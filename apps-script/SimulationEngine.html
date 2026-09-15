@@ -26,6 +26,7 @@ function normalizeSeed(seed) {
 }
 
 
+
 /**
  * Deterministic conveyor-design calculations based on the FlowPilot / CAT
  * engineering worksheet.  All linear rates below use millimetres per second
@@ -323,6 +324,7 @@ function subtractIfFinite(first, ...rest) {
 
 
 
+
 function resolveAccumulationZoneDefinition(allEquipment, ownerIndex) {
   const equipment = Array.isArray(allEquipment) ? allEquipment : [];
   const owner = equipment[ownerIndex];
@@ -609,6 +611,7 @@ function isFiniteNumber(value) {
 
 
 
+
 function validateSimulationInput(input) {
   const details = [];
   validateCase(input?.case, details);
@@ -876,6 +879,7 @@ function invalid(path, reason) { return { path, reason }; }
 function positiveNumber(value) { return typeof value === 'number' && Number.isFinite(value) && value > 0; }
 function nonNegativeNumber(value) { return typeof value === 'number' && Number.isFinite(value) && value >= 0; }
 function nonEmptyString(value) { return typeof value === 'string' && value.length > 0; }
+
 
 
 
@@ -2049,6 +2053,7 @@ function sum(values) {
 function round(value) {
   return Number(value.toFixed(6));
 }
+
 
 
 window.SimulatorEngine = {

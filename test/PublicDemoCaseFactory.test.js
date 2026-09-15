@@ -11,7 +11,7 @@ const repositoryRoot = path.resolve(import.meta.dirname, '..');
 test('public demo factory creates a runnable 13-step Case with explicit provenance', () => {
   const factory = vm.createContext({ Date, Array, Object });
   vm.runInContext(
-    fs.readFileSync(path.join(repositoryRoot, 'apps-script', 'source', 'PublicDemoCaseFactory.gs'), 'utf8'),
+    fs.readFileSync(path.join(repositoryRoot, 'apps-script', 'PublicDemoCaseFactory.gs'), 'utf8'),
     factory,
     { filename: 'PublicDemoCaseFactory.gs' }
   );
@@ -72,3 +72,4 @@ test('public demo factory creates a runnable 13-step Case with explicit provenan
   assert.equal(zoneMetrics.every((zone) => zone.modelOrigin === 'FLOWPILOT_ENGINEERING'), true);
   assert.equal(zoneMetrics.every((zone) => zone.engineering.audit.status !== 'FAIL'), true);
 });
+

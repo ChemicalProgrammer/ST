@@ -1,17 +1,45 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ST · Line Studio</title>
     <base target="_top">
+    <?!= include_('DesignTokens'); ?>
+    <?!= include_('Fonts'); ?>
+    <?!= include_('ThemePalette'); ?>
     <?!= include_('Styles'); ?>
+    <?!= include_('ShellStyles'); ?>
+    <?!= include_('UiPreferences'); ?>
   </head>
   <body>
-    <main class="app-shell">
+    <section id="auth-panel" class="auth-shell" aria-labelledby="auth-title">
+      <div class="auth-card">
+        <div class="brand"><span class="brand-mark" aria-hidden="true">ST</span><span>Line Studio</span></div>
+        <p class="eyebrow">A CLEARER VIEW OF YOUR LINE</p>
+        <h1 id="auth-title">Welcome to your workspace.</h1>
+        <p>Explore your cases, test possibilities and build confidence in your next decision.</p>
+        <form id="sign-in-form">
+          <label class="remember"><input type="checkbox" id="remember-session">Keep me signed in on this browser</label>
+          <button id="sign-in-button" type="submit">Continue with Google</button>
+        </form>
+        <p id="auth-status" role="status" aria-live="polite"></p>
+        <p class="auth-note">Uses the Google account authorized for this app. </p>
+        <label class="theme-control">Appearance<select data-theme-picker aria-label="Sign-in appearance"><option value="auto">Automatic</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+      </div>
+    </section>
+    <main id="application" class="app-shell hidden">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">SIMULATORTEMPLATE</p>
-          <h1>Packaging line simulator</h1>
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">ST</span>
+          <div><p class="eyebrow">LINE STUDIO</p><h1>Packaging line simulator</h1></div>
         </div>
-        <span id="user-email" class="user-chip">Loading identity…</span>
+        <div class="topbar-actions">
+          <button id="home-cases" type="button" class="secondary">Cases</button>
+          <button id="open-settings" type="button" class="secondary">Settings</button>
+          <label class="theme-control"><span class="sr-only">Appearance</span><select data-theme-picker aria-label="Appearance"><option value="auto">Automatic</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+          <span id="user-email" class="user-chip">Loading identity…</span>
+          <button id="sign-out" type="button" class="secondary">Lock workspace</button>
+        </div>
       </header>
 
       <section id="status" class="status" aria-live="polite">Loading console…</section>
@@ -37,18 +65,21 @@
       <section id="cases-panel" class="card hidden">
         <div class="section-heading">
           <div>
-            <h2>Cases</h2>
-            <p>Each Case is an isolated, versioned JSON record in your Drive workspace.</p>
+            <p class="eyebrow">YOUR WORKSPACE</p>
+            <h2>Your cases</h2>
+            <p>Pick up where you left off, or explore a new possibility.</p>
           </div>
           <div class="button-row">
-            <button id="create-public-demo-case" class="secondary" type="button">Public physical 13-unit demo</button>
+            <button id="create-public-demo-case" class="secondary" type="button">Create demo</button>
+            <button id="show-new-case" type="button">+ New case</button>
           </div>
         </div>
-        <form id="new-case-form" class="new-case-form">
+        <form id="new-case-form" class="new-case-form hidden">
           <label class="sr-only" for="new-case-name">New Case name</label>
           <input id="new-case-name" placeholder="New Case name" maxlength="120" required>
           <button type="submit">New Case</button>
         </form>
+        <label class="search-field"><span class="sr-only">Search your cases</span><input id="case-search" type="search" placeholder="Search cases…" autocomplete="off"></label>
         <div id="cases-list" class="cases-list"></div>
       </section>
 
@@ -186,6 +217,7 @@
       </section>
     </main>
     <?!= include_('SimulationEngine'); ?>
+    <?!= include_('CaseGallery'); ?>
     <?!= include_('Client'); ?>
   </body>
 </html>

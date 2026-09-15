@@ -2,6 +2,7 @@
   (function() {
     var state = {
       bootstrap: null,
+      requestEpoch: 0,
       activeCase: null,
       activeSimulationId: null,
       workspaceView: 'simulation',
@@ -24,7 +25,10 @@
 
     document.addEventListener('DOMContentLoaded', function() {
       bindEvents();
-      initialize();
+      if (STPreferences.read('remember') === 'yes') {
+        document.getElementById('remember-session').checked = true;
+        signIn();
+      }
     });
     window.addEventListener('resize', function() { renderPlaybackFrame(); });
     window.addEventListener('scroll', function() {
@@ -32,6 +36,16 @@
     }, { passive: true });
 
     function bindEvents() {
+      document.getElementById('sign-in-form').addEventListener('submit', function(event) { event.preventDefault(); signIn(); });
+      document.getElementById('sign-out').addEventListener('click', lockWorkspace);
+      document.getElementById('home-cases').addEventListener('click', showCaseHome);
+      document.getElementById('open-settings').addEventListener('click', function() {
+        toggle('workspace-panel', document.getElementById('workspace-panel').classList.contains('hidden'));
+      });
+      document.getElementById('show-new-case').addEventListener('click', function() {
+        toggle('new-case-form', true); document.getElementById('new-case-name').focus();
+      });
+      document.getElementById('case-search').addEventListener('input', function() { renderCases(state.bootstrap ? state.bootstrap.cases : []); });
       document.getElementById('workspace-form').addEventListener('submit', saveWorkspace);
       document.getElementById('new-case-form').addEventListener('submit', createDraftCase);
       document.getElementById('create-public-demo-case').addEventListener('click', createPublicDemoCase);
@@ -53,6 +67,36 @@
       });
     }
 
+    function signIn() {
+      document.getElementById('sign-in-button').disabled = true;
+      document.getElementById('auth-status').textContent = 'Verifying your Google access…';
+      initialize();
+    }
+
+    function showCaseHome() {
+      if (state.isDirty && !window.confirm('Discard unsaved changes and return to cases?')) return false;
+      stopPlaybackTimer();
+      state.activeCase = null;
+      state.isDirty = false;
+      ['editor-panel', 'run-panel', 'comparison-panel', 'workspace-tabs', 'engine-panel'].forEach(function(id) { toggle(id, false); });
+      var connected = Boolean(state.bootstrap && state.bootstrap.settings.workspaceRootFolderId);
+      toggle('cases-panel', connected);
+      toggle('workspace-panel', !connected);
+      return true;
+    }
+
+    function lockWorkspace() {
+      if (!showCaseHome()) return;
+      state.requestEpoch += 1;
+      STPreferences.write('remember', null);
+      document.getElementById('remember-session').checked = false;
+      state.bootstrap = null;
+      document.getElementById('cases-list').textContent = '';
+      toggle('application', false); toggle('auth-panel', true);
+      document.getElementById('auth-status').textContent = 'Workspace locked. Your Google account remains signed in.';
+      document.getElementById('sign-in-button').focus();
+    }
+
     function initialize() {
       setStatus('Loading console…');
       callServer('getBootstrap', [], renderBootstrap);
@@ -60,6 +104,10 @@
 
     function renderBootstrap(response) {
       if (!response.ok) return showError(response.error);
+      document.getElementById('sign-in-button').disabled = false;
+      document.getElementById('auth-status').textContent = '';
+      STPreferences.write('remember', document.getElementById('remember-session').checked ? 'yes' : null);
+      toggle('auth-panel', false); toggle('application', true);
       state.bootstrap = response.data;
       document.getElementById('user-email').textContent = response.data.user.email;
       document.getElementById('workspace-folder-id').value = response.data.settings.workspaceRootFolderId || '';
@@ -70,9 +118,9 @@
       }
 
       var hasWorkspace = Boolean(response.data.settings.workspaceRootFolderId);
-      toggle('workspace-panel', true);
-      toggle('cases-panel', hasWorkspace);
-      toggle('engine-panel', hasWorkspace);
+      toggle('workspace-panel', !hasWorkspace);
+      toggle('cases-panel', hasWorkspace && !state.activeCase);
+      toggle('engine-panel', false);
       renderCases(response.data.cases);
       if (!state.activeCase) setStatus(hasWorkspace ? 'Workspace connected.' : 'Connect a workspace folder to begin.');
     }
@@ -98,6 +146,7 @@
         setBusy('new-case-form', false);
         if (!response.ok) return showError(response.error);
         input.value = '';
+        toggle('new-case-form', false);
         openCase(response.data.id);
         initialize();
       });
@@ -144,10 +193,13 @@ function createPublicDemoCase() {
     }
 
 function openCase(caseId) {
+      if (state.isDirty && !window.confirm('Discard unsaved changes and open this case?')) return;
       callServer('getCase', [caseId], function(response) {
         if (!response.ok) return showError(response.error);
         stopPlaybackTimer();
         state.activeCase = response.data;
+        toggle('cases-panel', false);
+        toggle('workspace-panel', false);
         state.isDirty = false;
         state.workspaceView = 'simulation';
         state.liveZoneDetails = {};
@@ -228,28 +280,7 @@ function openCase(caseId) {
       renderRunWorkspace();
     }
 
-    function renderCases(cases) {
-      var target = document.getElementById('cases-list');
-      target.textContent = '';
-      if (!cases || !cases.length) {
-        target.innerHTML = '<p class="empty">No cases yet. Start with the physical 13-unit demo or create a new Case.</p>';
-        return;
-      }
-      cases.forEach(function(caseSummary) {
-        var row = document.createElement('article');
-        row.className = 'case-row';
-        row.innerHTML = '<div><strong></strong><span></span></div><div class="case-actions"><span></span><button class="open-case" type="button">Open</button><button class="delete-case danger" type="button">Delete</button></div>';
-        row.querySelector('strong').textContent = caseSummary.name;
-        var dataLabel = caseSummary.dataClassification === 'PUBLIC_DEMONSTRATION_ONLY' ? ' · public demo data' : '';
-        row.querySelector('div span').textContent = caseSummary.equipmentCount + ' equipment units · ' + (caseSummary.isSimulationReady ? 'simulation-ready' : 'draft') + dataLabel;
-        row.querySelector('.case-actions span').textContent = new Date(caseSummary.updatedAt).toLocaleString();
-        row.querySelector('.open-case').addEventListener('click', function() { openCase(caseSummary.id); });
-        row.querySelector('.delete-case').addEventListener('click', function(event) {
-          requestCaseDeletion(caseSummary.id, caseSummary.name, event.currentTarget);
-        });
-        target.appendChild(row);
-      });
-    }
+    function renderCases(cases) { STCaseGallery.render(cases, openCase, requestCaseDeletion); }
 
     function renderEditor() {
       if (!state.activeCase) return;
@@ -2153,15 +2184,21 @@ function summarizeGeometrySources(sources, assumptions) {
     }
 
     function callServer(name, args, onSuccess) {
+      var epoch = state.requestEpoch;
       var runner = google.script.run
-        .withFailureHandler(function() { showError({ code: 'NETWORK_ERROR', message: 'The server request could not be completed.' }); })
-        .withSuccessHandler(onSuccess);
+        .withFailureHandler(function() { if (epoch === state.requestEpoch) showError({ code: 'NETWORK_ERROR', message: 'The server request could not be completed.' }); })
+        .withSuccessHandler(function(response) { if (epoch === state.requestEpoch) onSuccess(response); });
       runner[name].apply(runner, args);
     }
 
     function toggle(id, visible) { document.getElementById(id).classList.toggle('hidden', !visible); }
     function setStatus(message) { var target = document.getElementById('status'); target.className = 'status'; target.textContent = message; }
-    function showError(error) { var target = document.getElementById('status'); target.className = 'status error'; target.textContent = (error.code || 'ERROR') + ': ' + (error.message || 'The request failed.'); }
+    function showError(error) {
+      var message = (error.code || 'ERROR') + ': ' + (error.message || 'The request failed.');
+      var target = document.getElementById('status'); target.className = 'status error'; target.textContent = message;
+      document.getElementById('auth-status').textContent = message;
+      document.getElementById('sign-in-button').disabled = false;
+    }
     function setBusy(targetId, busy) { var target = document.getElementById(targetId); var button = target.tagName === 'FORM' ? target.querySelector('button') : target; button.disabled = busy; }
   })();
 </script>

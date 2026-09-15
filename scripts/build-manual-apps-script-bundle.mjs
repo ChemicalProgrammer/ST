@@ -17,13 +17,19 @@ const serverFiles = [
 ];
 
 const htmlIncludes = [
+  ['DesignTokens', 'DesignTokens.html'],
+  ['Fonts', 'Fonts.html'],
+  ['ThemePalette', 'ThemePalette.html'],
   ['Styles', 'Styles.html'],
+  ['ShellStyles', 'ShellStyles.html'],
+  ['UiPreferences', 'UiPreferences.html'],
   ['SimulationEngine', 'SimulationEngine.html'],
+  ['CaseGallery', 'CaseGallery.html'],
   ['Client', 'Client.html']
 ];
 
 export function buildManualAppsScriptBundle(rootDirectory = repositoryRoot) {
-  const appsScriptSourceDirectory = path.join(rootDirectory, 'apps-script', 'source');
+  const appsScriptSourceDirectory = path.join(rootDirectory, 'apps-script');
   const manualOutputDirectory = path.join(rootDirectory, 'apps-script');
   const readSource = (file) => fs.readFileSync(path.join(appsScriptSourceDirectory, file), 'utf8').trimEnd();
   const readServerSource = (file) => {

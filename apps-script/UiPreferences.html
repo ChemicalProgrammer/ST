@@ -1,0 +1,30 @@
+<script>
+// Browser preferences only. Google identity is ALWAYS verified by the server.
+window.STPreferences = (function() {
+  var key = 'st.ui.v1.';
+  function read(name) { try { return localStorage.getItem(key + name); } catch (_) { return null; } }
+  function write(name, value) {
+    try { if (value === null) localStorage.removeItem(key + name); else localStorage.setItem(key + name, value); return true; }
+    catch (_) { return false; }
+  }
+  var media = window.matchMedia('(prefers-color-scheme: dark)');
+  var theme = read('theme') || 'auto';
+  function apply() {
+    document.documentElement.dataset.theme = theme === 'auto' ? (media.matches ? 'dark' : 'light') : theme;
+  }
+  function setTheme(value) {
+    theme = ['auto', 'light', 'dark'].indexOf(value) >= 0 ? value : 'auto';
+    write('theme', theme); apply();
+    document.querySelectorAll('[data-theme-picker]').forEach(function(select) { select.value = theme; });
+  }
+  if (media.addEventListener) media.addEventListener('change', apply);
+  apply();
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-theme-picker]').forEach(function(select) {
+      select.value = theme;
+      select.addEventListener('change', function() { setTheme(select.value); });
+    });
+  });
+  return { read: read, write: write, setTheme: setTheme };
+})();
+</script>

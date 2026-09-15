@@ -28,7 +28,7 @@ test('manual Apps Script bundle contains all server modules and resolved HTML in
   assert.doesNotMatch(index, /<\?\s*include_/);
 
   const scripts = Array.from(index.matchAll(/<script>([\s\S]*?)<\/script>/g), (match) => match[1]);
-  assert.equal(scripts.length, 2);
+  assert.equal(scripts.length, 4);
   for (const script of scripts) new Function(script);
   new Function(code);
   assert.match(code, /MANUAL APPS SCRIPT DEPLOYMENT FILE/);

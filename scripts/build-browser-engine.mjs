@@ -10,7 +10,7 @@ const sourceFiles = [
   'src/simulation/SimulationValidation.js',
   'src/simulation/LineSimulationEngine.js'
 ];
-const targetFile = path.join(repositoryRoot, 'apps-script', 'source', 'SimulationEngine.html');
+const targetFile = path.join(repositoryRoot, 'apps-script', 'SimulationEngine.html');
 
 const source = sourceFiles
   .map((relativePath) => fs.readFileSync(path.join(repositoryRoot, relativePath), 'utf8'))
@@ -39,3 +39,4 @@ function removeModuleSyntax(moduleSource) {
     .replace(/^import .*;\n/gm, '')
     .replace(/^export /gm, '');
 }
+

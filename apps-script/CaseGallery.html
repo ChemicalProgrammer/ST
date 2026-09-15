@@ -1,0 +1,26 @@
+<script>
+window.STCaseGallery = { render: function(cases, openCase, requestCaseDeletion) {
+      var target = document.getElementById('cases-list');
+      target.textContent = '';
+      var query = document.getElementById('case-search').value.trim().toLowerCase();
+      cases = (cases || []).filter(function(item) { return String(item.name || '').toLowerCase().indexOf(query) >= 0; });
+      if (!cases || !cases.length) {
+        target.innerHTML = '<p class="empty">' + (query ? 'No matching cases. Try another name.' : 'Your next improvement starts here. Create a case or explore the demo.') + '</p>';
+        return;
+      }
+      cases.forEach(function(caseSummary) {
+        var row = document.createElement('article');
+        row.className = 'case-row';
+        row.innerHTML = '<div><strong></strong><span></span></div><div class="case-actions"><span></span><button class="open-case" type="button">Open</button><button class="delete-case danger" type="button">Delete</button></div>';
+        row.querySelector('strong').textContent = caseSummary.name;
+        var dataLabel = caseSummary.dataClassification === 'PUBLIC_DEMONSTRATION_ONLY' ? ' · public demo data' : '';
+        row.querySelector('div span').textContent = caseSummary.equipmentCount + ' equipment units · ' + (caseSummary.isSimulationReady ? 'simulation-ready' : 'draft') + dataLabel;
+        row.querySelector('.case-actions span').textContent = new Date(caseSummary.updatedAt).toLocaleString();
+        row.querySelector('.open-case').addEventListener('click', function() { openCase(caseSummary.id); });
+        row.querySelector('.delete-case').addEventListener('click', function(event) {
+          requestCaseDeletion(caseSummary.id, caseSummary.name, event.currentTarget);
+        });
+        target.appendChild(row);
+      });
+    } };
+</script>
