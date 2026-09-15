@@ -14,11 +14,11 @@ test('manual Apps Script bundle contains all server modules and resolved HTML in
   const code = fs.readFileSync(output.codePath, 'utf8');
   const index = fs.readFileSync(output.indexPath, 'utf8');
 
-  assert.equal(committedCode, code, 'apps-script/Code.gs must match the manual bundle generated from apps-script/source/.');
-  assert.equal(committedIndex, index, 'apps-script/Index.html must match the manual bundle generated from apps-script/source/.');
+  assert.equal(committedCode, code, 'apps-script/Code.gs must match the manual bundle generated from apps-script/.');
+  assert.equal(committedIndex, index, 'apps-script/Index.html must match the manual bundle generated from apps-script/.');
 
   for (const sourceFile of ['ApiResponse.gs', 'AuthService.gs', 'ConfigService.gs', 'DriveService.gs', 'CaseService.gs', 'ReferenceCaseFactory.gs', 'PublicDemoCaseFactory.gs', 'Main.gs']) {
-    assert.match(code, new RegExp(`Source: apps-script/source/${sourceFile.replace('.', '\\.')}`));
+    assert.match(code, new RegExp(`Source: apps-script/${sourceFile.replace('.', '\\.')}`));
   }
   assert.match(code, /function doGet\(\)/);
   assert.match(code, /createTemplateFromFile\('Index'\)/);
