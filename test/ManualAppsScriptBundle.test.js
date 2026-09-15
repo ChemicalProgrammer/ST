@@ -1,0 +1,134 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import test from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { buildManualAppsScriptBundle } from '../scripts/build-manual-apps-script-bundle.mjs';
+
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+test('manual Apps Script bundle contains all server modules and resolved HTML includes', () => {
+  const committedCode = fs.readFileSync(path.join(repositoryRoot, 'apps-script', 'Code.gs'), 'utf8');
+  const committedIndex = fs.readFileSync(path.join(repositoryRoot, 'apps-script', 'Index.html'), 'utf8');
+  const output = buildManualAppsScriptBundle(repositoryRoot);
+  const code = fs.readFileSync(output.codePath, 'utf8');
+  const index = fs.readFileSync(output.indexPath, 'utf8');
+
+  assert.equal(committedCode, code, 'apps-script/Code.gs must match the manual bundle generated from apps-script/source/.');
+  assert.equal(committedIndex, index, 'apps-script/Index.html must match the manual bundle generated from apps-script/source/.');
+
+  for (const sourceFile of ['ApiResponse.gs', 'AuthService.gs', 'ConfigService.gs', 'DriveService.gs', 'CaseService.gs', 'ReferenceCaseFactory.gs', 'PublicDemoCaseFactory.gs', 'Main.gs']) {
+    assert.match(code, new RegExp(`Source: apps-script/source/${sourceFile.replace('.', '\\.')}`));
+  }
+  assert.match(code, /function doGet\(\)/);
+  assert.match(code, /createTemplateFromFile\('Index'\)/);
+  assert.doesNotMatch(code, /createTemplateFromFile\('WebApp'\)/);
+  assert.doesNotMatch(code, /function include_\(/);
+  assert.doesNotMatch(index, /<\?!=\s*include_/);
+  assert.doesNotMatch(index, /<\?\s*include_/);
+
+  const scripts = Array.from(index.matchAll(/<script>([\s\S]*?)<\/script>/g), (match) => match[1]);
+  assert.equal(scripts.length, 2);
+  for (const script of scripts) new Function(script);
+  new Function(code);
+  assert.match(code, /MANUAL APPS SCRIPT DEPLOYMENT FILE/);
+  assert.match(index, /MANUAL APPS SCRIPT DEPLOYMENT FILE/);
+});
+
+test('manual bundle keeps time-faithful playback and direct equipment scenario controls', () => {
+  const output = buildManualAppsScriptBundle(repositoryRoot);
+  const index = fs.readFileSync(output.indexPath, 'utf8');
+
+  assert.match(index, /At 1×, one virtual second takes one real second\./);
+  assert.match(index, /virtualSeconds \* 1000 \/ playbackRate/);
+  assert.match(index, /Run \/ resume/);
+  assert.match(index, /Planned stop/);
+  assert.match(index, /Emergency stop/);
+  assert.match(index, /Reset \+ run/);
+  assert.match(index, /function applyLiveScenarioControl\(/);
+});
+
+test('manual bundle uses a wide, compact live-equipment list on large screens', () => {
+  const output = buildManualAppsScriptBundle(repositoryRoot);
+  const index = fs.readFileSync(output.indexPath, 'utf8');
+
+  assert.match(index, /\.app-shell \{ max-width: 1760px;/);
+  assert.match(index, /live-equipment-columns/);
+  assert.match(index, /State &amp; rate/);
+  assert.match(index, /Time losses/);
+  assert.match(index, /createAccumulationZoneDetails\(/);
+  assert.match(index, /physical accumulation/);
+});
+
+test('manual bundle updates live equipment rows in place to preserve scroll position', () => {
+  const output = buildManualAppsScriptBundle(repositoryRoot);
+  const index = fs.readFileSync(output.indexPath, 'utf8');
+
+  assert.match(index, /function ensureLiveEquipmentColumns\(/);
+  assert.match(index, /function createLiveEquipmentCard\(/);
+  assert.match(index, /function updateLiveEquipmentCard\(/);
+  assert.match(index, /function updateAccumulationZoneDetails\(/);
+  assert.match(index, /function updateLiveEquipmentControl\(/);
+  assert.match(index, /function captureLiveEquipmentScrollAnchor\(/);
+  assert.match(index, /function restoreLiveEquipmentScrollAnchor\(/);
+  assert.match(index, /window\.requestAnimationFrame\(/);
+  assert.match(index, /window\.scrollBy\(0, delta\)/);
+  assert.doesNotMatch(index, /function renderLiveEquipment\(sample\) \{\s+var target = document\.getElementById\('live-equipment'\);\s+target\.textContent = '';/);
+});
+
+
+test('manual bundle makes FlowPilot conveyor geometry mandatory and exposes Case deletion', () => {
+  const output = buildManualAppsScriptBundle(repositoryRoot);
+  const code = fs.readFileSync(output.codePath, 'utf8');
+  const index = fs.readFileSync(output.indexPath, 'utf8');
+
+  assert.match(index, /FlowPilot conveyor design/);
+  assert.match(index, /Installed length L_act/);
+  assert.match(index, /Required overflow L_bu/);
+  assert.match(index, /Conveyor design audit/);
+  assert.match(index, /FlowPilot geometry is active by default/);
+  assert.doesNotMatch(index, /Use format fields/);
+  assert.doesNotMatch(index, /Explicit accumulation-zone override JSON/);
+  assert.match(index, /Delete Case/);
+  assert.match(code, /function deleteCase\(/);
+});
+
+test('manual bundle exposes photoeye pulses, sustained Back-up timers, and Waiting material', () => {
+  const output = buildManualAppsScriptBundle(repositoryRoot);
+  const index = fs.readFileSync(output.indexPath, 'utf8');
+
+  assert.match(index, /normal photoeye pulse/);
+  assert.match(index, /Back-up blocked delay/);
+  assert.match(index, /Back-up clear delay/);
+  assert.match(index, /PULSING · normal flow/);
+  assert.match(index, /Waiting/);
+  assert.match(index, /SENSOR_DEBOUNCE/);
+});
+
+test('manual bundle exposes one evidence-led What-If recommendation and OEE results', () => {
+  const output = buildManualAppsScriptBundle(repositoryRoot);
+  const code = fs.readFileSync(output.codePath, 'utf8');
+  const index = fs.readFileSync(output.indexPath, 'utf8');
+
+  assert.match(index, /What this run indicates/);
+  assert.match(index, /Create recommended Simulation B/);
+  assert.match(index, /function renderSimulationAnalysis\(/);
+  assert.match(index, /function buildSimulationAnalysis\(/);
+  assert.match(index, /function calculateBufferRecoveryPlan\(/);
+  assert.match(index, /Balance downstream infeed speed/);
+  assert.match(index, /Restore buffer recovery/);
+  assert.match(index, /Tune Back-up confirmation timers/);
+  assert.match(index, /Reliability sensitivity check/);
+  assert.match(index, /function createWhatIfScenario\(/);
+  assert.match(index, /function applySpeedBalanceOverride\(/);
+  assert.match(index, /function applySensorDebounceOverride\(/);
+  assert.match(index, /workspaceView: 'simulation'/);
+  assert.match(index, /aria-pressed/);
+  assert.match(index, /Global OEE/);
+  assert.match(index, /function formatLineOeeAtSample\(/);
+  assert.match(code, /scenario: normalizeObject_\(simulation\.scenario\)/);
+  assert.match(index, /Advanced JSON fields/);
+  assert.doesNotMatch(index, /Suggested next simulations/);
+  assert.doesNotMatch(index, /function renderExperimentWorkspace\(/);
+  assert.doesNotMatch(index, /id="experiment-workspace"/);
+});

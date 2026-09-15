@@ -1,0 +1,341 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chemicalprogrammer.github.io/SimulatorTemplate/schemas/case.schema.json",
+  "title": "Simulator Case",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "unitOfFlow",
+    "equipment"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "unitOfFlow": {
+      "type": "string",
+      "minLength": 1
+    },
+    "engineConfig": {
+      "type": "object"
+    },
+    "metadata": {
+      "$ref": "#/$defs/caseMetadata"
+    },
+    "equipment": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/equipment"
+      }
+    }
+  },
+  "$defs": {
+    "equipment": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "name",
+        "nominalRatePerSecond",
+        "initialMode"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "enum": [
+            "BLOWER",
+            "BLOWMOLDER",
+            "CONVEYOR",
+            "PACEMAKER",
+            "PUCKER",
+            "FILLER",
+            "DEPUCKER",
+            "SLEEVER",
+            "CASE_PACKER",
+            "PALLETIZER",
+            "CUSTOM"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nominalRatePerSecond": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "initialMode": {
+          "enum": [
+            "AUTO",
+            "MANUAL",
+            "PAUSE",
+            "STOP"
+          ]
+        },
+        "noiseProfile": {
+          "$ref": "#/$defs/noiseProfile"
+        },
+        "processData": {
+          "$ref": "#/$defs/processData"
+        },
+        "startupDelaySeconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Optional machine start/restart delay. When omitted, the engine may use processData.upstream.startupTimeSeconds."
+        },
+        "restartRampUpSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Optional machine start/restart ramp duration. When omitted, the engine may use processData.downstream.rampUpTimeSeconds."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "CONVEYOR"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "processData"
+            ],
+            "properties": {
+              "processData": {
+                "type": "object",
+                "required": [
+                  "accumulation"
+                ],
+                "properties": {
+                  "accumulation": {
+                    "$ref": "#/$defs/accumulationFormat"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "noiseProfile": {
+      "type": "object",
+      "properties": {
+        "microStop": {
+          "type": "object",
+          "properties": {
+            "probabilityPerMinute": {
+              "type": "number",
+              "minimum": 0
+            },
+            "minDurationSeconds": {
+              "type": "number",
+              "minimum": 0
+            },
+            "maxDurationSeconds": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "reliability": {
+          "type": "object",
+          "required": [
+            "mtbfMinutes",
+            "mttrMinutes"
+          ],
+          "properties": {
+            "mtbfMinutes": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "mttrMinutes": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        }
+      }
+    },
+    "caseMetadata": {
+      "type": "object",
+      "properties": {
+        "dataClassification": {
+          "type": "string"
+        },
+        "dataNote": {
+          "type": "string"
+        },
+        "publicReferences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "title",
+              "url"
+            ],
+            "properties": {
+              "publisher": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "usedFor": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "modelLimitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "processData": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "enum": [
+            "CRITICAL_MACHINE",
+            "CONVEYOR"
+          ]
+        },
+        "machineType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "equipment": {
+          "type": "object"
+        },
+        "geometry": {
+          "type": "object"
+        },
+        "upstream": {
+          "type": "object"
+        },
+        "downstream": {
+          "type": "object"
+        },
+        "speedAndSensors": {
+          "type": "object"
+        },
+        "accumulation": {
+          "$ref": "#/$defs/accumulationFormat"
+        }
+      }
+    },
+    "accumulationFormat": {
+      "type": "object",
+      "description": "Mandatory physical conveyor-zone inputs. Positions are measured from the upstream discharge toward the downstream infeed; LACT and LP Prime are not inferred.",
+      "required": [
+        "usableLengthMm",
+        "conveyorSpeedMmPerSecond",
+        "primeSensorPositionMm",
+        "backupSensorPositionMm",
+        "backupRestartPositionMm",
+        "upstreamStopResponseSeconds",
+        "bottlesDischargedAtStop",
+        "downstreamRampUpSeconds"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "usableLengthMm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "productLengthMm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "gapMm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "productPitchMm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "conveyorSpeedMmPerSecond": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "conveyorSpeedFactorPercent": {
+          "type": "number",
+          "minimum": 0
+        },
+        "primeSensorPositionMm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "backupSensorPositionMm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "backupRestartPositionMm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "upstreamStopResponseSeconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "bottlesDischargedAtStop": {
+          "type": "number",
+          "minimum": 0
+        },
+        "downstreamRampUpSeconds": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "productPitchMm"
+          ]
+        },
+        {
+          "required": [
+            "productLengthMm",
+            "gapMm"
+          ]
+        }
+      ]
+    }
+  }
+}
