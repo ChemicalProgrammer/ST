@@ -25,7 +25,7 @@ For a test deployment, use the editor's current saved code. For the stable `/exe
 
 ## Source of truth
 
-Do not hand-edit the generated deployment files in GitHub. The editable sources are in `apps-script/source/`; its page template is named `WebApp.html` specifically so it is not confused with the manual `Index.html`. The generated bundle is rebuilt and verified by the repository tests.
+Do not hand-edit the generated deployment files in GitHub. The editable sources are in `apps-script/`; its page template is named `WebApp.html` specifically so it is not confused with the manual `Index.html`. The generated bundle is rebuilt and verified by the repository tests.
 
 ## Current release: replace the pair in `apps-script/`
 
@@ -36,6 +36,6 @@ For an existing manual Apps Script project, replace both:
 
 This release adds Case deletion and changes the simulation contract: physical geometry is mandatory on every conveyor. Old Cases that use abstract buffers or `accumulationZone` overrides must be deleted or rebuilt from the new public demo.
 
-Do not copy files from `apps-script/source/`, `src/`, `test/`, or `docs/` into Apps Script. There is no third file for sensor control, the browser engine, styles, or charts: all browser code is embedded in `apps-script/Index.html`.
+Do not copy files from `apps-script/`, `src/`, `test/`, or `docs/` into Apps Script. There is no third file for sensor control, the browser engine, styles, or charts: all browser code is embedded in `apps-script/Index.html`.
 
 After pasting, save, then update the existing web-app deployment to a new version. This changes application code only; it does not create a Git branch or a Drive Case copy.
