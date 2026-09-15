@@ -1,7 +1,7 @@
 function success_(data) {
   return { ok: true, data: data };
 }
-
+ 
 function failure_(error) {
   var safeError = error && error.simulatorError
     ? error.simulatorError
