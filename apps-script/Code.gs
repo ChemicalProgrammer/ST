@@ -1,13 +1,13 @@
 // MANUAL APPS SCRIPT DEPLOYMENT FILE — copy this file as Code.gs.
-// GENERATED from apps-script/source/; edit the modular sources, not this file.
+// GENERATED from apps-script/; edit the modular sources, not this file.
 
 // -----------------------------------------------------------------------------
-// Source: apps-script/source/ApiResponse.gs
+// Source: apps-script/ApiResponse.gs
 // -----------------------------------------------------------------------------
 function success_(data) {
   return { ok: true, data: data };
 }
-
+  
 function failure_(error) {
   var safeError = error && error.simulatorError
     ? error.simulatorError
@@ -30,7 +30,7 @@ function createSimulatorError_(code, message, details) {
 }
 
 // -----------------------------------------------------------------------------
-// Source: apps-script/source/AuthService.gs
+// Source: apps-script/AuthService.gs
 // -----------------------------------------------------------------------------
 function requireCurrentUser_() {
   var email = Session.getActiveUser().getEmail();
@@ -64,7 +64,7 @@ function getAllowedUserEmails_() {
 }
 
 // -----------------------------------------------------------------------------
-// Source: apps-script/source/ConfigService.gs
+// Source: apps-script/ConfigService.gs
 // -----------------------------------------------------------------------------
 function getUserSettings_() {
   var raw = PropertiesService.getUserProperties().getProperty('USER_SETTINGS_JSON');
@@ -121,7 +121,7 @@ function normalizeUserSettings_(settings) {
 }
 
 // -----------------------------------------------------------------------------
-// Source: apps-script/source/DriveService.gs
+// Source: apps-script/DriveService.gs
 // -----------------------------------------------------------------------------
 function verifyWorkspaceRoot_(folderId) {
   try {
@@ -155,7 +155,7 @@ function getFixedKnowledgeFolder_() {
 }
 
 // -----------------------------------------------------------------------------
-// Source: apps-script/source/CaseService.gs
+// Source: apps-script/CaseService.gs
 // -----------------------------------------------------------------------------
 function listCases_(user) {
   var settings = getUserSettings_();
@@ -462,7 +462,7 @@ function toCaseSummary_(caseData, file) {
 }
 
 // -----------------------------------------------------------------------------
-// Source: apps-script/source/ReferenceCaseFactory.gs
+// Source: apps-script/ReferenceCaseFactory.gs
 // -----------------------------------------------------------------------------
 function createReferenceCaseRequest_() {
   var suffix = new Date().getTime().toString();
@@ -545,7 +545,7 @@ function createReferenceCaseRequest_() {
 }
 
 // -----------------------------------------------------------------------------
-// Source: apps-script/source/PublicDemoCaseFactory.gs
+// Source: apps-script/PublicDemoCaseFactory.gs
 // -----------------------------------------------------------------------------
 function createPublicDemoCaseRequest_() {
   var suffix = new Date().getTime().toString();
@@ -724,7 +724,7 @@ function createPublicLineUnit_(definition) {
 }
 
 // -----------------------------------------------------------------------------
-// Source: apps-script/source/Main.gs
+// Source: apps-script/Main.gs
 // -----------------------------------------------------------------------------
 function doGet() {
   return HtmlService.createTemplateFromFile('Index')
