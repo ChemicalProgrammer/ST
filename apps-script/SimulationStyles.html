@@ -17,7 +17,7 @@
   .live-equipment { display: grid; gap: var(--size-8); margin-top: var(--size-14); }
   .live-equipment-columns, .live-equipment-card__row { align-items: center; column-gap: var(--size-12); display: grid; grid-template-columns: minmax(var(--size-168), 1.15fr) minmax(var(--size-150), .92fr) minmax(var(--size-96), .55fr) minmax(var(--size-240), 1.42fr) minmax(var(--size-162), .88fr) minmax(var(--size-252), 1.3fr); }
   .live-equipment-columns { color: var(--muted); font-size: var(--text-10); font-weight: var(--weight-bold); letter-spacing: .06em; padding: 0 var(--size-14); text-transform: uppercase; }
-  .live-equipment-card { background: var(--surface); border: var(--size-1) solid var(--line); border-left: var(--size-4) solid var(--muted); border-radius: var(--size-10); padding: var(--size-10) var(--size-12); }
+  .live-equipment-card { background: var(--surface); border: var(--size-1) solid var(--line); border-left: var(--state-border-width) solid var(--muted); border-radius: var(--size-10); padding: var(--size-10) var(--size-12); }
   .live-equipment-cell { min-width: 0; }
   .live-equipment-identity strong { color: var(--ink); display: block; font-size: var(--text-14); }
   .live-command { color: var(--muted); display: block; font-size: var(--text-11); margin-top: var(--size-4); }
@@ -73,7 +73,7 @@
   .accumulation-zone-details[open] summary::before { content: '\25be'; }
   .accumulation-zone-summary-name { margin-right: auto; }
   .accumulation-zone-summary-reading { color: var(--muted); font-size: var(--text-11); font-weight: var(--weight-bold); }
-  .accumulation-zone { background: var(--surface-soft); border: var(--size-1) solid var(--line); border-left: var(--size-4) solid var(--accent); border-radius: var(--size-8); margin-top: var(--size-10); padding: var(--size-10); }
+  .accumulation-zone { background: var(--surface-soft); border: var(--size-1) solid var(--line); border-left: var(--state-border-width) solid var(--accent); border-radius: var(--size-8); margin-top: var(--size-10); padding: var(--size-10); }
   .accumulation-zone-heading { align-items: center; display: flex; font-size: var(--text-12); gap: var(--size-8); justify-content: space-between; }
   .accumulation-zone-heading strong { color: var(--ink); }
   .accumulation-zone-heading span { background: var(--surface-soft); border-radius: var(--size-99); color: var(--ink); font-size: var(--text-10); font-weight: var(--weight-bold); padding: var(--size-4) var(--size-7); }

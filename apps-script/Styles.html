@@ -45,4 +45,17 @@ td.numeric,th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
 .request-progress { height: var(--focus-width); overflow: hidden; background: var(--surface-soft); }
 .request-progress span { display: block; width: 30%; height: 100%; background: var(--accent); animation: loading-progress var(--duration-loading) ease-in-out infinite alternate; }
 @keyframes loading-progress { to { transform: translateX(230%); } }
+
+select { appearance:none; padding-right:var(--space-8); background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23626977' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right var(--space-3) center; background-size:var(--icon-size); }
+:root[data-theme=dark] select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23a2a7b4' stroke-width='1.5'/%3E%3C/svg%3E"); }
+.accent-palette { display:flex; gap:var(--space-2); flex-wrap:wrap; }
+.accent-choice { width:var(--accent-swatch); height:var(--accent-swatch); min-height:0; padding:0; border-radius:var(--radius-pill); color:var(--on-accent); }
+.accent-choice svg { visibility:hidden; } .accent-choice[aria-pressed=true] svg { visibility:visible; }
+.gemini-settings { border:var(--border-width) solid var(--line); border-radius:var(--radius-md); padding:var(--space-4); min-width:0; }
+.accent-choice[data-accent=violet] { background:var(--swatch-violet); color:var(--on-swatch); }
+.accent-choice[data-accent=blue] { background:var(--swatch-blue); color:var(--on-swatch); }
+.accent-choice[data-accent=teal] { background:var(--swatch-teal); color:var(--on-swatch); }
+.accent-choice[data-accent=green] { background:var(--swatch-green); color:var(--on-swatch); }
+.accent-choice[data-accent=amber] { background:var(--swatch-amber); color:var(--on-swatch); }
+.accent-choice[data-accent=rose] { background:var(--swatch-rose); color:var(--on-swatch); }
 </style>

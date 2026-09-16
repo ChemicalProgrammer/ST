@@ -1,0 +1,15 @@
+<style>
+.app-shell.case-open.assistant-open { padding-right:var(--assistant-width); }
+.gemini-panel { position:fixed; inset:var(--header-height) 0 0 auto; width:var(--assistant-width); z-index:var(--z-sidebar); border-left:var(--border-width) solid var(--line); background:var(--surface); display:flex; flex-direction:column; padding:var(--space-4); gap:var(--space-3); }
+.gemini-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:var(--space-2); }
+.gemini-heading h2 { margin:0; } .gemini-heading p { margin:var(--space-1) 0 0; }
+#gemini-notice { color:var(--muted); font-size:var(--font-secondary); }
+#gemini-messages { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; gap:var(--space-3); }
+.gemini-message { white-space:pre-wrap; overflow-wrap:anywhere; margin:0; padding:var(--space-3); background:var(--surface-soft); border-radius:var(--radius-md); }
+.gemini-message[data-role=user] { background:var(--accent-soft); }
+.gemini-message strong { display:block; margin-bottom:var(--space-1); }
+.gemini-composer { display:grid; gap:var(--space-2); }
+.gemini-composer textarea { resize:vertical; max-height:var(--size-220); width:100%; }
+.gemini-actions { display:flex; justify-content:space-between; }
+@media(max-width:1100px) { .app-shell.case-open.assistant-open { padding-right:0; } .gemini-panel { width:min(var(--assistant-width),calc(100% - var(--sidebar-collapsed))); box-shadow:var(--shadow-dialog); z-index:var(--z-overlay); } }
+</style>

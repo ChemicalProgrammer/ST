@@ -14,6 +14,7 @@ function getBootstrap() {
       user: user,
       globalConfig: getClientSafeGlobalConfig_(),
       settings: getUserSettings_(),
+      gemini: getGeminiClientConfig_(),
       cases: listCases_(user)
     };
   });
@@ -80,4 +81,9 @@ function executeServerAction_(action) {
   } catch (error) {
     return failure_(error);
   }
+}
+
+
+function askGemini(request) {
+  return executeServerAction_(function(user) { return askGemini_(request, user); });
 }

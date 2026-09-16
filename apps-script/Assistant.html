@@ -1,0 +1,38 @@
+<script>
+window.STAssistant = function(state) {
+  var opened=false,caseId=null,messages=[],pending=false,sequence=0;
+  function el(id){return document.getElementById(id);}
+  function render(){
+    el('gemini-messages').textContent='';
+    messages.forEach(function(m){var p=document.createElement('p');p.className='gemini-message';p.dataset.role=m.role;var label=document.createElement('strong');label.textContent=m.role==='user'?'You':'Gemini';p.appendChild(label);p.appendChild(document.createTextNode(m.text));el('gemini-messages').appendChild(p);});
+    el('gemini-messages').scrollTop=el('gemini-messages').scrollHeight;
+  }
+  function reset(){sequence++;messages=[];pending=false;caseId=null;opened=false;render();el('gemini-question').value='';el('gemini-error').textContent='';sync();}
+  function sync(){
+    var active=state.activeCase;
+    if(caseId!==(active?.id||null)){sequence++;caseId=active?.id||null;messages=[];pending=false;render();el('gemini-question').value='';el('gemini-error').textContent='';}
+    var visible=Boolean(active&&opened);
+    el('application').classList.toggle('assistant-open',visible);el('gemini-panel').classList.toggle('hidden',!visible);el('toggle-gemini').setAttribute('aria-expanded',String(visible));
+    el('gemini-context').textContent=active?active.name+' · saved case':'';
+    var configured=Boolean(state.bootstrap?.gemini?.configured);
+    el('gemini-notice').textContent=pending?'Gemini is analyzing the case…':!configured?'Add your Gemini API key in Settings to ask questions.':state.isDirty?'Save your changes before asking about this case.':'Context includes this saved case and all saved simulation results.';
+    el('send-gemini').disabled=pending||!configured||state.isDirty||!active;el('send-gemini').setAttribute('aria-busy',String(pending));
+    el('clear-gemini').disabled=pending;
+  }
+  function init(){
+    el('toggle-gemini').onclick=function(){opened=!opened;sync();if(opened)el('gemini-question').focus();window.dispatchEvent(new Event('resize'));};
+    el('close-gemini').onclick=function(){opened=false;sync();el('toggle-gemini').focus();window.dispatchEvent(new Event('resize'));};
+    el('gemini-panel').addEventListener('keydown',function(e){if(e.key==='Escape'){e.stopPropagation();el('close-gemini').click();}});
+    el('clear-gemini').onclick=function(){messages=[];render();el('gemini-error').textContent='';};
+    el('gemini-form').onsubmit=function(e){
+      e.preventDefault();sync();if(el('send-gemini').disabled)return;
+      var question=el('gemini-question').value.trim();if(!question)return;
+      var request={caseId:caseId,simulationId:state.activeSimulationId,question:question,history:messages.slice(-24)},ticket=++sequence;
+      pending=true;el('gemini-error').textContent='';messages.push({role:'user',text:question});el('gemini-question').value='';render();sync();
+      function finish(response){if(ticket!==sequence)return;pending=false;if(response.ok)messages.push({role:'model',text:response.data.text});else {messages.pop();el('gemini-question').value=question;el('gemini-error').textContent=response.error.message;}render();sync();}
+      google.script.run.withFailureHandler(function(){finish({ok:false,error:{message:'Gemini could not be reached. Try again.'}});}).withSuccessHandler(finish).askGemini(request);
+    };
+  }
+  return {init:init,sync:sync,reset:reset};
+};
+</script>

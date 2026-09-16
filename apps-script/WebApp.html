@@ -14,6 +14,7 @@
     <?!= include_('CasesStyles'); ?>
     <?!= include_('DialogStyles'); ?>
     <?!= include_('DashboardStyles'); ?>
+    <?!= include_('AssistantStyles'); ?>
     <?!= include_('UiPreferences'); ?>
   </head>
   <body>
@@ -29,30 +30,33 @@
         </form>
         <p id="auth-status" role="status" aria-live="polite"></p>
         <p class="auth-note">Uses the Google account authorized for this app. </p>
-        <label class="theme-control">Appearance<select data-theme-picker aria-label="Sign-in appearance"><option value="auto">Automatic</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
       </div>
     </section>
     <main id="application" class="app-shell hidden">
-      <aside class="sidebar" aria-label="Workspace navigation">
-        <div class="brand"><span class="brand-mark">ST</span><span class="brand-name">Line Studio</span></div>
-        <nav aria-label="Main navigation">
-          <p class="nav-caption">WORKSPACE</p>
-          <button id="home-cases" class="nav-item" data-icon="folder" aria-label="Cases" aria-current="page"><span class="nav-label">Cases</span></button>
+      <aside id="case-sidebar" class="sidebar hidden" aria-label="Case navigation">
+        <div class="sidebar-heading"><div class="brand"><span class="brand-mark">ST</span><span class="brand-name">Line Studio</span></div><button id="collapse-sidebar" class="ghost icon-button" data-icon="collapse" aria-label="Collapse sidebar" title="Collapse sidebar" aria-expanded="true"></button></div>
+        <section class="sidebar-section sidebar-simulations" aria-label="Simulations">
+          <p class="nav-caption">SIMULATIONS</p>
+          <nav id="workspace-tabs" class="simulation-navigation" aria-label="Simulations and comparison"></nav>
+        </section>
+        <nav class="sidebar-section" aria-label="Selected simulation">
+          <p id="simulation-nav-caption" class="nav-caption">SELECTED SIMULATION</p>
           <button class="nav-item" data-view="editor" data-icon="edit" aria-label="Line setup" disabled><span class="nav-label">Line setup</span></button>
           <button class="nav-item" data-view="simulation" data-icon="play" aria-label="Simulation" disabled><span class="nav-label">Simulation</span></button>
           <button class="nav-item" data-view="results" data-icon="chart" aria-label="Results" disabled><span class="nav-label">Results</span></button>
           <button class="nav-item" data-view="whatif" data-icon="flask" aria-label="What-If" disabled><span class="nav-label">What-If</span></button>
         </nav>
-        <div class="sidebar-footer">
+        <nav class="sidebar-section sidebar-footer" aria-label="Workspace actions">
           <button id="open-settings" class="nav-item" data-icon="settings" aria-label="Settings"><span class="nav-label">Settings</span></button>
-          <button id="sign-out" class="nav-item" data-icon="lock" aria-label="Lock workspace"><span class="nav-label">Lock workspace</span></button>
-          <button id="collapse-sidebar" class="nav-item" data-icon="collapse" aria-label="Collapse sidebar" aria-expanded="true"><span class="nav-label">Collapse sidebar</span></button>
-        </div>
+          <button id="home-cases" class="nav-item" data-icon="back" aria-label="Close case"><span class="nav-label">Close case</span></button>
+          <button id="sign-out" class="nav-item" data-icon="logout" aria-label="Sign out" title="Sign out of this workspace"><span class="nav-label">Sign out</span></button>
+        </nav>
       </aside>
       <header class="topbar">
         <div class="breadcrumb"><span id="breadcrumb-case">Workspace</span><span>/</span><span id="breadcrumb-view">Cases</span></div>
         <span id="user-email" class="user-chip"></span>
-        <button id="open-commands" class="ghost icon-button" data-icon="command" aria-label="Search commands" title="Search commands (Ctrl/⌘ K)"></button>
+        <div id="cases-top-actions" class="button-row"><button id="cases-settings" class="ghost" data-icon="settings">Settings</button><button id="cases-sign-out" class="ghost" data-icon="logout">Sign out</button></div>
+        <button id="toggle-gemini" class="secondary hidden" data-icon="chat" aria-controls="gemini-panel" aria-expanded="false">Gemini</button>
         <button id="save-workspace-case" class="secondary hidden" data-icon="save">Save changes</button>
       </header>
       <div class="workspace-content">
@@ -86,7 +90,6 @@
         <div id="cases-list" class="cases-list"></div><div id="case-pagination" class="case-pagination"></div>
       </section>
 
-      <nav id="workspace-tabs" class="workspace-tabs hidden" aria-label="Simulation workspace"></nav>
       <section id="editor-panel" class="card hidden">
         <div class="section-heading">
           <div>
@@ -206,7 +209,7 @@
           </details></div>
       </section>
       <section id="whatif-panel" class="card hidden" aria-labelledby="whatif-title">
-        <div class="section-heading"><div><p class="eyebrow">SCENARIO LAB</p><h2 id="whatif-title">What-If</h2><p>Review the evidence, change a scenario and compare measured simulation results.</p></div></div>
+        <div class="section-heading"><div><p class="eyebrow">SCENARIO LAB</p><h2 id="whatif-title">What-If</h2><p>Review the recommendation for the selected simulation and create a proposed scenario.</p></div></div>
         <div id="whatif-empty" class="empty"><h3>Start with a baseline run</h3><p>Run the active simulation to generate an evidence-based recommendation.</p><button data-view="simulation" data-icon="play">Go to simulation</button></div>
           <section id="simulation-analysis" class="simulation-analysis hidden" aria-labelledby="simulation-analysis-title">
             <div class="simulation-analysis-heading">
@@ -218,25 +221,32 @@
             </div>
             <div id="simulation-analysis-content" class="simulation-analysis-content"></div>
           </section>
+      </section>
       <section id="comparison-panel" class="card hidden">
-        <div class="section-heading"><div><p class="eyebrow">CASE COMPARISON</p><h2>Simulation VS.</h2><p>Select exactly two saved simulations.</p></div></div>
+        <div class="section-heading"><div><p class="eyebrow">CASE COMPARISON</p><h2>Compare simulations</h2><p>Select exactly two saved simulations.</p></div></div>
         <div class="field-grid"><label>Baseline<select id="case-compare-a"></select></label><label>Proposed scenario<select id="case-compare-b"></select></label></div>
         <div id="case-comparison-content" class="comparison-vertical"></div>
-      </section>
       </section>
       <section id="engine-panel" class="card hidden">
         <h2>Engine boundary</h2>
         <p>The browser engine executes the deterministic Case. Apps Script is responsible for identity and Drive persistence; Gemini is not used for calculation. Sensor positions in the public demo are transparent synthetic assumptions, not a PLC or safety-control design.</p>
       </section>
       </div>
+      <aside id="gemini-panel" class="gemini-panel hidden" aria-labelledby="gemini-title">
+        <header class="gemini-heading"><div><h2 id="gemini-title">Gemini</h2><span id="gemini-context" class="chart-note"></span></div><button id="close-gemini" class="ghost icon-button" data-icon="chevron" aria-label="Collapse Gemini panel" title="Collapse Gemini panel"></button></header>
+        <p id="gemini-notice" class="gemini-notice">Ask about the saved case, equipment and simulation results.</p>
+        <div id="gemini-messages" class="gemini-messages" role="log" aria-label="Case conversation" aria-live="polite"></div>
+        <form id="gemini-form" class="gemini-composer"><label class="sr-only" for="gemini-question">Question for Gemini</label><textarea id="gemini-question" rows="3" maxlength="6000" placeholder="Ask about this case…" required></textarea><div class="gemini-actions"><button id="clear-gemini" type="button" class="ghost icon-button" data-icon="trash" aria-label="Clear case conversation" title="Clear case conversation"></button><button id="send-gemini" type="submit" data-icon="send">Send</button></div><p id="gemini-error" class="chart-note" role="alert"></p><p class="chart-note">Sending shares this saved case with Google Gemini. Conversations clear when you close the case, refresh or sign out.</p></form>
+      </aside>
     </main>
     <dialog id="settings-dialog" aria-labelledby="settings-title">
       <header class="dialog-heading"><h2 id="settings-title">Settings</h2><button id="settings-close" class="ghost icon-button" data-icon="x" aria-label="Close settings" title="Close settings (Esc)"></button></header>
       <div class="dialog-body">
-        <section class="settings-section"><h3>Appearance</h3><p>Applied immediately on this browser.</p><div class="settings-row"><label for="settings-theme">Theme</label><select id="settings-theme" data-theme-picker aria-label="Appearance"><option value="light">Light</option><option value="dark">Dark</option><option value="auto">System / Automatic</option></select></div></section>
+        <section class="settings-section"><h3>Appearance</h3><p>Applied immediately on this browser.</p><div class="settings-row"><label for="settings-theme">Theme</label><select id="settings-theme" data-theme-picker aria-label="Appearance"><option value="light">Light</option><option value="dark">Dark</option><option value="auto">System / Automatic</option></select></div><div class="settings-row"><span>Accent color</span><div id="accent-palette" class="accent-palette" role="group" aria-label="Accent color"></div></div></section>
         <section id="workspace-panel" class="settings-section"><h3>Storage &amp; simulation defaults</h3><p>Choose a Drive folder you can access. Cases and results are saved in this workspace.</p>
         <form id="workspace-form"><label for="workspace-folder-id">Drive folder ID</label><input id="workspace-folder-id" autocomplete="off" required>
         <label for="playback-rate">Default playback speed</label><select id="playback-rate"><option value="0.5">0.5×</option><option value="1">1×</option><option value="1.5">1.5×</option><option value="5">5×</option><option value="10">10×</option></select>
+        <fieldset class="gemini-settings"><legend>Gemini</legend><p class="chart-note">Your API key is stored in your Apps Script user properties and used only by the server.</p><label for="gemini-model">Model ID</label><input id="gemini-model" value="gemini-2.5-flash" maxlength="100" pattern="gemini-[a-zA-Z0-9.\-]+" required><label for="gemini-api-key">API key</label><input id="gemini-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep your saved key"><span id="gemini-key-status" class="chart-note"></span><label class="remember"><input id="gemini-clear-key" type="checkbox">Remove saved API key</label></fieldset>
         <p id="settings-error" role="alert"></p><div class="dialog-actions"><span id="settings-unsaved" role="status"></span><button id="settings-cancel" type="button" class="ghost">Cancel</button><button id="settings-save" type="submit" data-icon="save">Save settings</button></div></form></section>
       </div>
     </dialog>
@@ -250,6 +260,7 @@
     <?!= include_('Shell'); ?>
     <?!= include_('Charts'); ?>
     <?!= include_('Comparison'); ?>
+    <?!= include_('Assistant'); ?>
     <?!= include_('Client'); ?>
   </body>
 </html>

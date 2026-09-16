@@ -4,12 +4,17 @@ window.STShell = function(state,actions) {
   function sync() {
     var active=Boolean(state.activeCase),view=active?(state.uiView||'simulation'):'cases';
     var connected=Boolean(state.bootstrap?.settings?.workspaceRootFolderId);
-    ['cases','editor','run','results','whatif','comparison'].forEach(function(name){var visible=(name==='cases'&&view==='cases')||(name==='editor'&&view==='editor')||(name==='run'&&view==='simulation')||(name==='results'&&view==='results')||((name==='whatif'||name==='comparison')&&view==='whatif');document.getElementById(name+'-panel').classList.toggle('hidden',!visible);});
+    ['cases','editor','run','results','whatif','comparison'].forEach(function(name){var visible=(name==='cases'&&view==='cases')||(name==='editor'&&view==='editor')||(name==='run'&&view==='simulation')||(name==='results'&&view==='results')||(name==='whatif'&&view==='whatif')||(name==='comparison'&&view==='comparison');document.getElementById(name+'-panel').classList.toggle('hidden',!visible);});
+    document.getElementById('application').classList.toggle('case-open',active);
+    document.getElementById('case-sidebar').classList.toggle('hidden',!active);
+    document.getElementById('cases-top-actions').classList.toggle('hidden',active);
+    document.getElementById('toggle-gemini').classList.toggle('hidden',!active);
+    actions.assistant();
     document.getElementById('workspace-tabs').classList.toggle('hidden',!active);
     document.getElementById('home-cases').setAttribute('aria-current',view==='cases'?'page':'false');
     document.querySelectorAll('.sidebar [data-view]').forEach(function(button){button.disabled=!active;button.setAttribute('aria-current',button.dataset.view===view?'page':'false');button.title=active?button.getAttribute('aria-label'):'Open a case first';});
     document.getElementById('breadcrumb-case').textContent=active?state.activeCase.name:'Workspace';
-    document.getElementById('breadcrumb-view').textContent={cases:'Cases',editor:'Line setup',simulation:'Simulation',results:'Results',whatif:'What-If'}[view];
+    document.getElementById('breadcrumb-view').textContent={cases:'Cases',editor:'Line setup',simulation:'Simulation',results:'Results',whatif:'What-If',comparison:'Compare simulations'}[view];
     var save=document.getElementById('save-workspace-case');save.classList.toggle('hidden',!active);save.disabled=!state.isDirty || state.saving;save.innerHTML=STIcons.svg('save')+(state.isDirty?'Save changes':'Saved');
     document.getElementById('show-new-case').disabled=!connected; document.getElementById('create-public-demo-case').disabled=!connected;
     document.getElementById('whatif-empty').classList.toggle('hidden',Boolean(state.run.result));
@@ -19,6 +24,8 @@ window.STShell = function(state,actions) {
   function toast(message) {var el=document.getElementById('toast');el.textContent=message;el.classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(function(){el.classList.add('hidden');},4000);}
   function init(){
     STSettings.init();STIcons.decorate();
+    document.getElementById('cases-settings').onclick=STSettings.open;
+    document.getElementById('cases-sign-out').onclick=actions.signout;
     function collapse(){document.getElementById('application').classList.toggle('sidebar-collapsed',collapsed);var el=document.getElementById('collapse-sidebar');el.setAttribute('aria-expanded',String(!collapsed));el.setAttribute('aria-label',collapsed?'Expand sidebar':'Collapse sidebar');el.title=el.getAttribute('aria-label');}
     collapse();document.getElementById('collapse-sidebar').onclick=function(){collapsed=!collapsed;STPreferences.write('sidebar',collapsed?'collapsed':'expanded');collapse();setTimeout(actions.redraw,180);};
     document.querySelectorAll('[data-view]').forEach(function(button){button.addEventListener('click',function(){actions.navigate(button.dataset.view);});});
@@ -32,7 +39,7 @@ window.STShell = function(state,actions) {
       if(!list.children.length)list.textContent='No matching commands.';
     }
     function openCommands(){if(document.getElementById('application').classList.contains('hidden')||document.querySelector('dialog[open]'))return;input.value='';commands();dialog.showModal();input.focus();}
-    document.getElementById('open-commands').onclick=openCommands;input.oninput=commands;
+    input.oninput=commands;
     input.onkeydown=function(e){if(e.key==='ArrowDown'){e.preventDefault();list.querySelector('button')?.focus();}if(e.key==='Enter'){e.preventDefault();list.querySelector('button')?.click();}};
     list.onkeydown=function(e){if(!['ArrowDown','ArrowUp'].includes(e.key))return;e.preventDefault();var buttons=Array.from(list.querySelectorAll('button')),index=buttons.indexOf(document.activeElement);buttons[(index+(e.key==='ArrowDown'?1:buttons.length-1))%buttons.length]?.focus();};
     document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCommands();}});

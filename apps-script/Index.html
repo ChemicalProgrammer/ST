@@ -136,6 +136,25 @@
 }
 /* Canvas layout resources (unitless values are CSS pixels). */
 :root { --chart-pad-left: 46; --chart-pad-right: 16; --chart-pad-top: 22; --chart-pad-bottom: 32; --chart-label-top: 13; --chart-label-offset: 16; --chart-label-gap: 8; --chart-label-x: 38; --chart-time-label-width: 70; --chart-axis-stroke: 1; --chart-series-stroke: 1.8; --chart-spark-x: 2; --chart-spark-y: 4; }
+:root { --state-border-width:5px; --assistant-width:360px; --accent-swatch:28px; --on-swatch:#ffffff; }
+:root[data-theme="light"][data-accent="violet"] { --accent:#5656c9; --accent-hover:#5656c9; --accent-soft:#ededfc; --selected:#ededfc; --selected-text:#5656c9; --on-accent:#ffffff; }
+:root[data-theme="dark"][data-accent="violet"] { --accent:#a6a4ff; --accent-hover:#a6a4ff; --accent-soft:#2b2947; --selected:#2b2947; --selected-text:#a6a4ff; --on-accent:#16171b; }
+:root { --swatch-violet:#5656c9; }
+:root[data-theme="light"][data-accent="blue"] { --accent:#2563a9; --accent-hover:#2563a9; --accent-soft:#eaf2fc; --selected:#eaf2fc; --selected-text:#2563a9; --on-accent:#ffffff; }
+:root[data-theme="dark"][data-accent="blue"] { --accent:#8bb9f0; --accent-hover:#8bb9f0; --accent-soft:#223149; --selected:#223149; --selected-text:#8bb9f0; --on-accent:#16171b; }
+:root { --swatch-blue:#2563a9; }
+:root[data-theme="light"][data-accent="teal"] { --accent:#14766d; --accent-hover:#14766d; --accent-soft:#e6f5f1; --selected:#e6f5f1; --selected-text:#14766d; --on-accent:#ffffff; }
+:root[data-theme="dark"][data-accent="teal"] { --accent:#7bd4c8; --accent-hover:#7bd4c8; --accent-soft:#203b37; --selected:#203b37; --selected-text:#7bd4c8; --on-accent:#16171b; }
+:root { --swatch-teal:#14766d; }
+:root[data-theme="light"][data-accent="green"] { --accent:#287447; --accent-hover:#287447; --accent-soft:#eaf5ee; --selected:#eaf5ee; --selected-text:#287447; --on-accent:#ffffff; }
+:root[data-theme="dark"][data-accent="green"] { --accent:#8dd5a6; --accent-hover:#8dd5a6; --accent-soft:#20372c; --selected:#20372c; --selected-text:#8dd5a6; --on-accent:#16171b; }
+:root { --swatch-green:#287447; }
+:root[data-theme="light"][data-accent="amber"] { --accent:#875900; --accent-hover:#875900; --accent-soft:#fff5df; --selected:#fff5df; --selected-text:#875900; --on-accent:#ffffff; }
+:root[data-theme="dark"][data-accent="amber"] { --accent:#e7bd6a; --accent-hover:#e7bd6a; --accent-soft:#3a3020; --selected:#3a3020; --selected-text:#e7bd6a; --on-accent:#16171b; }
+:root { --swatch-amber:#875900; }
+:root[data-theme="light"][data-accent="rose"] { --accent:#ad355f; --accent-hover:#ad355f; --accent-soft:#fcecf2; --selected:#fcecf2; --selected-text:#ad355f; --on-accent:#ffffff; }
+:root[data-theme="dark"][data-accent="rose"] { --accent:#ef9aba; --accent-hover:#ef9aba; --accent-soft:#3e2531; --selected:#3e2531; --selected-text:#ef9aba; --on-accent:#16171b; }
+:root { --swatch-rose:#ad355f; }
 </style>
     <!-- DejaVu Sans subset. Embedded; no network request.
 Copyright: Copyright (c) 2003 by Bitstream, Inc. All Rights Reserved.
@@ -234,6 +253,19 @@ td.numeric,th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
 .request-progress { height: var(--focus-width); overflow: hidden; background: var(--surface-soft); }
 .request-progress span { display: block; width: 30%; height: 100%; background: var(--accent); animation: loading-progress var(--duration-loading) ease-in-out infinite alternate; }
 @keyframes loading-progress { to { transform: translateX(230%); } }
+
+select { appearance:none; padding-right:var(--space-8); background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23626977' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right var(--space-3) center; background-size:var(--icon-size); }
+:root[data-theme=dark] select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23a2a7b4' stroke-width='1.5'/%3E%3C/svg%3E"); }
+.accent-palette { display:flex; gap:var(--space-2); flex-wrap:wrap; }
+.accent-choice { width:var(--accent-swatch); height:var(--accent-swatch); min-height:0; padding:0; border-radius:var(--radius-pill); color:var(--on-accent); }
+.accent-choice svg { visibility:hidden; } .accent-choice[aria-pressed=true] svg { visibility:visible; }
+.gemini-settings { border:var(--border-width) solid var(--line); border-radius:var(--radius-md); padding:var(--space-4); min-width:0; }
+.accent-choice[data-accent=violet] { background:var(--swatch-violet); color:var(--on-swatch); }
+.accent-choice[data-accent=blue] { background:var(--swatch-blue); color:var(--on-swatch); }
+.accent-choice[data-accent=teal] { background:var(--swatch-teal); color:var(--on-swatch); }
+.accent-choice[data-accent=green] { background:var(--swatch-green); color:var(--on-swatch); }
+.accent-choice[data-accent=amber] { background:var(--swatch-amber); color:var(--on-swatch); }
+.accent-choice[data-accent=rose] { background:var(--swatch-rose); color:var(--on-swatch); }
 </style>
     <style>
   .field-grid, .equipment-grid { display: grid; gap: var(--size-12); grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -285,7 +317,7 @@ td.numeric,th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
   .live-equipment { display: grid; gap: var(--size-8); margin-top: var(--size-14); }
   .live-equipment-columns, .live-equipment-card__row { align-items: center; column-gap: var(--size-12); display: grid; grid-template-columns: minmax(var(--size-168), 1.15fr) minmax(var(--size-150), .92fr) minmax(var(--size-96), .55fr) minmax(var(--size-240), 1.42fr) minmax(var(--size-162), .88fr) minmax(var(--size-252), 1.3fr); }
   .live-equipment-columns { color: var(--muted); font-size: var(--text-10); font-weight: var(--weight-bold); letter-spacing: .06em; padding: 0 var(--size-14); text-transform: uppercase; }
-  .live-equipment-card { background: var(--surface); border: var(--size-1) solid var(--line); border-left: var(--size-4) solid var(--muted); border-radius: var(--size-10); padding: var(--size-10) var(--size-12); }
+  .live-equipment-card { background: var(--surface); border: var(--size-1) solid var(--line); border-left: var(--state-border-width) solid var(--muted); border-radius: var(--size-10); padding: var(--size-10) var(--size-12); }
   .live-equipment-cell { min-width: 0; }
   .live-equipment-identity strong { color: var(--ink); display: block; font-size: var(--text-14); }
   .live-command { color: var(--muted); display: block; font-size: var(--text-11); margin-top: var(--size-4); }
@@ -341,7 +373,7 @@ td.numeric,th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
   .accumulation-zone-details[open] summary::before { content: '\25be'; }
   .accumulation-zone-summary-name { margin-right: auto; }
   .accumulation-zone-summary-reading { color: var(--muted); font-size: var(--text-11); font-weight: var(--weight-bold); }
-  .accumulation-zone { background: var(--surface-soft); border: var(--size-1) solid var(--line); border-left: var(--size-4) solid var(--accent); border-radius: var(--size-8); margin-top: var(--size-10); padding: var(--size-10); }
+  .accumulation-zone { background: var(--surface-soft); border: var(--size-1) solid var(--line); border-left: var(--state-border-width) solid var(--accent); border-radius: var(--size-8); margin-top: var(--size-10); padding: var(--size-10); }
   .accumulation-zone-heading { align-items: center; display: flex; font-size: var(--text-12); gap: var(--size-8); justify-content: space-between; }
   .accumulation-zone-heading strong { color: var(--ink); }
   .accumulation-zone-heading span { background: var(--surface-soft); border-radius: var(--size-99); color: var(--ink); font-size: var(--text-10); font-weight: var(--weight-bold); padding: var(--size-4) var(--size-7); }
@@ -379,7 +411,7 @@ td.numeric,th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
   .simulation-analysis-content { margin-top: var(--size-14); }
   .simulation-analysis-grid { display: grid; gap: var(--size-12); grid-template-columns: minmax(0, 1.15fr) minmax(var(--size-300), .85fr); }
   .analysis-finding, .analysis-recommendation, .analysis-no-action { background: var(--surface); border: var(--size-1) solid var(--line); border-radius: var(--size-9); padding: var(--size-14); }
-  .analysis-finding { border-left: var(--size-4) solid var(--accent); }
+  .analysis-finding { border-left: var(--state-border-width) solid var(--accent); }
   .analysis-finding.analysis-critical { border-left-color: var(--danger); }
   .analysis-finding.analysis-attention { border-left-color: var(--starved); }
   .analysis-status { border-radius: var(--size-99); display: inline-block; font-size: var(--text-9); font-weight: var(--weight-bold); letter-spacing: .06em; padding: var(--size-4) var(--size-7); text-transform: uppercase; }
@@ -403,7 +435,7 @@ td.numeric,th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
   .workspace-tab-active { background: var(--accent); box-shadow: 0 0 0 var(--size-3) var(--accent-soft); color: var(--surface); font-weight: var(--weight-bold); }
   .workspace-tab-comparison { background: var(--surface-soft); }
   .comparison-vertical { display: grid; gap: var(--size-1); margin-top: var(--size-16); }
-  .comparison-context { border: var(--size-1) solid var(--line); border-left: var(--size-4) solid var(--accent); border-radius: var(--size-8); padding: var(--size-12); }
+  .comparison-context { border: var(--size-1) solid var(--line); border-left: var(--state-border-width) solid var(--accent); border-radius: var(--size-8); padding: var(--size-12); }
   .comparison-context-paired { background: var(--success-soft); border-color: var(--success); border-left-color: var(--running); }
   .comparison-context-caution { background: var(--warning-soft); border-color: var(--warning); border-left-color: var(--starved); }
   .comparison-context strong { color: var(--ink); display: block; font-size: var(--text-13); }
@@ -412,7 +444,7 @@ td.numeric,th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
   .comparison-section h3 { background: var(--surface-soft); color: var(--ink); font-size: var(--text-13); margin: 0; padding: var(--size-10); }
   .comparison-row { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: var(--size-12); background: var(--surface); padding: var(--size-10); }
   .comparison-row span { background: var(--surface); padding: var(--size-6); }
-  .comparison-changed { border-left: var(--size-4) solid var(--warning); background: var(--warning-soft); }
+  .comparison-changed { border-left: var(--state-border-width) solid var(--warning); background: var(--warning-soft); }
   .scenario-tab { background: var(--surface-soft); border: var(--size-1) solid var(--line); color: var(--muted); font-size: var(--text-12); margin: 0; padding: var(--size-8) var(--size-11); }
   .scenario-tab-active { background: var(--selected); border-color: var(--accent); color: var(--info); font-weight: var(--weight-bold); }
   .equipment-json-details { border-top: var(--size-1) solid var(--line); margin-top: var(--size-12); padding-top: var(--size-10); }
@@ -422,7 +454,8 @@ td.numeric,th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
 
 </style>
     <style>
-.app-shell { width: 100%; min-height: 100vh; padding-left: var(--sidebar-width); }
+.app-shell { width: 100%; min-height: 100vh; padding: 0; }
+.app-shell.case-open { padding-left: var(--sidebar-width); }
 .sidebar { position: fixed; inset: 0 auto 0 0; width: var(--sidebar-width); z-index: var(--z-sidebar); background: var(--surface-soft); border-right: var(--border-width) solid var(--line); display: flex; flex-direction: column; padding: var(--space-3); gap: var(--space-5); transition: width var(--duration-normal) var(--ease); }
 .brand { display: flex; align-items: center; gap: var(--space-2); white-space: nowrap; min-height: var(--control-height); color: var(--ink); font-weight: var(--weight-semibold); }
 .brand-mark { background: var(--ink); color: var(--page); display: grid; place-items: center; width: var(--size-28); height: var(--size-28); border-radius: var(--radius-sm); font-size: var(--font-secondary); flex-shrink: 0; }
@@ -432,7 +465,7 @@ td.numeric,th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
 .nav-item:hover { background: var(--surface-hover); color: var(--ink); }
 .nav-item[aria-current=page] { background: var(--selected); color: var(--selected-text); }
 .sidebar-footer { margin-top: auto; display: grid; gap: var(--space-2); }
-.sidebar-collapsed { padding-left: var(--sidebar-collapsed); }
+.app-shell.case-open.sidebar-collapsed { padding-left: var(--sidebar-collapsed); }
 .sidebar-collapsed .sidebar { width: var(--sidebar-collapsed); }
 .sidebar-collapsed .nav-label,.sidebar-collapsed .nav-caption,.sidebar-collapsed .brand-name { display: none; }
 .sidebar-collapsed .nav-item { justify-content: center; padding: var(--space-2); }
@@ -442,10 +475,15 @@ td.numeric,th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
 #breadcrumb-case { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } #breadcrumb-view { color: var(--ink); }
 .user-chip { max-width: var(--size-220); overflow: hidden; text-overflow: ellipsis; font-size: var(--font-secondary); color: var(--muted); }
 .workspace-content { padding: 0 var(--page-padding) var(--space-8); min-width: 0; }
-.workspace-content > .card { border: 0; border-radius: 0; padding: var(--space-4) 0; }
-.workspace-tabs { margin: 0 0 var(--space-4); padding: 0; gap: var(--space-1); border-bottom: var(--border-width) solid var(--line); }
-.workspace-tab,.workspace-tab-comparison { background: transparent; color: var(--muted); border: 0; border-radius: 0; border-bottom: var(--size-2) solid transparent; box-shadow: none; padding: var(--space-2) var(--space-3); font-weight: var(--weight-medium); }
-.workspace-tab:hover { background: var(--surface-soft); } .workspace-tab-active { color: var(--ink); border-bottom-color: var(--accent); background: transparent; box-shadow: none; }
+.workspace-content > .card { border: 0; border-radius: 0; padding: var(--space-4) 0; background: transparent; }
+ .sidebar-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--space-1); }
+.sidebar-section + .sidebar-section { border-top:var(--border-width) solid var(--line); padding-top:var(--space-3); }
+.sidebar-simulations { min-height:0; overflow-y:auto; }
+.simulation-navigation .nav-label { overflow:hidden; text-overflow:ellipsis; }
+.workspace-tab { border:0; border-radius:var(--radius-sm); box-shadow:none; }
+.sidebar-collapsed .sidebar-heading .brand { display:none; }
+.sidebar-collapsed .sidebar-heading { justify-content:center; }
+.sidebar-collapsed .sidebar { gap:var(--space-3); }
 .auth-shell { min-height: 100vh; display: grid; place-items: center; padding: var(--space-6); background: var(--surface-soft); }
 .auth-card { width: min(100%,var(--size-420)); padding: var(--space-8); background: var(--surface); border: var(--border-width) solid var(--line); border-radius: var(--radius-lg); }
 .auth-card .brand { margin-bottom: var(--space-8); } .auth-card form { margin-top: var(--space-6); }
@@ -455,15 +493,27 @@ td.numeric,th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
 .theme-control select { max-width: var(--size-150); }
 #mobile-menu { display: none; }
 @media(max-width:760px) {
-  .app-shell,.app-shell.sidebar-collapsed { padding-left: 0; }
+  .app-shell,.app-shell.app-shell.case-open.sidebar-collapsed { padding-left: 0; }
   .sidebar,.sidebar-collapsed .sidebar { width: var(--sidebar-collapsed); padding: var(--space-2); }
-  .app-shell { padding-left: var(--sidebar-collapsed) !important; }
+  .app-shell.case-open { padding-left: var(--sidebar-collapsed); }
   .sidebar .nav-label,.sidebar .brand-name,.sidebar .nav-caption { display: none; }
   .sidebar .nav-item { justify-content: center; padding: var(--space-2); }
   #collapse-sidebar { display: none; } .user-chip { display: none; }
-  .workspace-content { padding: 0 var(--space-3) var(--space-6); } .topbar { padding: 0 var(--space-3); }
+  .workspace-content { padding: 0 var(--space-3) var(--space-6); } .topbar { padding: 0 var(--space-3); flex-direction: row; align-items: center; }
   .section-heading { align-items: flex-start; flex-direction: column; }
   .breadcrumb { font-size: var(--font-secondary); }
+}
+
+.sidebar { overflow-y:auto; }
+.sidebar-simulations { flex:1; }
+.sidebar-section { flex-shrink:0; }
+.sidebar-simulations { flex-shrink:1; }
+.topbar { min-width:0; }
+@media(max-width:600px) {
+ .topbar { gap:var(--space-1); flex-wrap:wrap; height:auto; min-height:var(--header-height); padding-top:var(--space-2); padding-bottom:var(--space-2); }
+ .topbar .breadcrumb { flex-basis:100%; }
+ .topbar .button-row { flex-wrap:wrap; }
+ .app-shell:not(.case-open) { padding:0; }
 }
 </style>
     <style>
@@ -519,7 +569,7 @@ dialog::backdrop { background: var(--overlay); } dialog[open] { animation: dialo
 .metrics-grid article { background: var(--surface); border-radius: var(--radius-md); }
 .metrics-grid strong { font-size: var(--font-section); font-variant-numeric: tabular-nums; }
 .live-equipment-columns { display: none; }
-.live-equipment-card { border-left-width: var(--size-2); border-radius: var(--radius-md); background: var(--surface); }
+.live-equipment-card { border-left-width: var(--state-border-width); border-radius: var(--radius-md); background: var(--surface); }
 .live-equipment-card__row { display: grid; grid-template-columns: minmax(var(--size-140),1fr) minmax(var(--size-120),.85fr) minmax(var(--size-100),.7fr) minmax(var(--size-180),1.1fr); gap: var(--space-3); align-items: center; }
 .live-equipment-controls { grid-column: 1/-1; display: flex; flex-wrap: wrap; border-top: var(--border-width) solid var(--line); padding-top: var(--space-2); }
 .live-equipment-controls button { padding: var(--space-1) var(--space-2); font-size: var(--font-secondary); }
@@ -537,11 +587,40 @@ dialog::backdrop { background: var(--overlay); } dialog[open] { animation: dialo
 .simulation-analysis { background: var(--surface); border: 0; padding: 0; }
 #comparison-panel { border: 0; padding: var(--space-5) 0 0; }
 .comparison-section { margin-bottom: var(--space-3); } .comparison-row { overflow-wrap: anywhere; }
-.comparison-row span { min-width: 0; } .comparison-changed { border-left-width: var(--size-2); }
+.comparison-row span { min-width: 0; } .comparison-changed { border-left-width: var(--state-border-width); }
 .comparison-section > summary { padding: var(--space-3); background: var(--surface-soft); font-weight: var(--weight-medium); }
 .equipment-card { border-radius: var(--radius-md); } .format-zone-setup { background: var(--surface-soft); }
 @media(max-width:1100px) { .live-equipment-card__row { grid-template-columns: repeat(2,minmax(0,1fr)); } .live-equipment-card.show-losses .live-equipment-stats { grid-template-columns: repeat(3,minmax(0,1fr)); } }
 @media(max-width:600px) { .live-equipment-card__row { grid-template-columns: 1fr; } .result-kpis,.metrics-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .result-kpi { padding: var(--space-3); } .result-kpi strong { font-size: var(--font-section); } .comparison-row { grid-template-columns: 1fr; } .equipment-header { flex-direction: column; align-items: flex-start; } }
+
+.workspace-content { container-type:inline-size; }
+.live-equipment-card__row { grid-template-columns:minmax(0,1fr) minmax(0,.85fr) minmax(0,.6fr) minmax(0,1.2fr) auto; }
+.live-speed-cell { grid-column:4; grid-row:1; }
+.live-equipment-controls { grid-column:5; grid-row:1; display:grid; grid-template-columns:repeat(2,var(--control-height)); grid-template-rows:repeat(3,var(--control-height)); gap:var(--space-1); border:0; padding:0; }
+.live-equipment-controls button { width:var(--control-height); height:var(--control-height); min-height:0; padding:0; }
+.live-equipment-controls .live-control-run { grid-column:auto; }
+.live-equipment-controls .loss-toggle { margin:0; }
+@container(max-width:900px) {
+ .live-equipment-card__row { grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; }
+ .live-equipment-controls { grid-column:3; grid-row:2; }
+ .live-speed-cell { grid-column:1/3; grid-row:2; }
+ .live-equipment-card.show-losses .live-equipment-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+</style>
+    <style>
+.app-shell.case-open.assistant-open { padding-right:var(--assistant-width); }
+.gemini-panel { position:fixed; inset:var(--header-height) 0 0 auto; width:var(--assistant-width); z-index:var(--z-sidebar); border-left:var(--border-width) solid var(--line); background:var(--surface); display:flex; flex-direction:column; padding:var(--space-4); gap:var(--space-3); }
+.gemini-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:var(--space-2); }
+.gemini-heading h2 { margin:0; } .gemini-heading p { margin:var(--space-1) 0 0; }
+#gemini-notice { color:var(--muted); font-size:var(--font-secondary); }
+#gemini-messages { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; gap:var(--space-3); }
+.gemini-message { white-space:pre-wrap; overflow-wrap:anywhere; margin:0; padding:var(--space-3); background:var(--surface-soft); border-radius:var(--radius-md); }
+.gemini-message[data-role=user] { background:var(--accent-soft); }
+.gemini-message strong { display:block; margin-bottom:var(--space-1); }
+.gemini-composer { display:grid; gap:var(--space-2); }
+.gemini-composer textarea { resize:vertical; max-height:var(--size-220); width:100%; }
+.gemini-actions { display:flex; justify-content:space-between; }
+@media(max-width:1100px) { .app-shell.case-open.assistant-open { padding-right:0; } .gemini-panel { width:min(var(--assistant-width),calc(100% - var(--sidebar-collapsed))); box-shadow:var(--shadow-dialog); z-index:var(--z-overlay); } }
 </style>
     <script>
 // Browser preferences only. Google identity is ALWAYS verified by the server.
@@ -554,6 +633,9 @@ window.STPreferences = (function() {
   }
   var media = window.matchMedia('(prefers-color-scheme: dark)');
   var theme = read('theme') || 'light';
+  var colors=['violet','blue','teal','green','amber','rose'];
+  function setAccent(value){if(!colors.includes(value))value='violet';document.documentElement.dataset.accent=value;write('accent',value);document.querySelectorAll('.accent-choice').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.accent===value));});window.dispatchEvent(new Event('st:theme'));}
+  setAccent(read('accent'));
   function apply() {
     document.documentElement.dataset.theme = theme === 'auto' ? (media.matches ? 'dark' : 'light') : theme;
     window.dispatchEvent(new Event('st:theme'));
@@ -566,6 +648,8 @@ window.STPreferences = (function() {
   if (media.addEventListener) media.addEventListener('change', apply);
   apply();
   document.addEventListener('DOMContentLoaded', function() {
+    var palette=document.getElementById('accent-palette');
+    colors.forEach(function(color){var b=document.createElement('button');b.type='button';b.className='accent-choice';b.dataset.accent=color;b.title=color;b.setAttribute('aria-label',color+' accent');b.innerHTML=STIcons.svg('check');b.onclick=function(){setAccent(color);};palette.appendChild(b);});setAccent(read('accent'));
     document.querySelectorAll('[data-theme-picker]').forEach(function(select) {
       select.value = theme;
       select.addEventListener('change', function() { setTheme(select.value); });
@@ -588,30 +672,33 @@ window.STPreferences = (function() {
         </form>
         <p id="auth-status" role="status" aria-live="polite"></p>
         <p class="auth-note">Uses the Google account authorized for this app. </p>
-        <label class="theme-control">Appearance<select data-theme-picker aria-label="Sign-in appearance"><option value="auto">Automatic</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
       </div>
     </section>
     <main id="application" class="app-shell hidden">
-      <aside class="sidebar" aria-label="Workspace navigation">
-        <div class="brand"><span class="brand-mark">ST</span><span class="brand-name">Line Studio</span></div>
-        <nav aria-label="Main navigation">
-          <p class="nav-caption">WORKSPACE</p>
-          <button id="home-cases" class="nav-item" data-icon="folder" aria-label="Cases" aria-current="page"><span class="nav-label">Cases</span></button>
+      <aside id="case-sidebar" class="sidebar hidden" aria-label="Case navigation">
+        <div class="sidebar-heading"><div class="brand"><span class="brand-mark">ST</span><span class="brand-name">Line Studio</span></div><button id="collapse-sidebar" class="ghost icon-button" data-icon="collapse" aria-label="Collapse sidebar" title="Collapse sidebar" aria-expanded="true"></button></div>
+        <section class="sidebar-section sidebar-simulations" aria-label="Simulations">
+          <p class="nav-caption">SIMULATIONS</p>
+          <nav id="workspace-tabs" class="simulation-navigation" aria-label="Simulations and comparison"></nav>
+        </section>
+        <nav class="sidebar-section" aria-label="Selected simulation">
+          <p id="simulation-nav-caption" class="nav-caption">SELECTED SIMULATION</p>
           <button class="nav-item" data-view="editor" data-icon="edit" aria-label="Line setup" disabled><span class="nav-label">Line setup</span></button>
           <button class="nav-item" data-view="simulation" data-icon="play" aria-label="Simulation" disabled><span class="nav-label">Simulation</span></button>
           <button class="nav-item" data-view="results" data-icon="chart" aria-label="Results" disabled><span class="nav-label">Results</span></button>
           <button class="nav-item" data-view="whatif" data-icon="flask" aria-label="What-If" disabled><span class="nav-label">What-If</span></button>
         </nav>
-        <div class="sidebar-footer">
+        <nav class="sidebar-section sidebar-footer" aria-label="Workspace actions">
           <button id="open-settings" class="nav-item" data-icon="settings" aria-label="Settings"><span class="nav-label">Settings</span></button>
-          <button id="sign-out" class="nav-item" data-icon="lock" aria-label="Lock workspace"><span class="nav-label">Lock workspace</span></button>
-          <button id="collapse-sidebar" class="nav-item" data-icon="collapse" aria-label="Collapse sidebar" aria-expanded="true"><span class="nav-label">Collapse sidebar</span></button>
-        </div>
+          <button id="home-cases" class="nav-item" data-icon="back" aria-label="Close case"><span class="nav-label">Close case</span></button>
+          <button id="sign-out" class="nav-item" data-icon="logout" aria-label="Sign out" title="Sign out of this workspace"><span class="nav-label">Sign out</span></button>
+        </nav>
       </aside>
       <header class="topbar">
         <div class="breadcrumb"><span id="breadcrumb-case">Workspace</span><span>/</span><span id="breadcrumb-view">Cases</span></div>
         <span id="user-email" class="user-chip"></span>
-        <button id="open-commands" class="ghost icon-button" data-icon="command" aria-label="Search commands" title="Search commands (Ctrl/⌘ K)"></button>
+        <div id="cases-top-actions" class="button-row"><button id="cases-settings" class="ghost" data-icon="settings">Settings</button><button id="cases-sign-out" class="ghost" data-icon="logout">Sign out</button></div>
+        <button id="toggle-gemini" class="secondary hidden" data-icon="chat" aria-controls="gemini-panel" aria-expanded="false">Gemini</button>
         <button id="save-workspace-case" class="secondary hidden" data-icon="save">Save changes</button>
       </header>
       <div class="workspace-content">
@@ -645,7 +732,6 @@ window.STPreferences = (function() {
         <div id="cases-list" class="cases-list"></div><div id="case-pagination" class="case-pagination"></div>
       </section>
 
-      <nav id="workspace-tabs" class="workspace-tabs hidden" aria-label="Simulation workspace"></nav>
       <section id="editor-panel" class="card hidden">
         <div class="section-heading">
           <div>
@@ -765,7 +851,7 @@ window.STPreferences = (function() {
           </details></div>
       </section>
       <section id="whatif-panel" class="card hidden" aria-labelledby="whatif-title">
-        <div class="section-heading"><div><p class="eyebrow">SCENARIO LAB</p><h2 id="whatif-title">What-If</h2><p>Review the evidence, change a scenario and compare measured simulation results.</p></div></div>
+        <div class="section-heading"><div><p class="eyebrow">SCENARIO LAB</p><h2 id="whatif-title">What-If</h2><p>Review the recommendation for the selected simulation and create a proposed scenario.</p></div></div>
         <div id="whatif-empty" class="empty"><h3>Start with a baseline run</h3><p>Run the active simulation to generate an evidence-based recommendation.</p><button data-view="simulation" data-icon="play">Go to simulation</button></div>
           <section id="simulation-analysis" class="simulation-analysis hidden" aria-labelledby="simulation-analysis-title">
             <div class="simulation-analysis-heading">
@@ -777,25 +863,32 @@ window.STPreferences = (function() {
             </div>
             <div id="simulation-analysis-content" class="simulation-analysis-content"></div>
           </section>
+      </section>
       <section id="comparison-panel" class="card hidden">
-        <div class="section-heading"><div><p class="eyebrow">CASE COMPARISON</p><h2>Simulation VS.</h2><p>Select exactly two saved simulations.</p></div></div>
+        <div class="section-heading"><div><p class="eyebrow">CASE COMPARISON</p><h2>Compare simulations</h2><p>Select exactly two saved simulations.</p></div></div>
         <div class="field-grid"><label>Baseline<select id="case-compare-a"></select></label><label>Proposed scenario<select id="case-compare-b"></select></label></div>
         <div id="case-comparison-content" class="comparison-vertical"></div>
-      </section>
       </section>
       <section id="engine-panel" class="card hidden">
         <h2>Engine boundary</h2>
         <p>The browser engine executes the deterministic Case. Apps Script is responsible for identity and Drive persistence; Gemini is not used for calculation. Sensor positions in the public demo are transparent synthetic assumptions, not a PLC or safety-control design.</p>
       </section>
       </div>
+      <aside id="gemini-panel" class="gemini-panel hidden" aria-labelledby="gemini-title">
+        <header class="gemini-heading"><div><h2 id="gemini-title">Gemini</h2><span id="gemini-context" class="chart-note"></span></div><button id="close-gemini" class="ghost icon-button" data-icon="chevron" aria-label="Collapse Gemini panel" title="Collapse Gemini panel"></button></header>
+        <p id="gemini-notice" class="gemini-notice">Ask about the saved case, equipment and simulation results.</p>
+        <div id="gemini-messages" class="gemini-messages" role="log" aria-label="Case conversation" aria-live="polite"></div>
+        <form id="gemini-form" class="gemini-composer"><label class="sr-only" for="gemini-question">Question for Gemini</label><textarea id="gemini-question" rows="3" maxlength="6000" placeholder="Ask about this case…" required></textarea><div class="gemini-actions"><button id="clear-gemini" type="button" class="ghost icon-button" data-icon="trash" aria-label="Clear case conversation" title="Clear case conversation"></button><button id="send-gemini" type="submit" data-icon="send">Send</button></div><p id="gemini-error" class="chart-note" role="alert"></p><p class="chart-note">Sending shares this saved case with Google Gemini. Conversations clear when you close the case, refresh or sign out.</p></form>
+      </aside>
     </main>
     <dialog id="settings-dialog" aria-labelledby="settings-title">
       <header class="dialog-heading"><h2 id="settings-title">Settings</h2><button id="settings-close" class="ghost icon-button" data-icon="x" aria-label="Close settings" title="Close settings (Esc)"></button></header>
       <div class="dialog-body">
-        <section class="settings-section"><h3>Appearance</h3><p>Applied immediately on this browser.</p><div class="settings-row"><label for="settings-theme">Theme</label><select id="settings-theme" data-theme-picker aria-label="Appearance"><option value="light">Light</option><option value="dark">Dark</option><option value="auto">System / Automatic</option></select></div></section>
+        <section class="settings-section"><h3>Appearance</h3><p>Applied immediately on this browser.</p><div class="settings-row"><label for="settings-theme">Theme</label><select id="settings-theme" data-theme-picker aria-label="Appearance"><option value="light">Light</option><option value="dark">Dark</option><option value="auto">System / Automatic</option></select></div><div class="settings-row"><span>Accent color</span><div id="accent-palette" class="accent-palette" role="group" aria-label="Accent color"></div></div></section>
         <section id="workspace-panel" class="settings-section"><h3>Storage &amp; simulation defaults</h3><p>Choose a Drive folder you can access. Cases and results are saved in this workspace.</p>
         <form id="workspace-form"><label for="workspace-folder-id">Drive folder ID</label><input id="workspace-folder-id" autocomplete="off" required>
         <label for="playback-rate">Default playback speed</label><select id="playback-rate"><option value="0.5">0.5×</option><option value="1">1×</option><option value="1.5">1.5×</option><option value="5">5×</option><option value="10">10×</option></select>
+        <fieldset class="gemini-settings"><legend>Gemini</legend><p class="chart-note">Your API key is stored in your Apps Script user properties and used only by the server.</p><label for="gemini-model">Model ID</label><input id="gemini-model" value="gemini-2.5-flash" maxlength="100" pattern="gemini-[a-zA-Z0-9.\-]+" required><label for="gemini-api-key">API key</label><input id="gemini-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep your saved key"><span id="gemini-key-status" class="chart-note"></span><label class="remember"><input id="gemini-clear-key" type="checkbox">Remove saved API key</label></fieldset>
         <p id="settings-error" role="alert"></p><div class="dialog-actions"><span id="settings-unsaved" role="status"></span><button id="settings-cancel" type="button" class="ghost">Cancel</button><button id="settings-save" type="submit" data-icon="save">Save settings</button></div></form></section>
       </div>
     </dialog>
@@ -2869,6 +2962,7 @@ window.SimulatorEngine = {
 // Original line icons: one 24-unit grid, currentColor, uniform stroke.
 window.STIcons = (function() {
   var paths = {
+    chat:'M3 4h18v13H9l-6 4ZM7 8h10M7 12h7', send:'m3 3 18 9-18 9 4-9Zm4 9h14', logout:'M10 4H3v16h7m5-13 5 5-5 5m-8-5h13',
     up:'M12 20V4m-6 6 6-6 6 6', down:'M12 4v16m-6-6 6 6 6-6', folder:'M3 7V5h6l2 2h10v13H3Z', play:'m8 5 12 7-12 7Z', chart:'M4 4v16h17M8 16v-4m5 4V8m5 8V5',
     flask:'M9 3h6m-5 0v7L4 20h16l-6-10V3M8 14h8', settings:'M9 4l1-2h4l1 2 3 2 2 1v4l-2 1-1 3-1 2h-4l-1-2-3-2-2-1V8l2-1Z M15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
     back:'M20 12H4m6-6-6 6 6 6', plus:'M12 5v14M5 12h14', edit:'m4 16 12-12 4 4L8 20H4Zm10-10 4 4',
@@ -2896,7 +2990,7 @@ window.STIcons = (function() {
     <script>
 window.STSettings = (function() {
   var snapshot = '', lastFocus, saving = false;
-  function formValue() { return JSON.stringify([document.getElementById('workspace-folder-id').value,document.getElementById('playback-rate').value]); }
+  function formValue() { return JSON.stringify([document.getElementById('workspace-folder-id').value,document.getElementById('playback-rate').value,document.getElementById('gemini-model').value,document.getElementById('gemini-api-key').value,document.getElementById('gemini-clear-key').checked]); }
   function dirty() { return snapshot !== formValue(); }
   function refresh() { document.getElementById('settings-unsaved').textContent = dirty() ? 'Unsaved changes' : ''; }
   function open() {
@@ -2907,8 +3001,9 @@ window.STSettings = (function() {
   }
   function close() {
     if(saving) return;
-    if(dirty() && !window.confirm('Discard unsaved storage and simulation defaults?')) return;
+    if(dirty() && !window.confirm('Discard unsaved settings?')) return;
     var values=JSON.parse(snapshot); document.getElementById('workspace-folder-id').value=values[0]; document.getElementById('playback-rate').value=values[1];
+    document.getElementById('gemini-model').value=values[2]; document.getElementById('gemini-api-key').value=''; document.getElementById('gemini-clear-key').checked=values[4];
     document.getElementById('settings-dialog').close(); if(lastFocus) lastFocus.focus();
   }
   function setSaving(value) {
@@ -2919,15 +3014,17 @@ window.STSettings = (function() {
     document.getElementById('settings-save').setAttribute('aria-busy',String(value));
     document.getElementById('workspace-folder-id').disabled=value;
     document.getElementById('playback-rate').disabled=value;
+    ['gemini-model','gemini-api-key','gemini-clear-key'].forEach(function(id){document.getElementById(id).disabled=value;});
   }
-  function saved() { snapshot=formValue(); refresh(); setSaving(false); document.getElementById('settings-dialog').close(); if(lastFocus) lastFocus.focus(); }
+  function saved() { document.getElementById('gemini-api-key').value=''; document.getElementById('gemini-clear-key').checked=false; snapshot=formValue(); refresh(); setSaving(false); document.getElementById('settings-dialog').close(); if(lastFocus) lastFocus.focus(); }
   function error(message) { setSaving(false); document.getElementById('settings-error').textContent=message; }
   function init() {
     document.getElementById('settings-close').onclick=close; document.getElementById('settings-cancel').onclick=close;
     document.getElementById('settings-dialog').addEventListener('cancel',function(e){ e.preventDefault(); close(); });
     document.getElementById('workspace-form').addEventListener('input',refresh);
   }
-  return { init:init,open:open,close:close,saved:saved,error:error,setSaving:setSaving };
+  function configureGemini(config){document.getElementById('gemini-model').value=config.model||'gemini-2.5-flash';document.getElementById('gemini-key-status').textContent=config.configured?'API key saved for your Google account.':'No API key configured.';}
+  return { configureGemini:configureGemini,init:init,open:open,close:close,saved:saved,error:error,setSaving:setSaving };
 })();
 </script>
     <script>
@@ -3008,12 +3105,17 @@ window.STShell = function(state,actions) {
   function sync() {
     var active=Boolean(state.activeCase),view=active?(state.uiView||'simulation'):'cases';
     var connected=Boolean(state.bootstrap?.settings?.workspaceRootFolderId);
-    ['cases','editor','run','results','whatif','comparison'].forEach(function(name){var visible=(name==='cases'&&view==='cases')||(name==='editor'&&view==='editor')||(name==='run'&&view==='simulation')||(name==='results'&&view==='results')||((name==='whatif'||name==='comparison')&&view==='whatif');document.getElementById(name+'-panel').classList.toggle('hidden',!visible);});
+    ['cases','editor','run','results','whatif','comparison'].forEach(function(name){var visible=(name==='cases'&&view==='cases')||(name==='editor'&&view==='editor')||(name==='run'&&view==='simulation')||(name==='results'&&view==='results')||(name==='whatif'&&view==='whatif')||(name==='comparison'&&view==='comparison');document.getElementById(name+'-panel').classList.toggle('hidden',!visible);});
+    document.getElementById('application').classList.toggle('case-open',active);
+    document.getElementById('case-sidebar').classList.toggle('hidden',!active);
+    document.getElementById('cases-top-actions').classList.toggle('hidden',active);
+    document.getElementById('toggle-gemini').classList.toggle('hidden',!active);
+    actions.assistant();
     document.getElementById('workspace-tabs').classList.toggle('hidden',!active);
     document.getElementById('home-cases').setAttribute('aria-current',view==='cases'?'page':'false');
     document.querySelectorAll('.sidebar [data-view]').forEach(function(button){button.disabled=!active;button.setAttribute('aria-current',button.dataset.view===view?'page':'false');button.title=active?button.getAttribute('aria-label'):'Open a case first';});
     document.getElementById('breadcrumb-case').textContent=active?state.activeCase.name:'Workspace';
-    document.getElementById('breadcrumb-view').textContent={cases:'Cases',editor:'Line setup',simulation:'Simulation',results:'Results',whatif:'What-If'}[view];
+    document.getElementById('breadcrumb-view').textContent={cases:'Cases',editor:'Line setup',simulation:'Simulation',results:'Results',whatif:'What-If',comparison:'Compare simulations'}[view];
     var save=document.getElementById('save-workspace-case');save.classList.toggle('hidden',!active);save.disabled=!state.isDirty || state.saving;save.innerHTML=STIcons.svg('save')+(state.isDirty?'Save changes':'Saved');
     document.getElementById('show-new-case').disabled=!connected; document.getElementById('create-public-demo-case').disabled=!connected;
     document.getElementById('whatif-empty').classList.toggle('hidden',Boolean(state.run.result));
@@ -3023,6 +3125,8 @@ window.STShell = function(state,actions) {
   function toast(message) {var el=document.getElementById('toast');el.textContent=message;el.classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(function(){el.classList.add('hidden');},4000);}
   function init(){
     STSettings.init();STIcons.decorate();
+    document.getElementById('cases-settings').onclick=STSettings.open;
+    document.getElementById('cases-sign-out').onclick=actions.signout;
     function collapse(){document.getElementById('application').classList.toggle('sidebar-collapsed',collapsed);var el=document.getElementById('collapse-sidebar');el.setAttribute('aria-expanded',String(!collapsed));el.setAttribute('aria-label',collapsed?'Expand sidebar':'Collapse sidebar');el.title=el.getAttribute('aria-label');}
     collapse();document.getElementById('collapse-sidebar').onclick=function(){collapsed=!collapsed;STPreferences.write('sidebar',collapsed?'collapsed':'expanded');collapse();setTimeout(actions.redraw,180);};
     document.querySelectorAll('[data-view]').forEach(function(button){button.addEventListener('click',function(){actions.navigate(button.dataset.view);});});
@@ -3036,7 +3140,7 @@ window.STShell = function(state,actions) {
       if(!list.children.length)list.textContent='No matching commands.';
     }
     function openCommands(){if(document.getElementById('application').classList.contains('hidden')||document.querySelector('dialog[open]'))return;input.value='';commands();dialog.showModal();input.focus();}
-    document.getElementById('open-commands').onclick=openCommands;input.oninput=commands;
+    input.oninput=commands;
     input.onkeydown=function(e){if(e.key==='ArrowDown'){e.preventDefault();list.querySelector('button')?.focus();}if(e.key==='Enter'){e.preventDefault();list.querySelector('button')?.click();}};
     list.onkeydown=function(e){if(!['ArrowDown','ArrowUp'].includes(e.key))return;e.preventDefault();var buttons=Array.from(list.querySelectorAll('button')),index=buttons.indexOf(document.activeElement);buttons[(index+(e.key==='ArrowDown'?1:buttons.length-1))%buttons.length]?.focus();};
     document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCommands();}});
@@ -3366,6 +3470,44 @@ return {render:renderCaseComparison};
 };
 </script>
     <script>
+window.STAssistant = function(state) {
+  var opened=false,caseId=null,messages=[],pending=false,sequence=0;
+  function el(id){return document.getElementById(id);}
+  function render(){
+    el('gemini-messages').textContent='';
+    messages.forEach(function(m){var p=document.createElement('p');p.className='gemini-message';p.dataset.role=m.role;var label=document.createElement('strong');label.textContent=m.role==='user'?'You':'Gemini';p.appendChild(label);p.appendChild(document.createTextNode(m.text));el('gemini-messages').appendChild(p);});
+    el('gemini-messages').scrollTop=el('gemini-messages').scrollHeight;
+  }
+  function reset(){sequence++;messages=[];pending=false;caseId=null;opened=false;render();el('gemini-question').value='';el('gemini-error').textContent='';sync();}
+  function sync(){
+    var active=state.activeCase;
+    if(caseId!==(active?.id||null)){sequence++;caseId=active?.id||null;messages=[];pending=false;render();el('gemini-question').value='';el('gemini-error').textContent='';}
+    var visible=Boolean(active&&opened);
+    el('application').classList.toggle('assistant-open',visible);el('gemini-panel').classList.toggle('hidden',!visible);el('toggle-gemini').setAttribute('aria-expanded',String(visible));
+    el('gemini-context').textContent=active?active.name+' · saved case':'';
+    var configured=Boolean(state.bootstrap?.gemini?.configured);
+    el('gemini-notice').textContent=pending?'Gemini is analyzing the case…':!configured?'Add your Gemini API key in Settings to ask questions.':state.isDirty?'Save your changes before asking about this case.':'Context includes this saved case and all saved simulation results.';
+    el('send-gemini').disabled=pending||!configured||state.isDirty||!active;el('send-gemini').setAttribute('aria-busy',String(pending));
+    el('clear-gemini').disabled=pending;
+  }
+  function init(){
+    el('toggle-gemini').onclick=function(){opened=!opened;sync();if(opened)el('gemini-question').focus();window.dispatchEvent(new Event('resize'));};
+    el('close-gemini').onclick=function(){opened=false;sync();el('toggle-gemini').focus();window.dispatchEvent(new Event('resize'));};
+    el('gemini-panel').addEventListener('keydown',function(e){if(e.key==='Escape'){e.stopPropagation();el('close-gemini').click();}});
+    el('clear-gemini').onclick=function(){messages=[];render();el('gemini-error').textContent='';};
+    el('gemini-form').onsubmit=function(e){
+      e.preventDefault();sync();if(el('send-gemini').disabled)return;
+      var question=el('gemini-question').value.trim();if(!question)return;
+      var request={caseId:caseId,simulationId:state.activeSimulationId,question:question,history:messages.slice(-24)},ticket=++sequence;
+      pending=true;el('gemini-error').textContent='';messages.push({role:'user',text:question});el('gemini-question').value='';render();sync();
+      function finish(response){if(ticket!==sequence)return;pending=false;if(response.ok)messages.push({role:'model',text:response.data.text});else {messages.pop();el('gemini-question').value=question;el('gemini-error').textContent=response.error.message;}render();sync();}
+      google.script.run.withFailureHandler(function(){finish({ok:false,error:{message:'Gemini could not be reached. Try again.'}});}).withSuccessHandler(finish).askGemini(request);
+    };
+  }
+  return {init:init,sync:sync,reset:reset};
+};
+</script>
+    <script>
   (function() {
     var state = {
       bootstrap: null,
@@ -3397,17 +3539,19 @@ return {render:renderCaseComparison};
     var charts = STCharts(state,formatNumber);
     var drawSimulationChart = charts.drawSimulationChart, drawEquipmentSpeedChart = charts.drawEquipmentSpeedChart, drawEquipmentSpeedSparkline = charts.drawEquipmentSpeedSparkline;
     var renderCaseComparison = STComparison(state,isFiniteNumber).render;
-    var shell = STShell(state,{navigate:navigateView,home:showCaseHome,save:saveActiveCase,cases:function(){renderCases(state.bootstrap?.cases||[]);},redraw:renderPlaybackFrame});
+    var assistant = STAssistant(state);
+    var shell = STShell(state,{assistant:assistant.sync,signout:lockWorkspace,navigate:navigateView,home:showCaseHome,save:saveActiveCase,cases:function(){renderCases(state.bootstrap?.cases||[]);},redraw:renderPlaybackFrame});
     function navigateView(view) {
       if (!state.activeCase) return;
       state.uiView = view;
-      if (view === 'whatif') showCaseComparison();
+      if (view === 'comparison') showCaseComparison();
       else { state.workspaceView = 'simulation'; renderWorkspaceTabs(); }
       shell.sync(); renderPlaybackFrame();
     }
 
     document.addEventListener('DOMContentLoaded', function() {
       bindEvents();
+      assistant.init();
       shell.init();
       if (STPreferences.read('remember') === 'yes') {
         document.getElementById('remember-session').checked = true;
@@ -3476,9 +3620,10 @@ return {render:renderCaseComparison};
       STPreferences.write('remember', null);
       document.getElementById('remember-session').checked = false;
       state.bootstrap = null;
+      assistant.reset();
       document.getElementById('cases-list').textContent = '';
       toggle('application', false); toggle('auth-panel', true);
-      document.getElementById('auth-status').textContent = 'Workspace locked. Your Google account remains signed in.';
+      document.getElementById('auth-status').textContent = 'Signed out of Line Studio. Your Google account remains signed in.';
       document.getElementById('sign-in-button').focus();
     }
 
@@ -3494,6 +3639,7 @@ return {render:renderCaseComparison};
       STPreferences.write('remember', document.getElementById('remember-session').checked ? 'yes' : null);
       toggle('auth-panel', false); toggle('application', true);
       state.bootstrap = response.data;
+      STSettings.configureGemini(response.data.gemini || {});
       document.getElementById('user-email').textContent = response.data.user.email;
       document.getElementById('workspace-folder-id').value = response.data.settings.workspaceRootFolderId || '';
       document.getElementById('playback-rate').value = String(response.data.settings.preferredPlaybackRate || 1);
@@ -3516,7 +3662,8 @@ return {render:renderCaseComparison};
       STSettings.setSaving(true);
       callServer('saveUserSettings', [{
         workspaceRootFolderId: document.getElementById('workspace-folder-id').value,
-        preferredPlaybackRate: Number(document.getElementById('playback-rate').value)
+        preferredPlaybackRate: Number(document.getElementById('playback-rate').value),
+        gemini: {model:document.getElementById('gemini-model').value,apiKey:document.getElementById('gemini-api-key').value,clearKey:document.getElementById('gemini-clear-key').checked}
       }], function(response) {
         STSettings.setSaving(false);
         if (!response.ok) return STSettings.error(response.error.message || 'Settings could not be saved.');
@@ -4098,26 +4245,27 @@ function renderRawJson() {
       simulations.forEach(function(tab) {
         var button = document.createElement('button'); button.type = 'button';
         var isActive = state.workspaceView !== 'comparison' && tab.id === state.activeSimulationId;
-        button.className = 'workspace-tab' + (isActive ? ' workspace-tab-active' : '');
-        button.textContent = tab.name;
+        button.className = 'workspace-tab nav-item' + (isActive ? ' workspace-tab-active' : '');
+        button.innerHTML=STIcons.svg('play');var label=document.createElement('span');label.className='nav-label';label.textContent=tab.name;button.appendChild(label);
+        button.setAttribute('aria-label',tab.name);button.setAttribute('aria-current',isActive?'page':'false');
         button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         button.title = (isActive ? 'Active simulation: ' : 'Open simulation: ') + tab.name;
         button.addEventListener('click', function() { activatePersistentSimulation(tab.id); });
         target.appendChild(button);
       });
       var comparison = document.createElement('button'); comparison.type = 'button';
-      comparison.className = 'workspace-tab workspace-tab-comparison' + (state.workspaceView === 'comparison' ? ' workspace-tab-active' : '');
-      comparison.textContent = 'Comparison'; comparison.title = 'Compare two saved simulations from this Case.';
+      comparison.className = 'workspace-tab nav-item workspace-tab-comparison' + (state.workspaceView === 'comparison' ? ' workspace-tab-active' : '');
+      comparison.innerHTML=STIcons.svg('chart')+'<span class="nav-label">Compare simulations</span>';comparison.setAttribute('aria-label','Compare simulations');comparison.setAttribute('aria-current',state.workspaceView==='comparison'?'page':'false'); comparison.title = 'Compare two saved simulations from this Case.';
       comparison.setAttribute('aria-pressed', state.workspaceView === 'comparison' ? 'true' : 'false');
       comparison.addEventListener('click', showCaseComparison); target.appendChild(comparison);
-      STIcons.button(comparison,'flask');
+
       shell.sync();
     }
 
     function showCaseComparison() {
       syncPersistentSimulation();
       state.workspaceView = 'comparison';
-      state.uiView = 'whatif';
+      state.uiView = 'comparison';
       renderWorkspaceTabs();
       toggle('editor-panel', false); toggle('run-panel', false); toggle('comparison-panel', true);
       var simulations = state.activeCase.simulations || [];
@@ -5020,8 +5168,8 @@ function renderRawJson() {
       card.innerHTML = '<div class="live-equipment-card__row"><div class="live-equipment-identity live-equipment-cell" data-label="Equipment"><strong></strong><span class="live-command"></span></div><div class="live-equipment-operation live-equipment-cell" data-label="State &amp; rate"><span class="live-state"></span><b class="live-rate"></b><span class="live-nominal-rate"></span></div><div class="live-equipment-flow live-equipment-cell" data-label="Units &amp; OEE"><span class="live-flow-label"></span><b class="live-processed"></b><span class="live-oee-label" title="OEE = Availability × Performance × Quality. Quality is assumed 100% until the model includes rejected units.">OEE</span><b class="live-oee"></b></div><div class="live-equipment-stats live-equipment-cell" data-label="Time losses"><div><span>Starved</span><b class="live-starved"></b></div><div><span>Blocked</span><b class="live-blocked"></b></div><div><span>Waiting Prime</span><b class="live-waiting-prime"></b></div><div><span>Back-up stop</span><b class="live-backup-stop"></b></div><div><span>Failure</span><b class="live-failure"></b></div><div><span>Emergency</span><b class="live-emergency"></b></div></div><div class="live-speed-cell live-equipment-cell" data-label="Speed trend"><div class="equipment-speed-sparkline-heading"><span>Actual · last 60 s</span><b class="live-sparkline-nominal-rate"></b></div><canvas class="equipment-speed-sparkline" height="56" aria-label="Rolling actual-speed chart"></canvas></div><div class="live-equipment-controls live-equipment-cell" data-label="Scenario controls"><button class="secondary live-control-run" type="button">Run / resume</button><button class="live-control-pause" type="button">Pause</button><button class="live-control-stop" type="button">Planned stop</button><button class="live-control-emergency" type="button">Emergency stop</button><button class="secondary live-control-reset" type="button">Reset + run</button></div></div><div class="live-equipment-zone"></div>';
       var meta=document.createElement('span');meta.className='critical-label';card.querySelector('.live-equipment-identity').appendChild(meta);
       var reliability=document.createElement('span');reliability.className='case-description reliability-label';card.querySelector('.live-equipment-identity').appendChild(reliability);
-      var losses=document.createElement('button');losses.className='ghost loss-toggle';losses.type='button';losses.innerHTML=STIcons.svg('chart')+'Time losses';losses.setAttribute('aria-expanded','false');losses.onclick=function(){var open=card.dataset.losses!=='open';card.dataset.losses=open?'open':'closed';card.classList.toggle('show-losses',open);losses.setAttribute('aria-expanded',String(open));};card.querySelector('.live-equipment-controls').appendChild(losses);
-      [['run','play'],['pause','pause'],['stop','stop'],['emergency','warning'],['reset','refresh']].forEach(function(pair){STIcons.button(card.querySelector('.live-control-'+pair[0]),pair[1]);});
+      var losses=document.createElement('button');losses.className='ghost loss-toggle';losses.type='button';losses.innerHTML=STIcons.svg('chart');losses.title='Time losses';losses.setAttribute('aria-label','Time losses');losses.setAttribute('aria-expanded','false');losses.onclick=function(){var open=card.dataset.losses!=='open';card.dataset.losses=open?'open':'closed';card.classList.toggle('show-losses',open);losses.setAttribute('aria-expanded',String(open));};card.querySelector('.live-equipment-controls').appendChild(losses);
+      [['run','play','Run / resume'],['pause','pause','Pause'],['stop','stop','Planned stop'],['emergency','warning','Emergency stop'],['reset','refresh','Reset + run']].forEach(function(pair){var button=card.querySelector('.live-control-'+pair[0]);button.innerHTML=STIcons.svg(pair[1]);button.setAttribute('aria-label',pair[2]);button.dataset.actionLabel=pair[2];button.title=pair[2];});
       bindLiveEquipmentControl(card.querySelector('.live-control-run'), equipmentId, 'RUN');
       bindLiveEquipmentControl(card.querySelector('.live-control-pause'), equipmentId, 'PAUSE');
       bindLiveEquipmentControl(card.querySelector('.live-control-stop'), equipmentId, 'STOP');
@@ -5252,9 +5400,9 @@ function summarizeGeometrySources(sources, assumptions) {
       var sample = state.run.result && state.run.result.samples[state.run.sampleIndex];
       var isAtRunEnd = !sample || sample.virtualSecond >= state.run.result.durationSeconds;
       button.disabled = isAtRunEnd;
-      button.title = isAtRunEnd
+      button.title = (button.dataset.actionLabel || '') + ' — ' + (isAtRunEnd
         ? 'Reset playback to an earlier virtual time before applying a scenario control.'
-        : 'Apply at the displayed virtual second and recalculate this simulation scenario.';
+        : 'Apply at the displayed virtual second and recalculate this simulation scenario.');
     }
 
     function applyLiveScenarioControl(equipmentId, action) {

@@ -11,8 +11,15 @@ function getUserSettings_() {
 
 function saveUserSettings_(request) {
   var settings = normalizeUserSettings_(request);
+  var gemini = request.gemini ? normalizeGeminiSettings_(request.gemini) : null;
   verifyWorkspaceRoot_(settings.workspaceRootFolderId);
   PropertiesService.getUserProperties().setProperty('USER_SETTINGS_JSON', JSON.stringify(settings));
+  if (gemini) {
+    var props=PropertiesService.getUserProperties();
+    props.setProperty('GEMINI_MODEL',gemini.model);
+    if(gemini.clearKey) props.deleteProperty('GEMINI_API_KEY');
+    else if(gemini.key) props.setProperty('GEMINI_API_KEY',gemini.key);
+  }
   return settings;
 }
 
@@ -51,3 +58,4 @@ function normalizeUserSettings_(settings) {
     preferredPlaybackRate: playbackRate
   };
 }
+

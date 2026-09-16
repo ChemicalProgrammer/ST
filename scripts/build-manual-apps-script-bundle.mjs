@@ -13,6 +13,7 @@ const serverFiles = [
   'CaseService.gs',
   'ReferenceCaseFactory.gs',
   'PublicDemoCaseFactory.gs',
+  'GeminiService.gs',
   'Main.gs'
 ];
 
@@ -36,6 +37,8 @@ const htmlIncludes = [
   ['Shell', 'Shell.html'],
   ['Charts', 'Charts.html'],
   ['Comparison', 'Comparison.html'],
+  ['AssistantStyles', 'AssistantStyles.html'],
+  ['Assistant', 'Assistant.html'],
   ['Client', 'Client.html']
 ];
 
