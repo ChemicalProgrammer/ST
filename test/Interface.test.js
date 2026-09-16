@@ -7,7 +7,7 @@ import postcss from 'postcss';
 import selectorParser from 'postcss-selector-parser';
 const read = file => fs.readFileSync(new URL('../apps-script/'+file,import.meta.url),'utf8');
 const settle = () => new Promise(resolve=>setTimeout(resolve,35));
-async function setup({remember=false,fail=false,many=false}={}) {
+async function setup({remember=false,fail=false,many=false,invalidSheet=false}={}) {
  const context={}; vm.createContext(context);vm.runInContext(read('PublicDemoCaseFactory.gs'),context);
  const initial=JSON.parse(JSON.stringify(context.createPublicDemoCaseRequest_()));
  Object.assign(initial,{id:'demo',revision:1,updatedAt:'2026-09-15T10:00:00Z'});
@@ -17,6 +17,7 @@ async function setup({remember=false,fail=false,many=false}={}) {
  const api={
   getBootstrap:()=>({user:{email:'preview@example.test'},settings:stored,globalConfig:{},gemini:{configured:true,model:'gemini-2.5-flash'},cases:cases.map(c=>({id:c.id,name:c.name,equipmentCount:c.equipment.length,isSimulationReady:c.equipment.length>1,updatedAt:c.updatedAt}))}),
   askGemini:()=>({text:'Analysis of the saved case.'}),
+  previewSheetImport:()=>({canImport:!invalidSheet,source:{schemaVersion:'plant-sheet-v1',sheetName:'Synthetic sheet',readAt:'2026-09-16',spreadsheetId:'synthetic-id'},metadata:{site:'Synthetic site',formatName:'Imported format'},equipment:copy(initial.equipment.slice(0,3)).map((e,i)=>({...e,characteristics:{...e.characteristics,sourceSheetRow:i+10}})),sourceRows:[],errors:invalidSheet?[{cell:'D10:E10',message:'Supply both MTBF and MTTR.'}]:[],warnings:[],notes:['Review model assumptions.']}),
   getCase:id=>copy(cases.find(c=>c.id===id)),
   saveCase:c=>{c=copy(c);c.revision++;cases=cases.map(x=>x.id===c.id?c:x);return c;},
   saveUserSettings:s=>(stored=s),
@@ -127,5 +128,25 @@ test('UI: compact editor reorders equipment with keyboard and preserves values',
  await h.click('#settings-save');assert(!h.d.getElementById('status').textContent.includes('Loading console'));
  await h.click('#toggle-gemini');const grip=h.d.getElementById('gemini-resize');const initial=Number(grip.getAttribute('aria-valuenow'));grip.dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'ArrowLeft'}));assert(Number(grip.getAttribute('aria-valuenow'))>initial);
  assert.deepEqual(h.errors,[]);
+ }finally{h.dom.window.close();}
+});
+
+test('UI: Sheet preview creates a separate saved simulation and preserves current editor changes',async()=>{
+ const h=await setup();try{
+ await h.click('#sign-in-button');await h.click('.open-case');await h.click('.sidebar [data-view="editor"]');
+ const field=h.d.querySelector('.equipment-name');field.value='Original equipment edited';field.dispatchEvent(new h.w.Event('input',{bubbles:true}));
+ await h.click('#open-sheet-import');h.d.getElementById('sheet-import-url').value='synthetic-sheet-id';await h.click('#sheet-import-read');
+ assert.match(h.d.getElementById('sheet-import-preview').textContent,/Synthetic sheet/);assert(h.d.getElementById('sheet-import-apply').disabled);
+ h.d.getElementById('sheet-import-ack').checked=true;h.d.getElementById('sheet-import-ack').dispatchEvent(new h.w.Event('change'));await h.click('#sheet-import-apply');
+ assert(!h.d.getElementById('sheet-import-dialog').open);assert(h.visible('editor-panel'));assert.equal(h.d.querySelectorAll('.equipment-card').length,3);
+ let record=JSON.parse(h.d.getElementById('case-json-preview').value);assert.equal(record.simulations.length,2);assert.equal(record.simulations[0].equipment[0].name,'Original equipment edited');assert.equal(record.simulations[0].equipment.length,13);assert.equal(record.simulations[1].sourceImport.metadata.site,'Synthetic site');
+ assert(!h.d.getElementById('save-workspace-case').disabled);await h.click('#save-workspace-case');await h.click('#reload-case');
+ record=JSON.parse(h.d.getElementById('case-json-preview').value);assert.equal(record.simulations.length,2);assert.equal(record.simulations[1].sourceImport.metadata.site,'Synthetic site');assert.deepEqual(h.errors,[]);
+ }finally{h.dom.window.close();}
+});
+test('UI: invalid Sheet cannot import; cancel leaves equipment intact',async()=>{
+ const h=await setup({invalidSheet:true});try{
+ await h.click('#sign-in-button');await h.click('.open-case');await h.click('.sidebar [data-view="editor"]');await h.click('#open-sheet-import');h.d.getElementById('sheet-import-url').value='synthetic-sheet-id';await h.click('#sheet-import-read');
+ assert.match(h.d.getElementById('sheet-import-preview').textContent,/D10:E10/);h.d.getElementById('sheet-import-ack').checked=true;h.d.getElementById('sheet-import-ack').dispatchEvent(new h.w.Event('change'));assert(h.d.getElementById('sheet-import-apply').disabled);await h.click('#sheet-import-cancel');assert.equal(h.d.querySelectorAll('.equipment-card').length,13);assert.equal(h.d.getElementById('sheet-import-preview').textContent,'');assert.deepEqual(h.errors,[]);
  }finally{h.dom.window.close();}
 });

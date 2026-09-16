@@ -154,6 +154,7 @@ function normalizeSimulations_(simulations, fallbackEquipment, fallbackConfig) {
       dynamicConfig: normalizeObject_(simulation.dynamicConfig),
       results: normalizeObject_(simulation.results),
       scenario: normalizeObject_(simulation.scenario),
+      sourceImport: normalizeObject_(simulation.sourceImport),
       clonedFromSimulationId: typeof simulation.clonedFromSimulationId === 'string' ? simulation.clonedFromSimulationId : null,
       createdAt: typeof simulation.createdAt === 'string' ? simulation.createdAt : new Date().toISOString(),
       updatedAt: typeof simulation.updatedAt === 'string' ? simulation.updatedAt : new Date().toISOString()
@@ -301,3 +302,4 @@ function toCaseSummary_(caseData, file) {
     dataClassification: typeof metadata.dataClassification === 'string' ? metadata.dataClassification : null
   };
 }
+

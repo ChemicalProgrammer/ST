@@ -26,6 +26,7 @@ ${source}
 
 window.SimulatorEngine = {
   simulateLine: simulateLine,
+  validateSimulationInput: validateSimulationInput,
   calculateConveyorEngineering: calculateConveyorEngineering
 };
 })(window);

@@ -14,6 +14,7 @@ const serverFiles = [
   'ReferenceCaseFactory.gs',
   'PublicDemoCaseFactory.gs',
   'GeminiService.gs',
+  'SheetImportService.gs',
   'Main.gs'
 ];
 
@@ -40,6 +41,8 @@ const htmlIncludes = [
   ['AssistantStyles', 'AssistantStyles.html'],
   ['Assistant', 'Assistant.html'],
   ['EquipmentDrag', 'EquipmentDrag.html'],
+  ['SheetImportStyles', 'SheetImportStyles.html'],
+  ['SheetImport', 'SheetImport.html'],
   ['Client', 'Client.html']
 ];
 

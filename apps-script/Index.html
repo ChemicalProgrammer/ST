@@ -716,6 +716,23 @@ dialog::backdrop { background: var(--overlay); } dialog[open] { display:flex; fl
 #gemini-resize:hover,#gemini-resize:focus-visible { background:var(--accent-soft); outline:var(--border-width) solid var(--accent); }
 .gemini-heading { flex-shrink:0; }
 </style>
+    <style>
+#sheet-import-dialog { --dialog-width:var(--size-980); }
+#sheet-import-form { display:grid; gap:var(--space-3); }
+#sheet-import-preview { margin-top:var(--space-5); overflow-wrap:anywhere; }
+#sheet-import-preview .table-scroll { overflow-x:auto; }
+#sheet-import-preview table { width:100%; border-collapse:collapse; font-size:var(--font-secondary); }
+#sheet-import-preview th,#sheet-import-preview td { padding:var(--space-2); border-bottom:var(--border-width) solid var(--line); text-align:left; }
+#sheet-import-preview th { color:var(--muted); font-weight:var(--weight-medium); }
+#sheet-import-preview pre { white-space:pre-wrap; font-size:var(--font-caption); }
+#sheet-import-preview details { padding:var(--space-3); margin-top:var(--space-3); border:var(--border-width) solid var(--line); border-radius:var(--radius-md); }
+#sheet-import-preview li { margin:var(--space-2) 0; }
+.sheet-metadata { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-2); }
+.sheet-metadata dt { color:var(--muted); } .sheet-metadata dd { margin:0; }
+#sheet-import-error { color:var(--danger); }
+#sheet-import-dialog .dialog-actions { flex-wrap:wrap; }
+#sheet-import-dialog .dialog-actions label { margin-right:auto; max-width:var(--size-420); }
+</style>
     <script>
 // Browser preferences only. Google identity is ALWAYS verified by the server.
 window.STPreferences = (function() {
@@ -855,7 +872,7 @@ window.STPreferences = (function() {
             <h3>Equipment sequence</h3>
             <p>Order defines material flow. Use alternating machine → conveyor → machine steps; every conveyor requires physical geometry.</p>
           </div>
-          <button id="add-equipment" data-icon="plus" class="secondary icon-button" type="button" aria-label="Add equipment" title="Add equipment"></button>
+          <div class="button-row"><button id="open-sheet-import" data-icon="download" class="secondary" type="button">Import Sheet</button><button id="add-equipment" data-icon="plus" class="secondary icon-button" type="button" aria-label="Add equipment" title="Add equipment"></button></div>
         </div>
         <div id="equipment-list" class="equipment-list"></div>
 
@@ -986,6 +1003,15 @@ window.STPreferences = (function() {
         <p id="settings-error" role="alert"></p></form></section>
       </div>
       <div class="dialog-actions"><span id="settings-unsaved" role="status"></span><button id="settings-cancel" type="button" class="ghost">Cancel</button><button id="settings-save" type="submit" form="workspace-form" data-icon="save">Save settings</button></div>
+    </dialog>
+    <dialog id="sheet-import-dialog" aria-labelledby="sheet-import-title">
+      <header class="dialog-heading"><h2 id="sheet-import-title">Import equipment from Google Sheets</h2><button id="sheet-import-close" class="ghost icon-button" data-icon="x" aria-label="Close import" title="Close import"></button></header>
+      <div class="dialog-body">
+        <p>Read C1:C7 and equipment rows A10:W. NA and N/A mean not applicable. Import creates a new simulation in this case; save the case to keep it.</p>
+        <form id="sheet-import-form"><label>Google Sheets URL or ID<input id="sheet-import-url" required autocomplete="off" placeholder="https://docs.google.com/spreadsheets/d/…"></label><label>Worksheet name (optional)<input id="sheet-import-tab" autocomplete="off" placeholder="Uses the URL tab, or the first worksheet"></label><button id="sheet-import-read" data-icon="refresh" type="submit">Preview import</button></form>
+        <p id="sheet-import-error" role="alert"></p><div id="sheet-import-preview" aria-live="polite"></div>
+      </div>
+      <footer class="dialog-actions"><label class="remember"><input id="sheet-import-ack" type="checkbox">I reviewed the mapping, assumptions and warnings.</label><button id="sheet-import-cancel" class="ghost" type="button">Cancel</button><button id="sheet-import-apply" data-icon="plus" type="button" disabled>Create simulation</button></footer>
     </dialog>
     <dialog id="command-dialog" aria-label="Command palette"><input id="command-search" class="command-search" type="search" placeholder="Search commands…" aria-label="Search commands"><div id="command-list" class="command-list"></div></dialog>
     <div id="toast" class="hidden" role="status"></div>
@@ -3049,6 +3075,7 @@ function round(value) {
 
 window.SimulatorEngine = {
   simulateLine: simulateLine,
+  validateSimulationInput: validateSimulationInput,
   calculateConveyorEngineering: calculateConveyorEngineering
 };
 })(window);
@@ -3630,6 +3657,46 @@ window.STEquipmentDrag=(function(){
 })();
 </script>
     <script>
+window.STSheetImport=function(state,actions){
+  var preview=null,sequence=0,context=null,lastFocus;
+  function el(id){return document.getElementById(id);}
+  function validContext(){return context&&state.activeCase?.id===context.caseId&&state.activeSimulationId===context.simulationId&&state.requestEpoch===context.epoch;}
+  function clear(){preview=null;el('sheet-import-preview').textContent='';el('sheet-import-ack').checked=false;el('sheet-import-apply').disabled=true;}
+  function busy(value){el('sheet-import-read').disabled=value;el('sheet-import-read').setAttribute('aria-busy',String(value));el('sheet-import-url').disabled=value;el('sheet-import-tab').disabled=value;}
+  function close(){sequence++;clear();busy(false);el('sheet-import-dialog').close();if(lastFocus&&lastFocus.isConnected)lastFocus.focus();}
+  function node(tag,text){var n=document.createElement(tag);n.textContent=text;return n;}
+  function render(data){
+    var host=el('sheet-import-preview');host.textContent='';
+    host.appendChild(node('h3',data.equipment.length+' equipment · '+data.source.sheetName));
+    var metadata=node('dl','');metadata.className='sheet-metadata';
+    Object.entries(data.metadata).forEach(function(entry){metadata.appendChild(node('dt',({site:'Site',packagingLine:'Packaging line',formatName:'Format',containerSizeOz:'Container size (oz)',bottlesPerCase:'Bottles per case',dateOfAnalysis:'Analysis date',by:'By'})[entry[0]]));metadata.appendChild(node('dd',entry[1]===null?'NA':String(entry[1])));});host.appendChild(metadata);
+    var table=document.createElement('table'),head=document.createElement('thead'),tr=document.createElement('tr');
+    ['Row','Equipment','Type','Critical','MTBF (min)','MTTR (min)','Nominal (bpm)'].forEach(function(label){tr.appendChild(node('th',label));});head.appendChild(tr);table.appendChild(head);
+    var body=document.createElement('tbody');data.equipment.forEach(function(unit){var r=document.createElement('tr');[unit.characteristics.sourceSheetRow,unit.name,unit.type,unit.characteristics.criticalMachine?'Y':'N',unit.processData.equipment.mtbfMinutes,unit.processData.equipment.mttrMinutes,unit.nominalRatePerSecond===null?null:Math.round(unit.nominalRatePerSecond*60000)/1000].forEach(function(value){r.appendChild(node('td',value===null?'NA':String(value)));});body.appendChild(r);});table.appendChild(body);var scroll=document.createElement('div');scroll.className='table-scroll';scroll.appendChild(table);host.appendChild(scroll);
+    var validation=window.SimulatorEngine.validateSimulationInput({case:{equipment:data.equipment},run:{durationSeconds:1,tickSeconds:1,seed:1}});
+    var draftIssues=validation.ok?[]:validation.error.details.map(function(d){return {cell:d.path||'Model',message:d.message||JSON.stringify(d)};});
+    [['Import errors',data.errors],['Review before running',data.warnings.concat(draftIssues)]].forEach(function(group){if(!group[1].length)return;host.appendChild(node('h4',group[0]));var list=document.createElement('ul');group[1].forEach(function(item){list.appendChild(node('li',item.cell+': '+item.message));});host.appendChild(list);});
+    var detail=document.createElement('details');detail.open=true;detail.appendChild(node('summary','Mapping and model assumptions'));var list=document.createElement('ul');data.notes.forEach(function(text){list.appendChild(node('li',text));});detail.appendChild(list);host.appendChild(detail);
+    var source=document.createElement('details');source.appendChild(node('summary','All imported values (A–W)'));var pre=node('pre',JSON.stringify(data.sourceRows,null,2));source.appendChild(pre);host.appendChild(source);
+    el('sheet-import-error').textContent=data.canImport?'': 'Fix the listed import errors in the source Sheet, then preview again.';
+  }
+  function init(){
+    el('open-sheet-import').onclick=function(){if(!state.activeCase||state.saving)return;context={caseId:state.activeCase.id,simulationId:state.activeSimulationId,epoch:state.requestEpoch};lastFocus=document.activeElement;clear();el('sheet-import-error').textContent='';el('sheet-import-dialog').showModal();el('sheet-import-url').focus();};
+    el('sheet-import-close').onclick=close;el('sheet-import-cancel').onclick=close;
+    el('sheet-import-dialog').addEventListener('cancel',function(e){e.preventDefault();close();});
+    ['sheet-import-url','sheet-import-tab'].forEach(function(id){el(id).addEventListener('input',clear);});
+    el('sheet-import-ack').onchange=function(){el('sheet-import-apply').disabled=!(preview?.canImport&&el('sheet-import-ack').checked);};
+    el('sheet-import-form').onsubmit=function(e){
+      e.preventDefault();if(!validContext())return close();clear();busy(true);el('sheet-import-error').textContent='';var ticket=++sequence;
+      function finish(response){if(ticket!==sequence||!validContext())return;busy(false);if(!response.ok){el('sheet-import-error').textContent=response.error.message;return;}preview=response.data;render(preview);}
+      google.script.run.withFailureHandler(function(){finish({ok:false,error:{message:'The Sheet could not be read. Check your access and try again.'}});}).withSuccessHandler(finish).previewSheetImport({caseId:context.caseId,spreadsheet:el('sheet-import-url').value,sheetName:el('sheet-import-tab').value});
+    };
+    el('sheet-import-apply').onclick=function(){if(!validContext()||!preview?.canImport||!el('sheet-import-ack').checked)return;if(actions.apply(preview))close();};
+  }
+  return {init:init};
+};
+</script>
+    <script>
   (function() {
     var state = {
       bootstrap: null,
@@ -3662,6 +3729,7 @@ window.STEquipmentDrag=(function(){
     var drawSimulationChart = charts.drawSimulationChart, drawEquipmentSpeedChart = charts.drawEquipmentSpeedChart, drawEquipmentSpeedSparkline = charts.drawEquipmentSpeedSparkline;
     var renderCaseComparison = STComparison(state,isFiniteNumber).render;
     var assistant = STAssistant(state);
+    var sheetImport = STSheetImport(state,{apply:applySheetImport});
     var shell = STShell(state,{assistant:assistant.sync,signout:lockWorkspace,navigate:navigateView,home:showCaseHome,save:saveActiveCase,cases:function(){renderCases(state.bootstrap?.cases||[]);},redraw:renderPlaybackFrame});
     function navigateView(view) {
       if (!state.activeCase) return;
@@ -3674,6 +3742,7 @@ window.STEquipmentDrag=(function(){
     document.addEventListener('DOMContentLoaded', function() {
       bindEvents();
       assistant.init();
+      sheetImport.init();
       shell.init();
       if (STPreferences.read('remember') === 'yes') {
         document.getElementById('remember-session').checked = true;
@@ -3935,6 +4004,24 @@ function openCase(caseId) {
       });
     }
 
+    function applySheetImport(preview) {
+      if (!state.activeCase || state.saving || !preview.canImport) return false;
+      // Capture unsaved editor changes in the existing simulation before adding a new one.
+      if (!syncEquipmentFromEditor()) return false;
+      syncPersistentSimulation();
+      var stamp=Date.now(),id='sheet-'+stamp;
+      while(state.activeCase.simulations.some(function(sim){return sim.id===id;}))id='sheet-'+(++stamp);
+      var imported={id:id,name:(preview.metadata.formatName||'Sheet import').slice(0,100)+' · '+(state.activeCase.simulations.length+1),equipment:cloneJson(preview.equipment),dynamicConfig:Object.assign({},readRunConfiguration(),{commands:[]}),results:null,scenario:{},sourceImport:{source:preview.source,metadata:preview.metadata,rows:preview.sourceRows,warnings:preview.warnings,notes:preview.notes},createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+      state.activeCase.simulations.push(imported);
+      state.activeCase.metadata=Object.assign({},state.activeCase.metadata,{dataClassification:'USER_PROVIDED'});
+      state.run.configuration=null;
+      activatePersistentSimulation(id,true);
+      state.isDirty=true;state.uiView='editor';
+      renderEditorMeta();renderRawJson();shell.sync();
+      setStatus('Imported '+preview.equipment.length+' equipment into a new simulation. Review Line setup and save the case.');
+      return true;
+    }
+
     function addEquipment() {
       if (!syncEquipmentFromEditor()) return;
       state.activeCase.equipment.push(createBlankEquipment());
@@ -3973,7 +4060,8 @@ function openCase(caseId) {
     function renderCaseDataNote() {
       var target = document.getElementById('case-data-note');
       var metadata = state.activeCase && state.activeCase.metadata ? state.activeCase.metadata : {};
-      var note = typeof metadata.dataNote === 'string' ? metadata.dataNote : '';
+      var source=activePersistentSimulation()?.sourceImport;
+      var note = source?.source ? 'Imported from '+source.source.sheetName+' · '+source.source.readAt+'. MTBF drives random failure intervals; MTTR is a fixed repair duration. Review the stored import assumptions before running.' : typeof metadata.dataNote === 'string' ? metadata.dataNote : '';
       target.textContent = note;
       toggle('case-data-note', Boolean(note));
     }

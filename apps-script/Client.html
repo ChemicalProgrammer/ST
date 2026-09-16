@@ -31,6 +31,7 @@
     var drawSimulationChart = charts.drawSimulationChart, drawEquipmentSpeedChart = charts.drawEquipmentSpeedChart, drawEquipmentSpeedSparkline = charts.drawEquipmentSpeedSparkline;
     var renderCaseComparison = STComparison(state,isFiniteNumber).render;
     var assistant = STAssistant(state);
+    var sheetImport = STSheetImport(state,{apply:applySheetImport});
     var shell = STShell(state,{assistant:assistant.sync,signout:lockWorkspace,navigate:navigateView,home:showCaseHome,save:saveActiveCase,cases:function(){renderCases(state.bootstrap?.cases||[]);},redraw:renderPlaybackFrame});
     function navigateView(view) {
       if (!state.activeCase) return;
@@ -43,6 +44,7 @@
     document.addEventListener('DOMContentLoaded', function() {
       bindEvents();
       assistant.init();
+      sheetImport.init();
       shell.init();
       if (STPreferences.read('remember') === 'yes') {
         document.getElementById('remember-session').checked = true;
@@ -304,6 +306,24 @@ function openCase(caseId) {
       });
     }
 
+    function applySheetImport(preview) {
+      if (!state.activeCase || state.saving || !preview.canImport) return false;
+      // Capture unsaved editor changes in the existing simulation before adding a new one.
+      if (!syncEquipmentFromEditor()) return false;
+      syncPersistentSimulation();
+      var stamp=Date.now(),id='sheet-'+stamp;
+      while(state.activeCase.simulations.some(function(sim){return sim.id===id;}))id='sheet-'+(++stamp);
+      var imported={id:id,name:(preview.metadata.formatName||'Sheet import').slice(0,100)+' · '+(state.activeCase.simulations.length+1),equipment:cloneJson(preview.equipment),dynamicConfig:Object.assign({},readRunConfiguration(),{commands:[]}),results:null,scenario:{},sourceImport:{source:preview.source,metadata:preview.metadata,rows:preview.sourceRows,warnings:preview.warnings,notes:preview.notes},createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+      state.activeCase.simulations.push(imported);
+      state.activeCase.metadata=Object.assign({},state.activeCase.metadata,{dataClassification:'USER_PROVIDED'});
+      state.run.configuration=null;
+      activatePersistentSimulation(id,true);
+      state.isDirty=true;state.uiView='editor';
+      renderEditorMeta();renderRawJson();shell.sync();
+      setStatus('Imported '+preview.equipment.length+' equipment into a new simulation. Review Line setup and save the case.');
+      return true;
+    }
+
     function addEquipment() {
       if (!syncEquipmentFromEditor()) return;
       state.activeCase.equipment.push(createBlankEquipment());
@@ -342,7 +362,8 @@ function openCase(caseId) {
     function renderCaseDataNote() {
       var target = document.getElementById('case-data-note');
       var metadata = state.activeCase && state.activeCase.metadata ? state.activeCase.metadata : {};
-      var note = typeof metadata.dataNote === 'string' ? metadata.dataNote : '';
+      var source=activePersistentSimulation()?.sourceImport;
+      var note = source?.source ? 'Imported from '+source.source.sheetName+' · '+source.source.readAt+'. MTBF drives random failure intervals; MTTR is a fixed repair duration. Review the stored import assumptions before running.' : typeof metadata.dataNote === 'string' ? metadata.dataNote : '';
       target.textContent = note;
       toggle('case-data-note', Boolean(note));
     }

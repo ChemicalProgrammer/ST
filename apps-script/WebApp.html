@@ -15,6 +15,7 @@
     <?!= include_('DialogStyles'); ?>
     <?!= include_('DashboardStyles'); ?>
     <?!= include_('AssistantStyles'); ?>
+    <?!= include_('SheetImportStyles'); ?>
     <?!= include_('UiPreferences'); ?>
   </head>
   <body>
@@ -119,7 +120,7 @@
             <h3>Equipment sequence</h3>
             <p>Order defines material flow. Use alternating machine → conveyor → machine steps; every conveyor requires physical geometry.</p>
           </div>
-          <button id="add-equipment" data-icon="plus" class="secondary icon-button" type="button" aria-label="Add equipment" title="Add equipment"></button>
+          <div class="button-row"><button id="open-sheet-import" data-icon="download" class="secondary" type="button">Import Sheet</button><button id="add-equipment" data-icon="plus" class="secondary icon-button" type="button" aria-label="Add equipment" title="Add equipment"></button></div>
         </div>
         <div id="equipment-list" class="equipment-list"></div>
 
@@ -251,6 +252,15 @@
       </div>
       <div class="dialog-actions"><span id="settings-unsaved" role="status"></span><button id="settings-cancel" type="button" class="ghost">Cancel</button><button id="settings-save" type="submit" form="workspace-form" data-icon="save">Save settings</button></div>
     </dialog>
+    <dialog id="sheet-import-dialog" aria-labelledby="sheet-import-title">
+      <header class="dialog-heading"><h2 id="sheet-import-title">Import equipment from Google Sheets</h2><button id="sheet-import-close" class="ghost icon-button" data-icon="x" aria-label="Close import" title="Close import"></button></header>
+      <div class="dialog-body">
+        <p>Read C1:C7 and equipment rows A10:W. NA and N/A mean not applicable. Import creates a new simulation in this case; save the case to keep it.</p>
+        <form id="sheet-import-form"><label>Google Sheets URL or ID<input id="sheet-import-url" required autocomplete="off" placeholder="https://docs.google.com/spreadsheets/d/…"></label><label>Worksheet name (optional)<input id="sheet-import-tab" autocomplete="off" placeholder="Uses the URL tab, or the first worksheet"></label><button id="sheet-import-read" data-icon="refresh" type="submit">Preview import</button></form>
+        <p id="sheet-import-error" role="alert"></p><div id="sheet-import-preview" aria-live="polite"></div>
+      </div>
+      <footer class="dialog-actions"><label class="remember"><input id="sheet-import-ack" type="checkbox">I reviewed the mapping, assumptions and warnings.</label><button id="sheet-import-cancel" class="ghost" type="button">Cancel</button><button id="sheet-import-apply" data-icon="plus" type="button" disabled>Create simulation</button></footer>
+    </dialog>
     <dialog id="command-dialog" aria-label="Command palette"><input id="command-search" class="command-search" type="search" placeholder="Search commands…" aria-label="Search commands"><div id="command-list" class="command-list"></div></dialog>
     <div id="toast" class="hidden" role="status"></div>
     <?!= include_('SimulationEngine'); ?>
@@ -263,6 +273,7 @@
     <?!= include_('Comparison'); ?>
     <?!= include_('Assistant'); ?>
     <?!= include_('EquipmentDrag'); ?>
+    <?!= include_('SheetImport'); ?>
     <?!= include_('Client'); ?>
   </body>
 </html>

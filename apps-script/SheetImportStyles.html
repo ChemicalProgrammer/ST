@@ -1,0 +1,17 @@
+<style>
+#sheet-import-dialog { --dialog-width:var(--size-980); }
+#sheet-import-form { display:grid; gap:var(--space-3); }
+#sheet-import-preview { margin-top:var(--space-5); overflow-wrap:anywhere; }
+#sheet-import-preview .table-scroll { overflow-x:auto; }
+#sheet-import-preview table { width:100%; border-collapse:collapse; font-size:var(--font-secondary); }
+#sheet-import-preview th,#sheet-import-preview td { padding:var(--space-2); border-bottom:var(--border-width) solid var(--line); text-align:left; }
+#sheet-import-preview th { color:var(--muted); font-weight:var(--weight-medium); }
+#sheet-import-preview pre { white-space:pre-wrap; font-size:var(--font-caption); }
+#sheet-import-preview details { padding:var(--space-3); margin-top:var(--space-3); border:var(--border-width) solid var(--line); border-radius:var(--radius-md); }
+#sheet-import-preview li { margin:var(--space-2) 0; }
+.sheet-metadata { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-2); }
+.sheet-metadata dt { color:var(--muted); } .sheet-metadata dd { margin:0; }
+#sheet-import-error { color:var(--danger); }
+#sheet-import-dialog .dialog-actions { flex-wrap:wrap; }
+#sheet-import-dialog .dialog-actions label { margin-right:auto; max-width:var(--size-420); }
+</style>

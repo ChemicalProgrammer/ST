@@ -1,0 +1,40 @@
+<script>
+window.STSheetImport=function(state,actions){
+  var preview=null,sequence=0,context=null,lastFocus;
+  function el(id){return document.getElementById(id);}
+  function validContext(){return context&&state.activeCase?.id===context.caseId&&state.activeSimulationId===context.simulationId&&state.requestEpoch===context.epoch;}
+  function clear(){preview=null;el('sheet-import-preview').textContent='';el('sheet-import-ack').checked=false;el('sheet-import-apply').disabled=true;}
+  function busy(value){el('sheet-import-read').disabled=value;el('sheet-import-read').setAttribute('aria-busy',String(value));el('sheet-import-url').disabled=value;el('sheet-import-tab').disabled=value;}
+  function close(){sequence++;clear();busy(false);el('sheet-import-dialog').close();if(lastFocus&&lastFocus.isConnected)lastFocus.focus();}
+  function node(tag,text){var n=document.createElement(tag);n.textContent=text;return n;}
+  function render(data){
+    var host=el('sheet-import-preview');host.textContent='';
+    host.appendChild(node('h3',data.equipment.length+' equipment · '+data.source.sheetName));
+    var metadata=node('dl','');metadata.className='sheet-metadata';
+    Object.entries(data.metadata).forEach(function(entry){metadata.appendChild(node('dt',({site:'Site',packagingLine:'Packaging line',formatName:'Format',containerSizeOz:'Container size (oz)',bottlesPerCase:'Bottles per case',dateOfAnalysis:'Analysis date',by:'By'})[entry[0]]));metadata.appendChild(node('dd',entry[1]===null?'NA':String(entry[1])));});host.appendChild(metadata);
+    var table=document.createElement('table'),head=document.createElement('thead'),tr=document.createElement('tr');
+    ['Row','Equipment','Type','Critical','MTBF (min)','MTTR (min)','Nominal (bpm)'].forEach(function(label){tr.appendChild(node('th',label));});head.appendChild(tr);table.appendChild(head);
+    var body=document.createElement('tbody');data.equipment.forEach(function(unit){var r=document.createElement('tr');[unit.characteristics.sourceSheetRow,unit.name,unit.type,unit.characteristics.criticalMachine?'Y':'N',unit.processData.equipment.mtbfMinutes,unit.processData.equipment.mttrMinutes,unit.nominalRatePerSecond===null?null:Math.round(unit.nominalRatePerSecond*60000)/1000].forEach(function(value){r.appendChild(node('td',value===null?'NA':String(value)));});body.appendChild(r);});table.appendChild(body);var scroll=document.createElement('div');scroll.className='table-scroll';scroll.appendChild(table);host.appendChild(scroll);
+    var validation=window.SimulatorEngine.validateSimulationInput({case:{equipment:data.equipment},run:{durationSeconds:1,tickSeconds:1,seed:1}});
+    var draftIssues=validation.ok?[]:validation.error.details.map(function(d){return {cell:d.path||'Model',message:d.message||JSON.stringify(d)};});
+    [['Import errors',data.errors],['Review before running',data.warnings.concat(draftIssues)]].forEach(function(group){if(!group[1].length)return;host.appendChild(node('h4',group[0]));var list=document.createElement('ul');group[1].forEach(function(item){list.appendChild(node('li',item.cell+': '+item.message));});host.appendChild(list);});
+    var detail=document.createElement('details');detail.open=true;detail.appendChild(node('summary','Mapping and model assumptions'));var list=document.createElement('ul');data.notes.forEach(function(text){list.appendChild(node('li',text));});detail.appendChild(list);host.appendChild(detail);
+    var source=document.createElement('details');source.appendChild(node('summary','All imported values (A–W)'));var pre=node('pre',JSON.stringify(data.sourceRows,null,2));source.appendChild(pre);host.appendChild(source);
+    el('sheet-import-error').textContent=data.canImport?'': 'Fix the listed import errors in the source Sheet, then preview again.';
+  }
+  function init(){
+    el('open-sheet-import').onclick=function(){if(!state.activeCase||state.saving)return;context={caseId:state.activeCase.id,simulationId:state.activeSimulationId,epoch:state.requestEpoch};lastFocus=document.activeElement;clear();el('sheet-import-error').textContent='';el('sheet-import-dialog').showModal();el('sheet-import-url').focus();};
+    el('sheet-import-close').onclick=close;el('sheet-import-cancel').onclick=close;
+    el('sheet-import-dialog').addEventListener('cancel',function(e){e.preventDefault();close();});
+    ['sheet-import-url','sheet-import-tab'].forEach(function(id){el(id).addEventListener('input',clear);});
+    el('sheet-import-ack').onchange=function(){el('sheet-import-apply').disabled=!(preview?.canImport&&el('sheet-import-ack').checked);};
+    el('sheet-import-form').onsubmit=function(e){
+      e.preventDefault();if(!validContext())return close();clear();busy(true);el('sheet-import-error').textContent='';var ticket=++sequence;
+      function finish(response){if(ticket!==sequence||!validContext())return;busy(false);if(!response.ok){el('sheet-import-error').textContent=response.error.message;return;}preview=response.data;render(preview);}
+      google.script.run.withFailureHandler(function(){finish({ok:false,error:{message:'The Sheet could not be read. Check your access and try again.'}});}).withSuccessHandler(finish).previewSheetImport({caseId:context.caseId,spreadsheet:el('sheet-import-url').value,sheetName:el('sheet-import-tab').value});
+    };
+    el('sheet-import-apply').onclick=function(){if(!validContext()||!preview?.canImport||!el('sheet-import-ack').checked)return;if(actions.apply(preview))close();};
+  }
+  return {init:init};
+};
+</script>

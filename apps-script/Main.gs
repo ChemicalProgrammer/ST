@@ -87,3 +87,7 @@ function executeServerAction_(action) {
 function askGemini(request) {
   return executeServerAction_(function(user) { return askGemini_(request, user); });
 }
+
+function previewSheetImport(request) {
+  return executeServerAction_(function(user) { return previewSheetImport_(request, user); });
+}

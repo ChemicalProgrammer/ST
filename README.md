@@ -57,3 +57,5 @@ The first runnable reference engine is now included. From the repository root, r
 ## Interface resources
 
 See [the interface guide](docs/18_INTERFACE.md) for themes, design tokens, view modules, keyboard navigation, preview and deployment.
+
+- [Import equipment from a fixed Google Sheet](docs/19_SHEET_IMPORT.md): Line setup preview, NA handling, MTBF/MTTR and model boundaries.

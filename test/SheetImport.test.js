@@ -1,0 +1,62 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {simulateLine} from '../src/simulation/LineSimulationEngine.js';
+function runtime(extra={}){
+ const c={Date,Utilities:{formatDate:()=> '2026-09-16'},...extra};vm.createContext(c);
+ for(const file of ['ApiResponse.gs','CaseService.gs','SheetImportService.gs','Main.gs'])vm.runInContext(fs.readFileSync('apps-script/'+file,'utf8'),c);
+ return c;
+}
+function fixture(){
+ const na=()=>Array(23).fill('NA');let a=na(),b=na(),c=na();
+ Object.assign(a,{0:'Blowmolder',1:'Machine A',2:'Y',3:2,4:.25,5:120,12:1,13:2});
+ Object.assign(b,{0:'Conveyor',1:'Conveyor B',2:'N',6:6000,7:500,8:100,9:200,10:50,11:60,12:1,13:2,14:60,15:2,16:10,17:7,18:8,19:.5,20:.5,21:2,22:5});
+ Object.assign(c,{0:'Filler',1:'Machine C',2:'N',3:3,4:.2,5:130,14:60,15:2});
+ return {metadata:['Synthetic site','Line 1','Synthetic format',12,24,'2026-09-16','Test author'],rows:[a,b,c],formats:Array.from({length:3},()=>Array(23).fill('0.00'))};
+}
+const plain=x=>JSON.parse(JSON.stringify(x));
+test('fixed Sheet mapping preserves every A–W value and C1:C7 metadata, with no invented reliability',()=>{
+ const r=runtime(),f=fixture(),out=r.parseEquipmentSheet_(f.metadata,f.rows,f.formats);
+ assert.equal(out.canImport,true,JSON.stringify(out.errors));assert.equal(out.equipment.length,3);
+ assert.equal(out.metadata.bottlesPerCase,24);assert.equal(out.metadata.containerSizeOz,12);
+ const [a,b]=out.equipment;
+ assert.equal(a.nominalRatePerSecond,2);assert.equal(a.processData.role,'CRITICAL_MACHINE');assert.deepEqual(plain(a.noiseProfile),{reliability:{mtbfMinutes:2,mttrMinutes:.25}});
+ assert.equal(a.processData.geometry.lactMm,null);assert.deepEqual(plain(b.noiseProfile),{});assert.equal(b.nominalRatePerSecond,2);
+ assert.equal(b.processData.geometry.actualDischargeMm,100);assert.equal(b.processData.geometry.actualCodingMm,200);
+ assert.equal(b.processData.accumulation.blockedTimeDelaySeconds,.5);assert.equal(b.processData.accumulation.insuranceFactorUnits,2);
+ assert.equal(b.processData.speedAndSensors.overspeedVsInfeedScrewPercent,5);assert.equal(b.processData.speedAndSensors.conveyorSpeedFactorVsPreviousConveyorPercent,8);
+ assert.equal(Object.keys(out.sourceRows[1].values).length,23);assert(out.notes.some(s=>s.includes('I/J and R/S/W')));
+});
+test('percentage cells and plain percentage points normalize without changing seconds or geometry',()=>{
+ const r=runtime(),f=fixture();f.rows[1][16]=.1;f.formats[1][16]='0.00%';f.rows[1][17]='7%';
+ const out=r.parseEquipmentSheet_(f.metadata,f.rows,f.formats);
+ assert.equal(out.sourceRows[1].values.conveyorSpeedFactorVsDischargeVelocityPercent,10);assert.equal(out.sourceRows[1].values.codingConveyorSpeedFactorVsPreviousConveyorPercent,7);assert.equal(out.sourceRows[1].values.blockedTimeDelaySeconds,.5);
+});
+test('invalid reliability, numeric formulas, types and geometry report exact cells; blank rows preserve order',()=>{
+ const r=runtime(),f=fixture();f.rows[0][3]=0;f.rows[0][4]='NA';f.rows[2][0]='Unknown';f.rows[2][5]='#DIV/0!';f.rows[1][7]=7000;
+ let out=r.parseEquipmentSheet_(f.metadata,f.rows,f.formats);assert.equal(out.canImport,false);
+ for(const cell of ['D10:E10','A12','F12','H11'])assert(out.errors.some(e=>e.cell===cell),cell);
+ const good=fixture();good.rows.splice(1,0,Array(23).fill(''));out=r.parseEquipmentSheet_(good.metadata,good.rows,[]);assert.equal(out.equipment.length,3);assert.equal(out.sourceRows[1].row,12);
+});
+test('imported MTBF/MTTR drive reproducible engine failures and fixed repair durations',()=>{
+ const r=runtime(),f=fixture();const out=plain(r.parseEquipmentSheet_(f.metadata,f.rows,f.formats));
+ const input={case:{id:'imported',equipment:out.equipment},run:{durationSeconds:600,tickSeconds:1,sampleEverySeconds:5,seed:42}};
+ const a=simulateLine(input),b=simulateLine(input);assert.equal(a.ok,true,JSON.stringify(a.error));assert.deepEqual(a,b);
+ const failures=a.result.events.filter(e=>e.type==='FAILURE_STARTED');assert(failures.length>0);assert(failures.every(e=>e.equipmentId!=='sheet-row-11'));assert(failures.every(e=>e.durationSeconds===(e.equipmentId==='sheet-row-10'?15:12)));
+});
+test('import provenance survives case normalization independently for each simulation',()=>{
+ const r=runtime(),f=fixture(),out=r.parseEquipmentSheet_(f.metadata,f.rows,f.formats);
+ const simulations=r.normalizeSimulations_([{id:'a',equipment:out.equipment,sourceImport:{metadata:out.metadata,rows:out.sourceRows}},{id:'b',equipment:out.equipment}],[],{});
+ assert.equal(simulations[0].sourceImport.metadata.site,'Synthetic site');assert.deepEqual(plain(simulations[1].sourceImport),{});
+});
+test('Sheet reader authenticates, checks case ownership, respects URL gid and serializes dates',()=>{
+ const f=fixture(),ranges=[],reads=[];
+ function tab(id){return {getSheetId:()=>id,getName:()=> 'Tab '+id,getLastRow:()=>12,getMaxColumns:()=>23,getMaxRows:()=>100,getRange:(row,col,num,width)=>{ranges.push([row,col,num,width]);return {getValues:()=>row===1?f.metadata.map((v,i)=>[i===5?new Date('2026-09-16'):v]):f.rows,getNumberFormats:()=>f.formats};}};}
+ const tabs=[tab(0),tab(22)];const r=runtime({SpreadsheetApp:{openById:id=>{reads.push(id);return {getSheets:()=>tabs,getSheetByName:()=>null,getSpreadsheetTimeZone:()=> 'Etc/UTC'};}}});
+ let checked=false;r.requireCurrentUser_=()=>({email:'owner@test'});r.getCase_=(id,user)=>{assert.equal(id,'mine');assert.equal(user.email,'owner@test');checked=true;};
+ const response=r.previewSheetImport({caseId:'mine',spreadsheet:'https://docs.google.com/spreadsheets/d/synthetic-sheet-id/edit#gid=22'});
+ assert(checked);assert.equal(response.ok,true);assert.equal(response.data.source.sheetId,22);assert.equal(response.data.metadata.dateOfAnalysis,'2026-09-16');assert.deepEqual(ranges,[[1,3,7,1],[10,1,3,23]]);
+ r.getCase_=()=>{throw Error('Denied');};assert.equal(r.previewSheetImport({caseId:'mine',spreadsheet:'synthetic-sheet-id'}).ok,false);assert.equal(reads.length,1);
+ assert.throws(()=>r.parseSheetReference_('https://evil.test/synthetic-sheet-id'));
+});
