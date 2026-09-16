@@ -6,9 +6,14 @@
     <base target="_top">
     <?!= include_('DesignTokens'); ?>
     <?!= include_('Fonts'); ?>
-    <?!= include_('ThemePalette'); ?>
     <?!= include_('Styles'); ?>
+    <?!= include_('EditorStyles'); ?>
+    <?!= include_('SimulationStyles'); ?>
+    <?!= include_('AnalysisStyles'); ?>
     <?!= include_('ShellStyles'); ?>
+    <?!= include_('CasesStyles'); ?>
+    <?!= include_('DialogStyles'); ?>
+    <?!= include_('DashboardStyles'); ?>
     <?!= include_('UiPreferences'); ?>
   </head>
   <body>
@@ -28,39 +33,31 @@
       </div>
     </section>
     <main id="application" class="app-shell hidden">
+      <aside class="sidebar" aria-label="Workspace navigation">
+        <div class="brand"><span class="brand-mark">ST</span><span class="brand-name">Line Studio</span></div>
+        <nav aria-label="Main navigation">
+          <p class="nav-caption">WORKSPACE</p>
+          <button id="home-cases" class="nav-item" data-icon="folder" aria-label="Cases" aria-current="page"><span class="nav-label">Cases</span></button>
+          <button class="nav-item" data-view="editor" data-icon="edit" aria-label="Line setup" disabled><span class="nav-label">Line setup</span></button>
+          <button class="nav-item" data-view="simulation" data-icon="play" aria-label="Simulation" disabled><span class="nav-label">Simulation</span></button>
+          <button class="nav-item" data-view="results" data-icon="chart" aria-label="Results" disabled><span class="nav-label">Results</span></button>
+          <button class="nav-item" data-view="whatif" data-icon="flask" aria-label="What-If" disabled><span class="nav-label">What-If</span></button>
+        </nav>
+        <div class="sidebar-footer">
+          <button id="open-settings" class="nav-item" data-icon="settings" aria-label="Settings"><span class="nav-label">Settings</span></button>
+          <button id="sign-out" class="nav-item" data-icon="lock" aria-label="Lock workspace"><span class="nav-label">Lock workspace</span></button>
+          <button id="collapse-sidebar" class="nav-item" data-icon="collapse" aria-label="Collapse sidebar" aria-expanded="true"><span class="nav-label">Collapse sidebar</span></button>
+        </div>
+      </aside>
       <header class="topbar">
-        <div class="brand">
-          <span class="brand-mark" aria-hidden="true">ST</span>
-          <div><p class="eyebrow">LINE STUDIO</p><h1>Packaging line simulator</h1></div>
-        </div>
-        <div class="topbar-actions">
-          <button id="home-cases" type="button" class="secondary">Cases</button>
-          <button id="open-settings" type="button" class="secondary">Settings</button>
-          <label class="theme-control"><span class="sr-only">Appearance</span><select data-theme-picker aria-label="Appearance"><option value="auto">Automatic</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
-          <span id="user-email" class="user-chip">Loading identity…</span>
-          <button id="sign-out" type="button" class="secondary">Lock workspace</button>
-        </div>
+        <div class="breadcrumb"><span id="breadcrumb-case">Workspace</span><span>/</span><span id="breadcrumb-view">Cases</span></div>
+        <span id="user-email" class="user-chip"></span>
+        <button id="open-commands" class="ghost icon-button" data-icon="command" aria-label="Search commands" title="Search commands (Ctrl/⌘ K)"></button>
+        <button id="save-workspace-case" class="secondary hidden" data-icon="save">Save changes</button>
       </header>
-
+      <div class="workspace-content">
+      <div id="request-progress" class="request-progress hidden" role="status" aria-label="Loading"><span></span></div>
       <section id="status" class="status" aria-live="polite">Loading console…</section>
-
-      <section id="workspace-panel" class="card hidden">
-        <h2>Workspace</h2>
-        <p>Choose a Google Drive folder you can access. The console creates its Cases, Artifacts, and Exports folders inside it.</p>
-        <form id="workspace-form">
-          <label for="workspace-folder-id">Drive folder ID</label>
-          <input id="workspace-folder-id" name="workspaceFolderId" autocomplete="off" required>
-          <label for="playback-rate">Default playback speed</label>
-          <select id="playback-rate" name="playbackRate">
-            <option value="0.5">0.5×</option>
-            <option value="1" selected>1×</option>
-            <option value="1.5">1.5×</option>
-            <option value="5">5×</option>
-            <option value="10">10×</option>
-          </select>
-          <button type="submit">Save workspace</button>
-        </form>
-      </section>
 
       <section id="cases-panel" class="card hidden">
         <div class="section-heading">
@@ -70,25 +67,26 @@
             <p>Pick up where you left off, or explore a new possibility.</p>
           </div>
           <div class="button-row">
-            <button id="create-public-demo-case" class="secondary" type="button">Create demo</button>
-            <button id="show-new-case" type="button">+ New case</button>
+            <button id="create-public-demo-case" data-icon="copy" class="secondary" type="button">Create demo</button>
+            <button id="show-new-case" data-icon="plus" type="button">New case</button>
           </div>
         </div>
         <form id="new-case-form" class="new-case-form hidden">
           <label class="sr-only" for="new-case-name">New Case name</label>
           <input id="new-case-name" placeholder="New Case name" maxlength="120" required>
-          <button type="submit">New Case</button>
+          <button type="submit" data-icon="plus">Create case</button><button id="cancel-new-case" type="button" class="ghost">Cancel</button>
         </form>
-        <label class="search-field"><span class="sr-only">Search your cases</span><input id="case-search" type="search" placeholder="Search cases…" autocomplete="off"></label>
-        <div id="cases-list" class="cases-list"></div>
+        <div class="cases-toolbar">
+          <label class="search-field" data-icon="search"><span class="sr-only">Search your cases</span><input id="case-search" type="search" placeholder="Search cases…" autocomplete="off"></label>
+          <select id="case-filter" aria-label="Filter cases"><option value="all">All cases</option><option value="ready">Ready to simulate</option><option value="draft">Drafts</option></select>
+          <select id="case-sort" aria-label="Sort cases"><option value="updated">Recently updated</option><option value="name">Name A–Z</option></select>
+          <button id="case-layout" class="ghost icon-button" data-icon="grid" aria-label="Switch to grid view" title="Switch to grid view"></button>
+          <span id="case-count" class="case-count" role="status"></span>
+        </div>
+        <div id="cases-list" class="cases-list"></div><div id="case-pagination" class="case-pagination"></div>
       </section>
 
       <nav id="workspace-tabs" class="workspace-tabs hidden" aria-label="Simulation workspace"></nav>
-      <section id="comparison-panel" class="card hidden">
-        <div class="section-heading"><div><p class="eyebrow">CASE COMPARISON</p><h2>Simulation VS.</h2><p>Select exactly two saved simulations.</p></div></div>
-        <div class="field-grid"><label>Simulation A<select id="case-compare-a"></select></label><label>Simulation B<select id="case-compare-b"></select></label></div>
-        <div id="case-comparison-content" class="comparison-vertical"></div>
-      </section>
       <section id="editor-panel" class="card hidden">
         <div class="section-heading">
           <div>
@@ -97,10 +95,10 @@
             <p id="editor-meta"></p>
           </div>
           <div class="button-row">
-            <button id="reload-case" class="secondary" type="button">Reload</button>
-            <button id="clone-case" class="secondary" type="button">Clone Simulation</button>
-            <button id="delete-case" class="danger" type="button">Delete Case</button>
-            <button id="save-case" type="button">Save Case</button>
+            <button id="reload-case" data-icon="refresh" class="secondary" type="button">Reload</button>
+            <button id="clone-case" data-icon="copy" class="secondary" type="button">Clone Simulation</button>
+            <button id="delete-case" data-icon="trash" class="danger" type="button">Delete Case</button>
+            <button id="save-case" data-icon="save" type="button">Save Case</button>
           </div>
         </div>
 
@@ -118,7 +116,7 @@
             <h3>Equipment sequence</h3>
             <p>Order defines material flow. Use alternating machine → conveyor → machine steps; every conveyor requires physical geometry.</p>
           </div>
-          <button id="add-equipment" class="secondary" type="button">Add equipment</button>
+          <button id="add-equipment" data-icon="plus" class="secondary" type="button">Add equipment</button>
         </div>
         <div id="equipment-list" class="equipment-list"></div>
 
@@ -136,12 +134,12 @@
             <p id="run-case-meta">Select a saved Case to run it.</p>
           </div>
           <div class="button-row">
-            <button id="run-simulation" type="button">Run simulation</button>
+            <button id="run-simulation" data-icon="play" type="button">Run simulation</button>
           </div>
         </div>
 
         <div id="run-not-ready" class="notice hidden">Save a valid physical line before running: machine → conveyor → machine, with geometry on every conveyor.</div>
-        <div id="run-config" class="run-config">
+        <details id="run-config" class="run-config" open><summary>Run configuration &amp; scheduled events</summary>
           <div class="field-grid run-fields">
             <label>Duration mode<select id="duration-mode"><option value="FIXED">Fixed virtual duration</option><option value="INDEFINITE">Indefinite (safety ceiling)</option></select></label>
             <label>Virtual duration / safety ceiling (s)<input id="run-duration" type="number" min="1" step="1" value="300"></label>
@@ -150,25 +148,24 @@
             <label>Playback speed (virtual / real)<select id="run-playback-rate"><option value="0.5">0.5×</option><option value="1">1×</option><option value="1.5">1.5×</option><option value="5">5×</option><option value="10">10×</option></select></label>
           </div>
 
-          <div class="notice model-boundary">
-            At 1×, one virtual second takes one real second. The engine integrates at 0.25 s; the display interval only controls replay detail and result size. Every conveyor uses FlowPilot physical geometry by default: L_act, L_p, package pitch, speed factor, runout, sensor delays, and insurance derive capacity, travel, normal photoeye pulses, Prime / Back-up control, recovery, and design audits. Abstract buffers are not used.
-          </div>
+          <details class="notice model-boundary"><summary>Model assumptions &amp; timing</summary><p>
+            At 1×, one virtual second takes one real second. The engine integrates at 0.25 s; the display interval only controls replay detail and result size. Every conveyor uses FlowPilot physical geometry by default: L_act, L_p, package pitch, speed factor, runout, sensor delays, and insurance derive capacity, travel, normal photoeye pulses, Prime / Back-up control, recovery, and design audits. Abstract buffers are not used.</p></details>
 
           <div class="editor-subheading compact-heading">
             <div>
               <h3>Equipment control events</h3>
               <p>Schedule a pause, planned stop, emergency stop, reset, run, manual, or automatic mode change in virtual time.</p>
             </div>
-            <button id="add-control-event" class="secondary" type="button">Add event</button>
+            <button id="add-control-event" data-icon="plus" class="secondary" type="button">Add event</button>
           </div>
           <div id="control-events" class="control-events"></div>
-        </div>
+        </details>
 
         <div id="simulation-results" class="hidden">
           <div class="playback-toolbar">
-            <button id="play-simulation" class="secondary" type="button">Play</button>
-            <button id="pause-simulation" class="secondary" type="button">Pause</button>
-            <button id="reset-playback" class="secondary" type="button">Reset</button>
+            <button id="play-simulation" data-icon="play" class="secondary" type="button">Play</button>
+            <button id="pause-simulation" data-icon="pause" class="secondary" type="button">Pause</button>
+            <button id="reset-playback" data-icon="refresh" class="secondary" type="button">Reset</button>
             <span id="playback-status">Ready</span>
           </div>
           <div class="metrics-grid">
@@ -181,6 +178,36 @@
             <article><span>Back-up control time</span><strong id="metric-backup-stop">—</strong></article>
             <article><span title="Line OEE is final output divided by the maximum output of the selected pacemaker across the same virtual duration. Quality is assumed 100% until rejects are modeled.">Global OEE</span><strong id="metric-line-oee">—</strong></article>
           </div>
+          <p class="live-controls-help">Scenario controls apply at the displayed virtual second and deterministically recalculate the run. They are simulation controls only; they never command real equipment.</p>
+          <div id="live-equipment" class="live-equipment"></div>
+
+        </div>
+      </section>
+
+      <section id="results-panel" class="card hidden" aria-labelledby="results-title">
+        <div class="section-heading"><div><p class="eyebrow">PERFORMANCE</p><h2 id="results-title">Run results</h2><p id="results-meta">Complete a simulation to inspect the results.</p></div><button id="export-results" class="secondary" data-icon="download" disabled>Export JSON</button></div>
+        <div id="results-empty" class="empty"><h3>No results yet</h3><p>Run this simulation to inspect production, losses and equipment performance.</p><button data-view="simulation" data-icon="play">Go to simulation</button></div>
+        <div id="results-body" class="hidden"><div id="results-kpis" class="result-kpis"></div><p id="results-reference" class="chart-note"></p><div id="results-insight" class="result-insight"></div>
+        <h3>Equipment comparison</h3><div id="results-table" class="table-scroll"></div>
+        <div class="chart-layout"><section class="chart-panel"><h3>Cumulative production</h3><p class="chart-note">Complete simulated duration · output units</p>          <canvas id="simulation-chart" height="210" aria-label="Cumulative output chart"></canvas>
+</section><section class="equipment-speed-chart-panel" aria-labelledby="equipment-speed-chart-title">
+            <div class="equipment-speed-chart-heading">
+              <div>
+                <h3 id="equipment-speed-chart-title">Actual speed by equipment</h3>
+                <p>Full simulated duration. Series colors match the live equipment trends.</p>
+              </div>
+            </div>
+            <canvas id="equipment-speed-chart" height="270" aria-label="Rolling actual speed chart for all equipment"></canvas>
+            <div id="equipment-speed-legend" class="equipment-speed-legend" aria-label="Equipment speed chart legend"></div>
+          </section>
+</div>          <details class="raw-viewer">
+            <summary>Raw simulation result</summary>
+            <textarea id="simulation-json-preview" readonly spellcheck="false"></textarea>
+          </details></div>
+      </section>
+      <section id="whatif-panel" class="card hidden" aria-labelledby="whatif-title">
+        <div class="section-heading"><div><p class="eyebrow">SCENARIO LAB</p><h2 id="whatif-title">What-If</h2><p>Review the evidence, change a scenario and compare measured simulation results.</p></div></div>
+        <div id="whatif-empty" class="empty"><h3>Start with a baseline run</h3><p>Run the active simulation to generate an evidence-based recommendation.</p><button data-view="simulation" data-icon="play">Go to simulation</button></div>
           <section id="simulation-analysis" class="simulation-analysis hidden" aria-labelledby="simulation-analysis-title">
             <div class="simulation-analysis-heading">
               <div>
@@ -191,33 +218,38 @@
             </div>
             <div id="simulation-analysis-content" class="simulation-analysis-content"></div>
           </section>
-          <canvas id="simulation-chart" height="210" aria-label="Cumulative output chart"></canvas>
-          <section class="equipment-speed-chart-panel" aria-labelledby="equipment-speed-chart-title">
-            <div class="equipment-speed-chart-heading">
-              <div>
-                <h3 id="equipment-speed-chart-title">Actual speed by equipment</h3>
-                <p>Rolling view of the last 60 virtual seconds. Each line is actual speed, not nominal speed.</p>
-              </div>
-            </div>
-            <canvas id="equipment-speed-chart" height="270" aria-label="Rolling actual speed chart for all equipment"></canvas>
-            <div id="equipment-speed-legend" class="equipment-speed-legend" aria-label="Equipment speed chart legend"></div>
-          </section>
-          <p class="live-controls-help">Scenario controls apply at the displayed virtual second and deterministically recalculate the run. They are simulation controls only; they never command real equipment.</p>
-          <div id="live-equipment" class="live-equipment"></div>
-          <details class="raw-viewer">
-            <summary>Raw simulation result</summary>
-            <textarea id="simulation-json-preview" readonly spellcheck="false"></textarea>
-          </details>
-        </div>
+      <section id="comparison-panel" class="card hidden">
+        <div class="section-heading"><div><p class="eyebrow">CASE COMPARISON</p><h2>Simulation VS.</h2><p>Select exactly two saved simulations.</p></div></div>
+        <div class="field-grid"><label>Baseline<select id="case-compare-a"></select></label><label>Proposed scenario<select id="case-compare-b"></select></label></div>
+        <div id="case-comparison-content" class="comparison-vertical"></div>
       </section>
-
+      </section>
       <section id="engine-panel" class="card hidden">
         <h2>Engine boundary</h2>
         <p>The browser engine executes the deterministic Case. Apps Script is responsible for identity and Drive persistence; Gemini is not used for calculation. Sensor positions in the public demo are transparent synthetic assumptions, not a PLC or safety-control design.</p>
       </section>
+      </div>
     </main>
+    <dialog id="settings-dialog" aria-labelledby="settings-title">
+      <header class="dialog-heading"><h2 id="settings-title">Settings</h2><button id="settings-close" class="ghost icon-button" data-icon="x" aria-label="Close settings" title="Close settings (Esc)"></button></header>
+      <div class="dialog-body">
+        <section class="settings-section"><h3>Appearance</h3><p>Applied immediately on this browser.</p><div class="settings-row"><label for="settings-theme">Theme</label><select id="settings-theme" data-theme-picker aria-label="Appearance"><option value="light">Light</option><option value="dark">Dark</option><option value="auto">System / Automatic</option></select></div></section>
+        <section id="workspace-panel" class="settings-section"><h3>Storage &amp; simulation defaults</h3><p>Choose a Drive folder you can access. Cases and results are saved in this workspace.</p>
+        <form id="workspace-form"><label for="workspace-folder-id">Drive folder ID</label><input id="workspace-folder-id" autocomplete="off" required>
+        <label for="playback-rate">Default playback speed</label><select id="playback-rate"><option value="0.5">0.5×</option><option value="1">1×</option><option value="1.5">1.5×</option><option value="5">5×</option><option value="10">10×</option></select>
+        <p id="settings-error" role="alert"></p><div class="dialog-actions"><span id="settings-unsaved" role="status"></span><button id="settings-cancel" type="button" class="ghost">Cancel</button><button id="settings-save" type="submit" data-icon="save">Save settings</button></div></form></section>
+      </div>
+    </dialog>
+    <dialog id="command-dialog" aria-label="Command palette"><input id="command-search" class="command-search" type="search" placeholder="Search commands…" aria-label="Search commands"><div id="command-list" class="command-list"></div></dialog>
+    <div id="toast" class="hidden" role="status"></div>
     <?!= include_('SimulationEngine'); ?>
+    <?!= include_('Icons'); ?>
+    <?!= include_('Settings'); ?>
     <?!= include_('CaseGallery'); ?>
+    <?!= include_('Results'); ?>
+    <?!= include_('Shell'); ?>
+    <?!= include_('Charts'); ?>
+    <?!= include_('Comparison'); ?>
     <?!= include_('Client'); ?>
   </body>
 </html>

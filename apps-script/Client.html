@@ -3,9 +3,13 @@
     var state = {
       bootstrap: null,
       requestEpoch: 0,
+      pendingRequests: 0,
+      openSequence: 0,
+      saving: false,
       activeCase: null,
       activeSimulationId: null,
       workspaceView: 'simulation',
+      uiView: 'simulation',
       isDirty: false,
       liveZoneDetails: {},
       lastUserScrollAt: 0,
@@ -23,8 +27,21 @@
       }
     };
 
+    var charts = STCharts(state,formatNumber);
+    var drawSimulationChart = charts.drawSimulationChart, drawEquipmentSpeedChart = charts.drawEquipmentSpeedChart, drawEquipmentSpeedSparkline = charts.drawEquipmentSpeedSparkline;
+    var renderCaseComparison = STComparison(state,isFiniteNumber).render;
+    var shell = STShell(state,{navigate:navigateView,home:showCaseHome,save:saveActiveCase,cases:function(){renderCases(state.bootstrap?.cases||[]);},redraw:renderPlaybackFrame});
+    function navigateView(view) {
+      if (!state.activeCase) return;
+      state.uiView = view;
+      if (view === 'whatif') showCaseComparison();
+      else { state.workspaceView = 'simulation'; renderWorkspaceTabs(); }
+      shell.sync(); renderPlaybackFrame();
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
       bindEvents();
+      shell.init();
       if (STPreferences.read('remember') === 'yes') {
         document.getElementById('remember-session').checked = true;
         signIn();
@@ -39,9 +56,7 @@
       document.getElementById('sign-in-form').addEventListener('submit', function(event) { event.preventDefault(); signIn(); });
       document.getElementById('sign-out').addEventListener('click', lockWorkspace);
       document.getElementById('home-cases').addEventListener('click', showCaseHome);
-      document.getElementById('open-settings').addEventListener('click', function() {
-        toggle('workspace-panel', document.getElementById('workspace-panel').classList.contains('hidden'));
-      });
+      document.getElementById('open-settings').addEventListener('click', STSettings.open);
       document.getElementById('show-new-case').addEventListener('click', function() {
         toggle('new-case-form', true); document.getElementById('new-case-name').focus();
       });
@@ -74,14 +89,17 @@
     }
 
     function showCaseHome() {
+      if(state.saving){setStatus('Saving your changes…');return false;}
       if (state.isDirty && !window.confirm('Discard unsaved changes and return to cases?')) return false;
+      state.openSequence += 1;
       stopPlaybackTimer();
       state.activeCase = null;
+      state.run.result = null;
       state.isDirty = false;
       ['editor-panel', 'run-panel', 'comparison-panel', 'workspace-tabs', 'engine-panel'].forEach(function(id) { toggle(id, false); });
       var connected = Boolean(state.bootstrap && state.bootstrap.settings.workspaceRootFolderId);
       toggle('cases-panel', connected);
-      toggle('workspace-panel', !connected);
+      shell.sync();
       return true;
     }
 
@@ -118,22 +136,25 @@
       }
 
       var hasWorkspace = Boolean(response.data.settings.workspaceRootFolderId);
-      toggle('workspace-panel', !hasWorkspace);
+      document.getElementById('workspace-panel').classList.remove('hidden');
       toggle('cases-panel', hasWorkspace && !state.activeCase);
       toggle('engine-panel', false);
       renderCases(response.data.cases);
-      if (!state.activeCase) setStatus(hasWorkspace ? 'Workspace connected.' : 'Connect a workspace folder to begin.');
+      if (!state.activeCase) setStatus(hasWorkspace ? 'Workspace connected.' : 'Open Settings to connect a Drive folder before creating a case.');
+      shell.sync();
     }
 
     function saveWorkspace(event) {
       event.preventDefault();
-      setBusy('workspace-form', true);
+      STSettings.setSaving(true);
       callServer('saveUserSettings', [{
         workspaceRootFolderId: document.getElementById('workspace-folder-id').value,
         preferredPlaybackRate: Number(document.getElementById('playback-rate').value)
       }], function(response) {
-        setBusy('workspace-form', false);
-        if (!response.ok) return showError(response.error);
+        STSettings.setSaving(false);
+        if (!response.ok) return STSettings.error(response.error.message || 'Settings could not be saved.');
+        STSettings.saved();
+        shell.toast('Settings saved');
         initialize();
       });
     }
@@ -194,14 +215,17 @@ function createPublicDemoCase() {
 
 function openCase(caseId) {
       if (state.isDirty && !window.confirm('Discard unsaved changes and open this case?')) return;
+      var sequence = ++state.openSequence;
       callServer('getCase', [caseId], function(response) {
+        if(sequence !== state.openSequence) return;
         if (!response.ok) return showError(response.error);
         stopPlaybackTimer();
         state.activeCase = response.data;
         toggle('cases-panel', false);
-        toggle('workspace-panel', false);
+
         state.isDirty = false;
         state.workspaceView = 'simulation';
+        state.uiView = 'simulation';
         state.liveZoneDetails = {};
         state.run.commands = [];
         state.run.result = null;
@@ -259,8 +283,11 @@ function openCase(caseId) {
         simulation.dynamicConfig = cloneJson(readRunConfiguration() || simulation.dynamicConfig || {});
         next.simulations = cloneJson(state.activeCase.simulations || []);
       }
+      if(state.saving) return;
+      state.saving=true; shell.sync();
       setBusy('save-case', true);
       callServer('saveCase', [next], function(response) {
+        state.saving=false; shell.sync();
         setBusy('save-case', false);
         if (!response.ok) return showError(response.error);
         state.activeCase = response.data;
@@ -303,6 +330,7 @@ function openCase(caseId) {
       var scenarioText = activeSimulation && activeSimulation.scenario && activeSimulation.scenario.title
         ? ' · What-If: ' + activeSimulation.scenario.title
         : '';
+      shell.sync();
       document.getElementById('editor-meta').textContent = 'ID: ' + state.activeCase.id + ' · Active: ' + (activeSimulation ? activeSimulation.name : '—') + scenarioText + ' · Revision ' + state.activeCase.revision + dirtyText;
     }
 
@@ -346,14 +374,16 @@ function openCase(caseId) {
       updateFormatZoneVisibility(card);
       renderFormatZonePreview(card);
 
+      ['up','down'].forEach(function(direction){var button=card.querySelector('.move-'+direction);button.innerHTML=STIcons.svg(direction==='up'?'up':'down');button.title='Move equipment '+direction;button.setAttribute('aria-label',button.title);});
+      STIcons.button(card.querySelector('.remove-equipment'),'trash');
       card.querySelector('.move-up').disabled = index === 0;
       card.querySelector('.move-down').disabled = index === state.activeCase.equipment.length - 1;
       card.querySelector('.move-up').addEventListener('click', function() { moveEquipment(index, -1); });
       card.querySelector('.move-down').addEventListener('click', function() { moveEquipment(index, 1); });
       card.querySelector('.remove-equipment').addEventListener('click', function() { removeEquipment(index); });
       var collapse = document.createElement('button');
-      collapse.type = 'button'; collapse.className = 'toggle-step secondary'; collapse.textContent = 'Details';
-      collapse.addEventListener('click', function() { card.classList.toggle('equipment-card-expanded'); collapse.textContent = card.classList.contains('equipment-card-expanded') ? 'Collapse' : 'Details'; });
+      collapse.type = 'button'; collapse.className = 'toggle-step secondary'; collapse.innerHTML = STIcons.svg('edit')+'Details'; collapse.setAttribute('aria-expanded','false');
+      collapse.addEventListener('click', function() { card.classList.toggle('equipment-card-expanded'); collapse.innerHTML = STIcons.svg('edit')+(card.classList.contains('equipment-card-expanded') ? 'Collapse' : 'Details'); collapse.setAttribute('aria-expanded',String(card.classList.contains('equipment-card-expanded'))); });
       card.querySelector('.equipment-header .button-row').prepend(collapse);
       card.querySelector('.equipment-type').addEventListener('change', function() {
         updateFormatZoneVisibility(card);
@@ -713,108 +743,25 @@ function renderRawJson() {
       comparison.textContent = 'Comparison'; comparison.title = 'Compare two saved simulations from this Case.';
       comparison.setAttribute('aria-pressed', state.workspaceView === 'comparison' ? 'true' : 'false');
       comparison.addEventListener('click', showCaseComparison); target.appendChild(comparison);
+      STIcons.button(comparison,'flask');
+      shell.sync();
     }
 
     function showCaseComparison() {
       syncPersistentSimulation();
       state.workspaceView = 'comparison';
+      state.uiView = 'whatif';
       renderWorkspaceTabs();
       toggle('editor-panel', false); toggle('run-panel', false); toggle('comparison-panel', true);
       var simulations = state.activeCase.simulations || [];
       var a = document.getElementById('case-compare-a'), b = document.getElementById('case-compare-b');
       [a, b].forEach(function(select) { select.textContent = ''; simulations.forEach(function(sim) { select.add(new Option(sim.name, sim.id)); }); select.onchange = renderCaseComparison; });
-      a.value = state.activeSimulationId || simulations[0]?.id || '';
-      b.value = (simulations.find(function(sim) { return sim.id !== a.value; }) || {}).id || a.value;
+      var current = activePersistentSimulation();
+      a.value = current?.scenario?.sourceSimulationId || current?.clonedFromSimulationId || simulations[0]?.id || '';
+      b.value = current && current.id !== a.value ? current.id : (simulations.find(function(sim) { return sim.id !== a.value; }) || {}).id || a.value;
       renderCaseComparison();
+      shell.sync();
     }
-
-    function renderCaseComparison() {
-      var a = (state.activeCase.simulations || []).find(function(sim) { return sim.id === document.getElementById('case-compare-a').value; });
-      var b = (state.activeCase.simulations || []).find(function(sim) { return sim.id === document.getElementById('case-compare-b').value; });
-      var target = document.getElementById('case-comparison-content'); target.textContent = '';
-      if (!a || !b || a.id === b.id) { target.textContent = 'Select two different simulations.'; return; }
-      appendComparisonContext(target, a, b);
-      appendComparisonSection(target, 'Scenario provenance', a.scenario || {}, b.scenario || {});
-      appendComparisonSection(target, 'Simulation configuration', a.dynamicConfig || {}, b.dynamicConfig || {});
-      appendComparisonSection(target, 'Simulation results', a.results?.summary || {}, b.results?.summary || {});
-      appendComparisonSection(target, 'Saved result metadata', comparisonResultMetadata(a.results), comparisonResultMetadata(b.results));
-      var byIdA = Object.fromEntries((a.equipment || []).map(function(item) { return [item.id, item]; }));
-      var byIdB = Object.fromEntries((b.equipment || []).map(function(item) { return [item.id, item]; }));
-      var equipmentIds = (a.equipment || []).map(function(item) { return item.id; });
-      (b.equipment || []).forEach(function(item) { if (equipmentIds.indexOf(item.id) === -1) equipmentIds.push(item.id); });
-      var metricA = a.results?.equipmentMetrics || {};
-      var metricB = b.results?.equipmentMetrics || {};
-      equipmentIds.forEach(function(equipmentId) {
-        appendComparisonSection(target, 'Equipment · ' + equipmentId, byIdA[equipmentId] || {}, byIdB[equipmentId] || {});
-        appendComparisonSection(target, 'Simulation metrics · ' + equipmentId, metricA[equipmentId] || {}, metricB[equipmentId] || {});
-      });
-    }
-
-    function appendComparisonContext(target, left, right) {
-      var context = document.createElement('section');
-      context.className = 'comparison-context';
-      var leftSeed = left.results?.seed;
-      var rightSeed = right.results?.seed;
-      var leftDuration = left.results?.durationSeconds;
-      var rightDuration = right.results?.durationSeconds;
-      var bothSaved = hasSavedSimulationResult(left.results) && hasSavedSimulationResult(right.results);
-      var paired = bothSaved && leftSeed === rightSeed && leftDuration === rightDuration;
-      context.classList.add(paired ? 'comparison-context-paired' : 'comparison-context-caution');
-      var heading = document.createElement('strong');
-      heading.textContent = left.name + ' vs. ' + right.name;
-      context.appendChild(heading);
-      var detail = document.createElement('p');
-      if (!bothSaved) {
-        detail.textContent = 'Configuration can be compared now. Run and save both simulations before interpreting result deltas.';
-      } else if (paired) {
-        detail.textContent = 'Paired run: both used seed ' + leftSeed + ' and ' + leftDuration + ' virtual seconds. Result differences can be attributed to the saved configuration change within this modeled run.';
-      } else {
-        detail.textContent = 'Comparison caution: saved seed or virtual duration differs (' + leftSeed + ' / ' + leftDuration + ' s vs. ' + rightSeed + ' / ' + rightDuration + ' s). Configuration differences remain valid, but rerun both with the same seed and duration for a direct result comparison.';
-      }
-      context.appendChild(detail);
-      target.appendChild(context);
-    }
-
-    function hasSavedSimulationResult(result) {
-      return Boolean(result && result.replay && result.summary &&
-        isFiniteNumber(result.seed) && isFiniteNumber(result.durationSeconds));
-    }
-
-    function comparisonResultMetadata(result) {
-      if (!hasSavedSimulationResult(result)) return {};
-      return {
-        seed: result.seed,
-        durationSeconds: result.durationSeconds,
-        completedAt: result.completedAt,
-        replaySampleCount: Array.isArray(result.replay?.samples) ? result.replay.samples.length : undefined,
-        eventCount: Array.isArray(result.replay?.events) ? result.replay.events.length : undefined
-      };
-    }
-
-    function appendComparisonSection(target, title, left, right) {
-      var section = document.createElement('section'); section.className = 'comparison-section';
-      var heading = document.createElement('h3'); heading.textContent = title; section.appendChild(heading);
-      var flatLeft = flattenComparisonValues(left); var flatRight = flattenComparisonValues(right);
-      var keys = Array.from(new Set(Object.keys(flatLeft).concat(Object.keys(flatRight)))).sort();
-      if (!keys.length) { section.appendChild(document.createTextNode('No saved values.')); target.appendChild(section); return; }
-      keys.forEach(function(key) {
-        var leftValue = flatLeft[key]; var rightValue = flatRight[key];
-        var row = document.createElement('div'); row.className = 'comparison-row' + (String(leftValue) !== String(rightValue) ? ' comparison-changed' : '');
-        row.innerHTML = '<strong></strong><span></span><span></span>';
-        row.children[0].textContent = key; row.children[1].textContent = formatComparisonValue(leftValue); row.children[2].textContent = formatComparisonValue(rightValue);
-        section.appendChild(row);
-      });
-      target.appendChild(section);
-    }
-
-    function flattenComparisonValues(value, prefix, output) {
-      var result = output || {}; var base = prefix || '';
-      if (value === null || value === undefined || typeof value !== 'object' || Array.isArray(value)) { result[base || 'value'] = value; return result; }
-      Object.keys(value).forEach(function(key) { var path = base ? base + '.' + key : key; var item = value[key]; if (item && typeof item === 'object' && !Array.isArray(item)) flattenComparisonValues(item, path, result); else result[path] = item; });
-      return result;
-    }
-
-    function formatComparisonValue(value) { return value === undefined || value === null || value === '' ? '—' : Array.isArray(value) ? JSON.stringify(value) : String(value); }
 
     function initializePersistentSimulations() {
       if (!Array.isArray(state.activeCase.simulations) || !state.activeCase.simulations.length) {
@@ -841,17 +788,21 @@ function renderRawJson() {
     }
 
     function activatePersistentSimulation(simulationId, initial) {
+      var hadUnsavedChanges = state.isDirty;
       if (!initial) syncPersistentSimulation();
       var simulation = (state.activeCase.simulations || []).find(function(item) { return item.id === simulationId; });
       if (!simulation) return;
+      stopPlaybackTimer();
+      state.run.sampleIndex = 0;
       state.activeSimulationId = simulation.id;
       state.workspaceView = 'simulation';
+      state.uiView = 'simulation';
       toggle('comparison-panel', false);
       state.activeCase.equipment = cloneJson(simulation.equipment || []);
       state.run.commands = cloneJson(simulation.dynamicConfig?.commands || []);
       applyScenarioRunInputs(simulation.dynamicConfig);
       state.run.result = simulation.results?.replay ? cloneJson(simulation.results.replay) : null;
-      state.isDirty = false;
+      state.isDirty = initial ? false : hadUnsavedChanges;
       renderEditor();
       if (state.run.result) {
         document.getElementById('simulation-json-preview').value = JSON.stringify(state.run.result, null, 2);
@@ -859,6 +810,7 @@ function renderRawJson() {
         renderPlaybackFrame();
       }
       renderSimulationAnalysis();
+      shell.sync();
       setStatus('Active simulation: ' + simulation.name + '.');
     }
 
@@ -940,7 +892,7 @@ function renderRawJson() {
         if (primary.canApply) {
           var button = document.createElement('button');
           button.type = 'button';
-          button.textContent = 'Create recommended Simulation B';
+          button.innerHTML = STIcons.svg('plus')+'Create recommended Simulation B';
           button.title = 'Create a saved clone, apply only these inputs, then review and run the successor simulation.';
           button.addEventListener('click', function() { createWhatIfScenario(primary.kind, button); });
           recommendation.appendChild(button);
@@ -1369,9 +1321,9 @@ function renderRawJson() {
 
     function applyScenarioRunInputs(run) {
       if (!run) return;
-      document.getElementById('run-duration').value = run.durationSeconds;
-      document.getElementById('run-sample-interval').value = run.sampleEverySeconds;
-      document.getElementById('run-seed').value = run.seed;
+      document.getElementById('run-duration').value = run.durationSeconds ?? document.getElementById('run-duration').defaultValue;
+      document.getElementById('run-sample-interval').value = run.sampleEverySeconds ?? document.getElementById('run-sample-interval').defaultValue;
+      document.getElementById('run-seed').value = run.seed ?? document.getElementById('run-seed').defaultValue;
     }
 
     function cloneJson(value) {
@@ -1510,6 +1462,7 @@ function renderRawJson() {
       state.run.sampleIndex = findSampleIndexAtOrBefore(response.result.samples, resumeAtVirtualSecond);
       toggle('simulation-results', true);
       document.getElementById('simulation-json-preview').value = JSON.stringify(response.result, null, 2);
+      shell.sync();
       renderPlaybackFrame();
       return true;
     }
@@ -1590,7 +1543,7 @@ function renderRawJson() {
       document.getElementById('metric-backup-stop').textContent = formatMinutes(sum(sample.equipment.map(function(unit) { return unit.backupStopSeconds || 0; })));
       document.getElementById('metric-line-oee').textContent = formatLineOeeAtSample(sample);
       setPlaybackStatus((state.run.playing ? 'Playing' : 'At') + ' ' + time + ' s · frame ' + state.run.sampleIndex + ' / ' + (state.run.result.samples.length - 1));
-      renderLiveEquipment(sample);
+      if (state.uiView === 'simulation') renderLiveEquipment(sample);
       drawSimulationChart();
       drawEquipmentSpeedChart();
       restoreLiveEquipmentScrollAnchor(scrollAnchor);
@@ -1698,6 +1651,10 @@ function renderRawJson() {
       card.setAttribute('data-equipment-id', equipmentId);
       card.setAttribute('role', 'listitem');
       card.innerHTML = '<div class="live-equipment-card__row"><div class="live-equipment-identity live-equipment-cell" data-label="Equipment"><strong></strong><span class="live-command"></span></div><div class="live-equipment-operation live-equipment-cell" data-label="State &amp; rate"><span class="live-state"></span><b class="live-rate"></b><span class="live-nominal-rate"></span></div><div class="live-equipment-flow live-equipment-cell" data-label="Units &amp; OEE"><span class="live-flow-label"></span><b class="live-processed"></b><span class="live-oee-label" title="OEE = Availability × Performance × Quality. Quality is assumed 100% until the model includes rejected units.">OEE</span><b class="live-oee"></b></div><div class="live-equipment-stats live-equipment-cell" data-label="Time losses"><div><span>Starved</span><b class="live-starved"></b></div><div><span>Blocked</span><b class="live-blocked"></b></div><div><span>Waiting Prime</span><b class="live-waiting-prime"></b></div><div><span>Back-up stop</span><b class="live-backup-stop"></b></div><div><span>Failure</span><b class="live-failure"></b></div><div><span>Emergency</span><b class="live-emergency"></b></div></div><div class="live-speed-cell live-equipment-cell" data-label="Speed trend"><div class="equipment-speed-sparkline-heading"><span>Actual · last 60 s</span><b class="live-sparkline-nominal-rate"></b></div><canvas class="equipment-speed-sparkline" height="56" aria-label="Rolling actual-speed chart"></canvas></div><div class="live-equipment-controls live-equipment-cell" data-label="Scenario controls"><button class="secondary live-control-run" type="button">Run / resume</button><button class="live-control-pause" type="button">Pause</button><button class="live-control-stop" type="button">Planned stop</button><button class="live-control-emergency" type="button">Emergency stop</button><button class="secondary live-control-reset" type="button">Reset + run</button></div></div><div class="live-equipment-zone"></div>';
+      var meta=document.createElement('span');meta.className='critical-label';card.querySelector('.live-equipment-identity').appendChild(meta);
+      var reliability=document.createElement('span');reliability.className='case-description reliability-label';card.querySelector('.live-equipment-identity').appendChild(reliability);
+      var losses=document.createElement('button');losses.className='ghost loss-toggle';losses.type='button';losses.innerHTML=STIcons.svg('chart')+'Time losses';losses.setAttribute('aria-expanded','false');losses.onclick=function(){var open=card.dataset.losses!=='open';card.dataset.losses=open?'open':'closed';card.classList.toggle('show-losses',open);losses.setAttribute('aria-expanded',String(open));};card.querySelector('.live-equipment-controls').appendChild(losses);
+      [['run','play'],['pause','pause'],['stop','stop'],['emergency','warning'],['reset','refresh']].forEach(function(pair){STIcons.button(card.querySelector('.live-control-'+pair[0]),pair[1]);});
       bindLiveEquipmentControl(card.querySelector('.live-control-run'), equipmentId, 'RUN');
       bindLiveEquipmentControl(card.querySelector('.live-control-pause'), equipmentId, 'PAUSE');
       bindLiveEquipmentControl(card.querySelector('.live-control-stop'), equipmentId, 'STOP');
@@ -1708,9 +1665,11 @@ function renderRawJson() {
 
     function updateLiveEquipmentCard(card, unit, model, index, sample) {
       var availabilityState = unit.availabilityState || unit.mode || 'UNKNOWN';
-      card.className = 'live-equipment-card state-' + availabilityState.toLowerCase().replace(/_/g, '-');
+      card.className = 'live-equipment-card state-' + availabilityState.toLowerCase().replace(/_/g, '-') + (card.dataset.losses === 'open' ? ' show-losses' : '');
       card.querySelector('.live-equipment-identity strong').textContent = model.name || unit.id;
-      card.querySelector('.live-state').textContent = availabilityState;
+      card.querySelector('.live-state').textContent = availabilityState.replace(/_/g,' ');
+      card.querySelector('.critical-label').textContent = model.processData?.role === 'PACEMAKER' ? 'Critical · pacemaker' : model.processData?.role === 'CRITICAL_MACHINE' ? 'Critical equipment' : '';
+      card.querySelector('.reliability-label').textContent = model.noiseProfile?.reliability ? 'MTBF '+formatNumber(model.noiseProfile?.reliability.mtbfMinutes)+' min · MTTR '+formatNumber(model.noiseProfile?.reliability.mttrMinutes)+' min' : '';
       card.querySelector('.live-command').textContent = 'Command: ' + unit.mode;
       card.querySelector('.live-flow-label').textContent = index === 0 ? 'Produced' : 'Processed';
       card.querySelector('.live-processed').textContent = formatNumber(unit.processedUnits === undefined ? unit.outputCount : unit.processedUnits);
@@ -1722,9 +1681,9 @@ function renderRawJson() {
       card.querySelector('.live-backup-stop').textContent = formatMinutes(unit.backupStopSeconds);
       card.querySelector('.live-failure').textContent = formatMinutes(unit.failureSeconds);
       card.querySelector('.live-emergency').textContent = formatMinutes(unit.emergencyStopSeconds);
-      card.querySelector('.live-nominal-rate').textContent = 'Nominal ' + formatRatePerMinute(model.nominalRatePerSecond);
+      card.querySelector('.live-nominal-rate').textContent = 'Nominal ' + formatRatePerMinute(model.nominalRatePerSecond) + (model.processData?.equipment?.maximumSpeedBpm ? ' · Max ' + formatNumber(model.processData.equipment.maximumSpeedBpm) + ' / min' : '');
       card.querySelector('.live-sparkline-nominal-rate').textContent = formatRatePerMinute(model.nominalRatePerSecond);
-      Array.prototype.forEach.call(card.querySelectorAll('.live-equipment-controls button'), updateLiveEquipmentControl);
+      Array.prototype.forEach.call(card.querySelectorAll('.live-equipment-controls button:not(.loss-toggle)'), updateLiveEquipmentControl);
 
       var zone = sample.accumulationZones ? sample.accumulationZones.find(function(candidate) {
         return candidate.ownerEquipmentId === unit.id;
@@ -1957,203 +1916,6 @@ function summarizeGeometrySources(sources, assumptions) {
       if (wasPlaying) startPlayback();
     }
 
-    function drawSimulationChart() {
-      var canvas = document.getElementById('simulation-chart');
-      if (!canvas || !state.run.result) return;
-      var bounds = canvas.getBoundingClientRect();
-      var width = Math.max(1, Math.floor(bounds.width));
-      var height = 210;
-      var ratio = window.devicePixelRatio || 1;
-      canvas.width = width * ratio;
-      canvas.height = height * ratio;
-      var context = canvas.getContext('2d');
-      context.scale(ratio, ratio);
-      context.clearRect(0, 0, width, height);
-
-      var padding = { left: 44, right: 16, top: 18, bottom: 30 };
-      var plotWidth = width - padding.left - padding.right;
-      var plotHeight = height - padding.top - padding.bottom;
-      var samples = state.run.result.samples.slice(0, state.run.sampleIndex + 1);
-      var maxTime = Math.max(state.run.result.durationSeconds, 1);
-      var maxOutput = Math.max(state.run.result.summary.outputCount, 1);
-      context.strokeStyle = '#d9e1ef';
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(padding.left, padding.top);
-      context.lineTo(padding.left, padding.top + plotHeight);
-      context.lineTo(padding.left + plotWidth, padding.top + plotHeight);
-      context.stroke();
-      context.strokeStyle = '#3967d6';
-      context.lineWidth = 2.5;
-      context.beginPath();
-      samples.forEach(function(sample, index) {
-        var x = padding.left + (sample.virtualSecond / maxTime) * plotWidth;
-        var y = padding.top + plotHeight - (sample.outputCount / maxOutput) * plotHeight;
-        if (index === 0) context.moveTo(x, y);
-        else context.lineTo(x, y);
-      });
-      context.stroke();
-      context.fillStyle = '#657187';
-      context.font = '12px Arial';
-      context.fillText('Output', padding.left, 12);
-      context.fillText('0', padding.left - 8, padding.top + plotHeight + 16);
-      context.fillText(formatNumber(maxOutput), padding.left - 34, padding.top + 6);
-      context.fillText(maxTime + ' s', padding.left + plotWidth - 24, padding.top + plotHeight + 20);
-    }
-
-    function drawEquipmentSpeedChart() {
-      var canvas = document.getElementById('equipment-speed-chart');
-      var legend = document.getElementById('equipment-speed-legend');
-      if (!canvas || !legend || !state.run.result || !state.activeCase) return;
-
-      var samples = getRollingSpeedSamples();
-      var models = state.activeCase.equipment || [];
-      var drawing = prepareLineCanvas(canvas, 270);
-      if (!drawing) return;
-      var context = drawing.context;
-      var padding = { left: 46, right: 16, top: 22, bottom: 32 };
-      var plotWidth = drawing.width - padding.left - padding.right;
-      var plotHeight = drawing.height - padding.top - padding.bottom;
-      var endTime = samples.length ? samples[samples.length - 1].virtualSecond : 0;
-      var startTime = samples.length ? samples[0].virtualSecond : 0;
-      var timeRange = Math.max(1, endTime - startTime);
-      var maxRate = Math.max(1, models.reduce(function(maximum, model) {
-        return Math.max(maximum, Number(model.nominalRatePerSecond || 0) * 60);
-      }, 0));
-      samples.forEach(function(sample) {
-        sample.equipment.forEach(function(unit) {
-          maxRate = Math.max(maxRate, Number(unit.actualRatePerSecond || 0) * 60);
-        });
-      });
-      maxRate = Math.ceil(maxRate / 25) * 25 || 25;
-
-      context.strokeStyle = '#d9e1ef';
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(padding.left, padding.top);
-      context.lineTo(padding.left, padding.top + plotHeight);
-      context.lineTo(padding.left + plotWidth, padding.top + plotHeight);
-      context.stroke();
-      for (var grid = 1; grid < 4; grid += 1) {
-        var gridY = padding.top + plotHeight - grid / 4 * plotHeight;
-        context.strokeStyle = '#edf1f7';
-        context.beginPath();
-        context.moveTo(padding.left, gridY);
-        context.lineTo(padding.left + plotWidth, gridY);
-        context.stroke();
-      }
-
-      models.forEach(function(model, index) {
-        drawSpeedSeries(
-          context,
-          samples,
-          index,
-          function(sample) { return padding.left + (sample.virtualSecond - startTime) / timeRange * plotWidth; },
-          function(ratePerSecond) { return padding.top + plotHeight - Math.min(maxRate, Number(ratePerSecond || 0) * 60) / maxRate * plotHeight; },
-          speedColor(index),
-          1.8
-        );
-      });
-
-      context.fillStyle = '#657187';
-      context.font = '12px Arial';
-      context.fillText('Actual BPM', padding.left, 13);
-      context.fillText('0', padding.left - 10, padding.top + plotHeight + 16);
-      context.fillText(formatNumber(maxRate), padding.left - 38, padding.top + 8);
-      context.fillText(startTime + '–' + endTime + ' s', Math.max(padding.left, padding.left + plotWidth - 70), padding.top + plotHeight + 20);
-
-      legend.textContent = '';
-      models.forEach(function(model, index) {
-        var item = document.createElement('span');
-        item.className = 'equipment-speed-legend-item';
-        var swatch = document.createElement('i');
-        swatch.style.backgroundColor = speedColor(index);
-        item.appendChild(swatch);
-        item.appendChild(document.createTextNode(model.name || model.id || ('Unit ' + (index + 1))));
-        legend.appendChild(item);
-      });
-    }
-
-    function drawEquipmentSpeedSparkline(canvas, equipmentIndex, model) {
-      if (!canvas) return;
-      var samples = getRollingSpeedSamples();
-      var drawing = prepareLineCanvas(canvas, 56);
-      if (!drawing) return;
-      var context = drawing.context;
-      var padding = { left: 2, right: 2, top: 4, bottom: 4 };
-      var plotWidth = drawing.width - padding.left - padding.right;
-      var plotHeight = drawing.height - padding.top - padding.bottom;
-      var endTime = samples.length ? samples[samples.length - 1].virtualSecond : 0;
-      var startTime = samples.length ? samples[0].virtualSecond : 0;
-      var timeRange = Math.max(1, endTime - startTime);
-      var maxRate = Math.max(1, Number(model.nominalRatePerSecond || 0) * 60);
-      samples.forEach(function(sample) {
-        var unit = sample.equipment[equipmentIndex];
-        maxRate = Math.max(maxRate, Number(unit && unit.actualRatePerSecond || 0) * 60);
-      });
-      maxRate *= 1.05;
-
-      context.strokeStyle = '#e5ebf4';
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(padding.left, padding.top + plotHeight);
-      context.lineTo(padding.left + plotWidth, padding.top + plotHeight);
-      context.stroke();
-      drawSpeedSeries(
-        context,
-        samples,
-        equipmentIndex,
-        function(sample) { return padding.left + (sample.virtualSecond - startTime) / timeRange * plotWidth; },
-        function(ratePerSecond) { return padding.top + plotHeight - Math.min(maxRate, Number(ratePerSecond || 0) * 60) / maxRate * plotHeight; },
-        speedColor(equipmentIndex),
-        1.8
-      );
-    }
-
-    function drawSpeedSeries(context, samples, equipmentIndex, xForSample, yForRate, color, lineWidth) {
-      if (!samples.length) return;
-      context.strokeStyle = color;
-      context.lineWidth = lineWidth;
-      context.lineJoin = 'round';
-      context.lineCap = 'round';
-      context.beginPath();
-      samples.forEach(function(sample, sampleIndex) {
-        var unit = sample.equipment[equipmentIndex];
-        var x = xForSample(sample);
-        var y = yForRate(unit ? unit.actualRatePerSecond : 0);
-        if (sampleIndex === 0) context.moveTo(x, y);
-        else context.lineTo(x, y);
-      });
-      context.stroke();
-    }
-
-    function getRollingSpeedSamples() {
-      if (!state.run.result || !state.run.result.samples) return [];
-      var allSamples = state.run.result.samples.slice(0, state.run.sampleIndex + 1);
-      if (!allSamples.length) return [];
-      var endTime = allSamples[allSamples.length - 1].virtualSecond;
-      var startTime = Math.max(0, endTime - 60);
-      return allSamples.filter(function(sample) { return sample.virtualSecond >= startTime; });
-    }
-
-    function prepareLineCanvas(canvas, height) {
-      var bounds = canvas.getBoundingClientRect();
-      var width = Math.max(1, Math.floor(bounds.width));
-      if (width <= 1) return null;
-      var ratio = window.devicePixelRatio || 1;
-      canvas.width = width * ratio;
-      canvas.height = height * ratio;
-      var context = canvas.getContext('2d');
-      context.scale(ratio, ratio);
-      context.clearRect(0, 0, width, height);
-      return { context: context, width: width, height: height };
-    }
-
-    function speedColor(index) {
-      var colors = ['#3967d6', '#268355', '#b05b12', '#8d4ec4', '#ca3d61', '#187f91', '#7a6c18', '#d05d2b', '#2a62a5', '#4f803f', '#aa4e9b', '#5d6f7c', '#b13838'];
-      return colors[index % colors.length];
-    }
-
     function setPlaybackStatus(message) {
       var target = document.getElementById('playback-status');
       if (target) target.textContent = message;
@@ -2185,9 +1947,22 @@ function summarizeGeometrySources(sources, assumptions) {
 
     function callServer(name, args, onSuccess) {
       var epoch = state.requestEpoch;
+      state.pendingRequests += 1;
+      document.getElementById('request-progress').classList.remove('hidden');
+      function done() {
+        state.pendingRequests = Math.max(0,state.pendingRequests-1);
+        document.getElementById('request-progress').classList.toggle('hidden',state.pendingRequests===0);
+      }
       var runner = google.script.run
-        .withFailureHandler(function() { if (epoch === state.requestEpoch) showError({ code: 'NETWORK_ERROR', message: 'The server request could not be completed.' }); })
-        .withSuccessHandler(function(response) { if (epoch === state.requestEpoch) onSuccess(response); });
+        .withFailureHandler(function() {
+          done();
+          if(epoch !== state.requestEpoch) return;
+          state.saving=false;
+          document.querySelectorAll('[data-busy="true"]').forEach(function(button){button.disabled=false;delete button.dataset.busy;});
+          shell.sync();
+          showError({ code: 'NETWORK_ERROR', message: 'The server request could not be completed. Please try again.' });
+        })
+        .withSuccessHandler(function(response) { done(); if(epoch === state.requestEpoch) onSuccess(response); });
       runner[name].apply(runner, args);
     }
 
@@ -2198,7 +1973,8 @@ function summarizeGeometrySources(sources, assumptions) {
       var target = document.getElementById('status'); target.className = 'status error'; target.textContent = message;
       document.getElementById('auth-status').textContent = message;
       document.getElementById('sign-in-button').disabled = false;
+      if (document.getElementById('settings-dialog').open) STSettings.error(message);
     }
-    function setBusy(targetId, busy) { var target = document.getElementById(targetId); var button = target.tagName === 'FORM' ? target.querySelector('button') : target; button.disabled = busy; }
+    function setBusy(targetId, busy) { var target = document.getElementById(targetId); var button = target.tagName === 'FORM' ? target.querySelector('button') : target; button.disabled = busy; button.dataset.busy=String(busy); button.setAttribute("aria-busy",String(busy)); }
   })();
 </script>

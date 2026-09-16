@@ -1,0 +1,31 @@
+<style>
+  .field-grid, .equipment-grid { display: grid; gap: var(--size-12); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .field-grid { margin: var(--size-20) 0; max-width: var(--size-760); }
+  label { color: var(--ink); display: grid; font-size: var(--text-13); font-weight: var(--weight-bold); gap: var(--size-6); }
+  .editor-subheading { align-items: center; display: flex; justify-content: space-between; margin-top: var(--size-28); }
+  .editor-subheading h3 { margin: 0 0 var(--size-4); }
+  .editor-subheading p { margin-bottom: 0; }
+  .equipment-list { display: grid; gap: var(--size-14); margin-top: var(--size-14); }
+  .equipment-card { background: var(--surface); border: var(--size-1) solid var(--line); border-radius: var(--size-10); padding: var(--size-16); }
+  .equipment-card:not(.equipment-card-expanded) .equipment-grid,
+  .equipment-card:not(.equipment-card-expanded) .format-zone-setup,
+  .equipment-card:not(.equipment-card-expanded) .equipment-json-details { display: none; }
+  .equipment-card:not(.equipment-card-expanded) { padding: var(--size-10) var(--size-16); }
+  .equipment-header strong { color: var(--ink); }
+  .format-zone-setup { background: var(--surface-soft); border: var(--size-1) solid var(--line); border-radius: var(--size-9); margin-top: var(--size-14); padding: var(--size-13); }
+  .format-zone-heading { align-items: flex-start; display: flex; gap: var(--size-14); justify-content: space-between; }
+  .format-zone-heading strong { color: var(--ink); font-size: var(--text-14); }
+  .format-zone-heading p { font-size: var(--text-12); margin: var(--size-4) 0 0; max-width: var(--size-530); }
+  .format-zone-grid { display: grid; gap: var(--size-10); grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: var(--size-12); }
+  .format-zone-grid label { color: var(--muted); font-size: var(--text-11); }
+  .format-zone-grid input { padding: var(--size-8) var(--size-9); }
+  .format-zone-preview { background: var(--surface); border-radius: var(--size-7); color: var(--info); font-size: var(--text-12); margin: var(--size-12) 0 0; padding: var(--size-9) var(--size-10); }
+  .characteristics-label { margin-top: var(--size-12); }
+  textarea { border: var(--size-1) solid var(--line-strong); min-height: var(--size-104); resize: vertical; width: 100%; }
+  .raw-viewer { margin-top: var(--size-22); }
+  .raw-viewer summary { color: var(--ink); cursor: pointer; font-weight: var(--weight-bold); }
+  .raw-viewer textarea { font-family: var(--font-mono); margin-top: var(--size-12); min-height: var(--size-260); }
+  .notice { background: var(--warning-soft); border: var(--size-1) solid var(--warning); border-radius: var(--size-8); color: var(--warning); margin: var(--size-18) 0; padding: var(--size-12); }
+  .model-boundary { font-size: var(--text-13); margin: var(--size-14) 0; }
+
+</style>

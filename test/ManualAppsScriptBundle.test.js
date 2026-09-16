@@ -28,7 +28,7 @@ test('manual Apps Script bundle contains all server modules and resolved HTML in
   assert.doesNotMatch(index, /<\?\s*include_/);
 
   const scripts = Array.from(index.matchAll(/<script>([\s\S]*?)<\/script>/g), (match) => match[1]);
-  assert.equal(scripts.length, 4);
+  assert.equal(scripts.length, 10);
   for (const script of scripts) new Function(script);
   new Function(code);
   assert.match(code, /MANUAL APPS SCRIPT DEPLOYMENT FILE/);
@@ -52,7 +52,7 @@ test('manual bundle uses a wide, compact live-equipment list on large screens', 
   const output = buildManualAppsScriptBundle(repositoryRoot);
   const index = fs.readFileSync(output.indexPath, 'utf8');
 
-  assert.match(index, /\.app-shell \{ max-width: 1760px;/);
+  assert.match(index, /padding-left: var\(--sidebar-width\)/);
   assert.match(index, /live-equipment-columns/);
   assert.match(index, /State &amp; rate/);
   assert.match(index, /Time losses/);

@@ -8,5 +8,10 @@
     "build:browser-engine": "node scripts/build-browser-engine.mjs",
     "build:manual-apps-script": "node scripts/build-manual-apps-script-bundle.mjs",
     "test": "node --test"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1",
+    "postcss": "^8.5.28",
+    "postcss-selector-parser": "^7.1.6"
   }
 }

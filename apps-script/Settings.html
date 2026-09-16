@@ -1,0 +1,37 @@
+<script>
+window.STSettings = (function() {
+  var snapshot = '', lastFocus, saving = false;
+  function formValue() { return JSON.stringify([document.getElementById('workspace-folder-id').value,document.getElementById('playback-rate').value]); }
+  function dirty() { return snapshot !== formValue(); }
+  function refresh() { document.getElementById('settings-unsaved').textContent = dirty() ? 'Unsaved changes' : ''; }
+  function open() {
+    var dialog=document.getElementById('settings-dialog');
+    if(dialog.open) return;
+    snapshot=formValue(); lastFocus=document.activeElement; refresh();
+    document.getElementById('settings-error').textContent=''; dialog.showModal();
+  }
+  function close() {
+    if(saving) return;
+    if(dirty() && !window.confirm('Discard unsaved storage and simulation defaults?')) return;
+    var values=JSON.parse(snapshot); document.getElementById('workspace-folder-id').value=values[0]; document.getElementById('playback-rate').value=values[1];
+    document.getElementById('settings-dialog').close(); if(lastFocus) lastFocus.focus();
+  }
+  function setSaving(value) {
+    saving=value;
+    document.getElementById('settings-close').disabled=value;
+    document.getElementById('settings-cancel').disabled=value;
+    document.getElementById('settings-save').disabled=value;
+    document.getElementById('settings-save').setAttribute('aria-busy',String(value));
+    document.getElementById('workspace-folder-id').disabled=value;
+    document.getElementById('playback-rate').disabled=value;
+  }
+  function saved() { snapshot=formValue(); refresh(); setSaving(false); document.getElementById('settings-dialog').close(); if(lastFocus) lastFocus.focus(); }
+  function error(message) { setSaving(false); document.getElementById('settings-error').textContent=message; }
+  function init() {
+    document.getElementById('settings-close').onclick=close; document.getElementById('settings-cancel').onclick=close;
+    document.getElementById('settings-dialog').addEventListener('cancel',function(e){ e.preventDefault(); close(); });
+    document.getElementById('workspace-form').addEventListener('input',refresh);
+  }
+  return { init:init,open:open,close:close,saved:saved,error:error,setSaving:setSaving };
+})();
+</script>

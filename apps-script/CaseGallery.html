@@ -1,26 +1,39 @@
 <script>
-window.STCaseGallery = { render: function(cases, openCase, requestCaseDeletion) {
-      var target = document.getElementById('cases-list');
-      target.textContent = '';
-      var query = document.getElementById('case-search').value.trim().toLowerCase();
-      cases = (cases || []).filter(function(item) { return String(item.name || '').toLowerCase().indexOf(query) >= 0; });
-      if (!cases || !cases.length) {
-        target.innerHTML = '<p class="empty">' + (query ? 'No matching cases. Try another name.' : 'Your next improvement starts here. Create a case or explore the demo.') + '</p>';
-        return;
-      }
-      cases.forEach(function(caseSummary) {
-        var row = document.createElement('article');
-        row.className = 'case-row';
-        row.innerHTML = '<div><strong></strong><span></span></div><div class="case-actions"><span></span><button class="open-case" type="button">Open</button><button class="delete-case danger" type="button">Delete</button></div>';
-        row.querySelector('strong').textContent = caseSummary.name;
-        var dataLabel = caseSummary.dataClassification === 'PUBLIC_DEMONSTRATION_ONLY' ? ' · public demo data' : '';
-        row.querySelector('div span').textContent = caseSummary.equipmentCount + ' equipment units · ' + (caseSummary.isSimulationReady ? 'simulation-ready' : 'draft') + dataLabel;
-        row.querySelector('.case-actions span').textContent = new Date(caseSummary.updatedAt).toLocaleString();
-        row.querySelector('.open-case').addEventListener('click', function() { openCase(caseSummary.id); });
-        row.querySelector('.delete-case').addEventListener('click', function(event) {
-          requestCaseDeletion(caseSummary.id, caseSummary.name, event.currentTarget);
-        });
-        target.appendChild(row);
-      });
-    } };
+window.STCaseGallery = (function() {
+  var page=0, pageSize=24, lastKey='', grid=STPreferences.read('caseLayout')==='grid';
+  function render(cases,openCase,requestCaseDeletion) {
+    var target=document.getElementById('cases-list'), pagination=document.getElementById('case-pagination');
+    var query=document.getElementById('case-search').value.trim().toLowerCase();
+    var filter=document.getElementById('case-filter').value, sort=document.getElementById('case-sort').value;
+    var key=query+'|'+filter+'|'+sort;
+    if(key!==lastKey) { page=0;lastKey=key; }
+    var items=(cases||[]).filter(function(item) { return String(item.name||'').toLowerCase().includes(query) && (filter==='all'||Boolean(item.isSimulationReady)===(filter==='ready')); });
+    items.sort(function(a,b){return sort==='name'?String(a.name).localeCompare(String(b.name)):new Date(b.updatedAt)-new Date(a.updatedAt);});
+    page=Math.min(page,Math.max(0,Math.ceil(items.length/pageSize)-1));
+    target.textContent=''; pagination.textContent=''; target.classList.toggle('grid',grid);
+    document.getElementById('case-count').textContent=items.length+' '+(items.length===1?'case':'cases');
+    var layout=document.getElementById('case-layout'); layout.innerHTML=STIcons.svg(grid?'list':'grid'); layout.setAttribute('aria-label','Switch to '+(grid?'list':'grid')+' view');layout.title=layout.getAttribute('aria-label');
+    layout.onclick=function(){grid=!grid;STPreferences.write('caseLayout',grid?'grid':'list');render(cases,openCase,requestCaseDeletion);};
+    if(!items.length) {
+      target.innerHTML='<div class="empty">'+STIcons.svg('folder')+'<h3>'+(query||filter!=='all'?'No matching cases':'Your workspace starts here')+'</h3><p>'+(query||filter!=='all'?'Try a different search or filter.':'Create a case to model a line, or start with the demonstration case.')+'</p></div>'; return;
+    }
+    items.slice(page*pageSize,(page+1)*pageSize).forEach(function(item){
+      var row=document.createElement('article');row.className='case-row';
+      row.innerHTML='<div class="case-identity"><span class="case-glyph">'+STIcons.svg('folder')+'</span><div><button class="case-name open-case" type="button"></button><span class="case-description"></span></div></div><div class="case-actions"><span class="badge"></span><time class="case-date"></time><button class="ghost icon-button delete-case" type="button">'+STIcons.svg('trash')+'</button></div>';
+      row.querySelector('.case-name').textContent=item.name;
+      row.querySelector('.case-description').textContent=item.equipmentCount+' equipment units'+(item.dataClassification==='PUBLIC_DEMONSTRATION_ONLY'?' · Public demo':'');
+      var badge=row.querySelector('.badge');badge.classList.toggle('ready',Boolean(item.isSimulationReady));badge.innerHTML=STIcons.svg(item.isSimulationReady?'check':'edit')+(item.isSimulationReady?'Ready':'Draft');
+      var date=new Date(item.updatedAt);row.querySelector('time').textContent=Number.isNaN(date.getTime())?'':date.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+      row.querySelector('.open-case').onclick=function(){openCase(item.id);};
+      var del=row.querySelector('.delete-case');del.title='Delete '+item.name;del.setAttribute('aria-label',del.title);del.onclick=function(){requestCaseDeletion(item.id,item.name,del);};
+      target.appendChild(row);
+    });
+    if(items.length>pageSize) {
+      var prev=document.createElement('button');prev.className='ghost';prev.innerHTML=STIcons.svg('back')+'Previous';prev.disabled=page===0;prev.onclick=function(){page--;render(cases,openCase,requestCaseDeletion);};
+      var next=document.createElement('button');next.className='ghost';next.innerHTML='Next'+STIcons.svg('chevron');next.disabled=(page+1)*pageSize>=items.length;next.onclick=function(){page++;render(cases,openCase,requestCaseDeletion);};
+      pagination.append(prev,document.createTextNode('Page '+(page+1)+' of '+Math.ceil(items.length/pageSize)),next);
+    }
+  }
+  return {render:render};
+})();
 </script>

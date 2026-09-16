@@ -1,43 +1,107 @@
-# Interface foundation
+# Line Studio interface
 
-The first interface pass adds a compact case-first workspace, Google-session entry screen,
-search, a separate settings entry, responsive cards and light/dark/system appearance.
-The simulation engine and server authorization model are unchanged.
+The interface separates Cases, Line setup, Simulation, Results and What-If. Settings
+is a native modal dialog, not a dashboard card. The mathematical engine in
+`src/simulation/` is unchanged.
 
-## UI modules
+## Design audit and decisions
 
-- DesignTokens.html: typography resource dictionary, semantic colors and surface tokens.
-- ThemePalette.html: compatibility palette for existing simulator components.
-- Fonts.html: embedded DejaVu Sans Latin subset in WOFF format; no external font requests.
-- ShellStyles.html: access screen, navigation, case cards and responsive interaction states.
-- Styles.html: existing editor, equipment, charts and simulation components.
-- UiPreferences.html: theme/system observation and browser preference storage.
-- CaseGallery.html: case-card rendering and filtered empty states.
-- Client.html: case and simulation application controller.
+The former page mixed equipment editing, run configuration, live playback, final
+charts and recommendations. Settings occupied the dashboard, technical labels
+used several unrelated palettes, and chart colors did not follow appearance.
+The new shell separates those tasks while retaining existing editors, controls,
+case deletion, raw JSON, saved simulation tabs, evidence and detailed comparison.
 
-Change --text-14 for default body text; headings, labels and metadata have their own
-tokens in DesignTokens.html. Color changes for both themes belong there. Compatibility
-colors for older simulator components remain in ThemePalette.html.
-The font license is in FONT-LICENSE.txt. Unsupported glyphs use the system fallback.
+Light is the default for a browser without a saved preference. Existing explicit
+preferences are retained. Dark and System use the same semantic state meanings.
+The restrained neutral surfaces, compact list, sidebar and tabs follow the
+principles requested from Linear/Vercel. Technical results and comparisons use
+an analytical table/KPI hierarchy. Settings and command search use compact dialogs.
 
-## Authentication and remembered entry
+## Resource dictionary
 
-The entry button calls getBootstrap, which invokes the existing server identity and
-allowlist checks. It does not implement OAuth or collect passwords. Google may require
-sign-in/authorization before serving the app, depending on deployment settings.
-Keep me signed in remembers only a browser preference to attempt bootstrap automatically.
-It never extends a Google session or bypasses server validation. Storage denial falls
-back to manual entry. Lock workspace clears that preference and hides the UI; it does
-not sign out of Google. Avoid the remembered entry option on shared devices.
+`apps-script/DesignTokens.html` is the single visual resource dictionary:
 
-## Deployment
+- `--font-page`, `--font-section`, `--font-card`, `--font-body`, `--font-secondary`,
+  `--font-caption`, `--font-kpi`, `--font-button`, `--font-input`.
+- Font family, weights, line height, spacing, radii, borders, surfaces, text,
+  semantic status colors, selection/disabled colors, chart series, shadows,
+  transitions, z-index and layout dimensions.
+- Compatibility `--text-*` and technical `--size-*` aliases keep older equipment
+  components adjustable from the same file. Shared sizes reference spacing tokens.
+- CSS media-query breakpoints remain literal in the responsive rules: browsers do
+  not support CSS custom properties inside media-query conditions.
 
-Run node scripts/build-manual-apps-script-bundle.mjs, then copy ONLY Code.gs and
-Index.html into the manual Apps Script deployment, with the required manifest.
-Do not combine generated Code.gs with the modular .gs files: they contain duplicate
-functions. The HTML modules are resolved into Index.html by the build.
-An alternative modular deployment includes the source modules, excludes Code.gs and
-Index.html, and uses WebApp.html as its entry. Publishing on GitHub does not update
-the live Google Apps Script deployment.
+The embedded DejaVu subset has no external font dependency; its license is in
+`docs/FONT-LICENSE.txt` and inside `Fonts.html`. SVG icons are original path assets
+in `Icons.html`; all use the same stroke, grid and currentColor.
 
-Run node --test for the existing engine, contract and bundle checks.
+## Modules
+
+| Module | Responsibility |
+|---|---|
+| Styles | Base components and accessibility |
+| Shell / ShellStyles | Sidebar, navigation, command search, save action |
+| CaseGallery / CasesStyles | Search, readiness filter, sort, list/grid, 24-item pagination |
+| Settings / DialogStyles | Modal, focus return, Escape, dirty defaults, save/error handling |
+| EditorStyles | Equipment/geometry editor |
+| SimulationStyles / DashboardStyles | Live rows, expandable time losses, technical panels |
+| Charts | Existing canvas rendering, themed series, full-run results and live sparklines |
+| Results | Final-run KPIs, equipment table, JSON export, presentation-only aggregates |
+| Comparison / AnalysisStyles | Baseline/proposed deltas, changed inputs, complete detail |
+| Client | Existing case, engine, persistence and recommendation orchestration |
+| UiPreferences | Browser appearance, automatic theme observation and remembered entry |
+
+Modules stay flat under `apps-script/` for Apps Script compatibility. The manual
+bundle generator resolves them to two deployment files; do not edit generated
+`Code.gs` or `Index.html` directly.
+
+## Interaction
+
+- Login verifies the existing Google identity and allowlist through `getBootstrap`.
+- Remembered entry saves only the preference to try bootstrap automatically. It
+  cannot extend a Google session or bypass authentication. Lock clears it.
+- Cases is the landing view. If storage is not configured, a short status directs
+  the user to Settings; creation is disabled until a workspace is configured.
+- Sidebar collapse is remembered. Compact navigation is used on small screens.
+- Ctrl/Command K opens command search; arrow keys, Enter and Escape are supported.
+- Settings appearance changes apply immediately. Storage and playback defaults
+  require Save; Cancel/Escape preserve the previously saved values, with a discard
+  prompt when necessary. Native dialog supplies modality and keyboard containment.
+- Simulation retains all scheduled and direct equipment controls. Time losses are
+  expandable. Switching saved simulations stops playback and resets its frame.
+- Missing saved run settings use the existing input defaults, not empty fields.
+
+## Data meaning
+
+Simulation KPIs follow the displayed virtual frame. Results KPIs and charts use
+the complete calculated run. Equipment downtime sums paused, stopped, failure,
+micro-stop and emergency counters. Starving, blocking and downtime aggregates are
+**equipment-minutes**, not elapsed line downtime; concurrent equipment losses can
+overlap. The existing engine's OEE assumes 100% quality until rejects are modeled.
+
+The highest-loss machine is described as an investigation lead, not a proven
+bottleneck. What-If retains the original recommendation algorithm. Numeric impact
+appears only when both scenarios have results. Baseline/proposed comparison shows
+absolute and relative deltas; OEE absolute delta is in percentage points, and a zero
+baseline has no relative percentage. Different seeds/durations keep the existing
+comparison caution. No untested optimization gain is invented.
+
+## Verification and deployment
+
+Run `npm ci`, `npm run build:apps-script`, then `npm test`. Development-only jsdom
+and CSS parsers test navigation, settings, themes, pagination, engine run/clone/
+comparison/delete flows, failure recovery, selectors, token references and contrast.
+They are not included in the deployed application.
+
+`node scripts/preview-ui.mjs` serves a local synthetic preview for visual review.
+It uses no real identity or Drive data and is never included in the bundle.
+Automated DOM tests do not validate actual browser rendering, native dialog focus
+trapping, device layouts or live Google authentication. Visual browser review of
+this revision was blocked by the execution environment's local-page policy.
+
+For manual deployment, replace ONLY Code.gs and Index.html in Apps Script, retain
+the required manifest, and update the deployment. Do not combine generated Code.gs
+with modular .gs sources (duplicate functions). For modular deployment, include
+source modules and use WebApp.html, excluding generated Code.gs/Index.html.
+Publishing GitHub changes does not update the running Apps Script deployment.

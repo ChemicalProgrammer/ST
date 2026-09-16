@@ -52,3 +52,8 @@ Introduce a separate Python service only when validated requirements need high-f
 ## Status
 
 The first runnable reference engine is now included. From the repository root, run `node --test` to validate its deterministic behavior without installing dependencies.
+
+
+## Interface resources
+
+See [the interface guide](docs/18_INTERFACE.md) for themes, design tokens, view modules, keyboard navigation, preview and deployment.

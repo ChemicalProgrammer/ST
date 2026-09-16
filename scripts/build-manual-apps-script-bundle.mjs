@@ -19,12 +19,23 @@ const serverFiles = [
 const htmlIncludes = [
   ['DesignTokens', 'DesignTokens.html'],
   ['Fonts', 'Fonts.html'],
-  ['ThemePalette', 'ThemePalette.html'],
   ['Styles', 'Styles.html'],
+  ['EditorStyles', 'EditorStyles.html'],
+  ['SimulationStyles', 'SimulationStyles.html'],
+  ['AnalysisStyles', 'AnalysisStyles.html'],
   ['ShellStyles', 'ShellStyles.html'],
+  ['CasesStyles', 'CasesStyles.html'],
+  ['DialogStyles', 'DialogStyles.html'],
+  ['DashboardStyles', 'DashboardStyles.html'],
   ['UiPreferences', 'UiPreferences.html'],
   ['SimulationEngine', 'SimulationEngine.html'],
+  ['Icons', 'Icons.html'],
+  ['Settings', 'Settings.html'],
   ['CaseGallery', 'CaseGallery.html'],
+  ['Results', 'Results.html'],
+  ['Shell', 'Shell.html'],
+  ['Charts', 'Charts.html'],
+  ['Comparison', 'Comparison.html'],
   ['Client', 'Client.html']
 ];
 
@@ -59,7 +70,7 @@ export function buildManualAppsScriptBundle(rootDirectory = repositoryRoot) {
     if (!index.includes(marker)) {
       throw new Error(`Manual bundle expected ${marker} in apps-script/WebApp.html.`);
     }
-    index = index.replace(marker, readSource(sourceFile));
+    index = index.replace(marker, () => readSource(sourceFile));
   }
   if (index.includes('<?')) {
     throw new Error('Manual bundle still contains an unresolved Apps Script template expression.');

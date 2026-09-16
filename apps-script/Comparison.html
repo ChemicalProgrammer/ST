@@ -1,0 +1,116 @@
+<script>
+window.STComparison=function(state,isFiniteNumber){
+    function renderCaseComparison() {
+      var a = (state.activeCase.simulations || []).find(function(sim) { return sim.id === document.getElementById('case-compare-a').value; });
+      var b = (state.activeCase.simulations || []).find(function(sim) { return sim.id === document.getElementById('case-compare-b').value; });
+      var target = document.getElementById('case-comparison-content'); target.textContent = '';
+      if (!a || !b || a.id === b.id) { target.textContent = 'Select two different simulations.'; return; }
+      appendComparisonContext(target, a, b);
+      STResults.compare(target,a,b);
+      appendChangedInputs(target,a,b);
+      appendComparisonSection(target, 'Scenario provenance', a.scenario || {}, b.scenario || {});
+      appendComparisonSection(target, 'Simulation configuration', a.dynamicConfig || {}, b.dynamicConfig || {});
+      appendComparisonSection(target, 'Simulation results', a.results?.summary || {}, b.results?.summary || {});
+      appendComparisonSection(target, 'Saved result metadata', comparisonResultMetadata(a.results), comparisonResultMetadata(b.results));
+      var byIdA = Object.fromEntries((a.equipment || []).map(function(item) { return [item.id, item]; }));
+      var byIdB = Object.fromEntries((b.equipment || []).map(function(item) { return [item.id, item]; }));
+      var equipmentIds = (a.equipment || []).map(function(item) { return item.id; });
+      (b.equipment || []).forEach(function(item) { if (equipmentIds.indexOf(item.id) === -1) equipmentIds.push(item.id); });
+      var metricA = a.results?.equipmentMetrics || {};
+      var metricB = b.results?.equipmentMetrics || {};
+      equipmentIds.forEach(function(equipmentId) {
+        appendComparisonSection(target, 'Equipment · ' + equipmentId, byIdA[equipmentId] || {}, byIdB[equipmentId] || {});
+        appendComparisonSection(target, 'Simulation metrics · ' + equipmentId, metricA[equipmentId] || {}, metricB[equipmentId] || {});
+      });
+    }
+
+    function appendChangedInputs(target,a,b) {
+      var changes=[],affected=new Set();
+      var right=Object.fromEntries((b.equipment||[]).map(function(e){return [e.id,e];}));
+      (a.equipment||[]).forEach(function(e){
+        var l=flattenComparisonValues(e),r=flattenComparisonValues(right[e.id]||{});
+        Array.from(new Set(Object.keys(l).concat(Object.keys(r)))).forEach(function(key){
+          if(formatComparisonValue(l[key])!==formatComparisonValue(r[key])){changes.push([e.name||e.id,key,formatComparisonValue(l[key]),formatComparisonValue(r[key])]);affected.add(e.id);}
+        });
+      });
+      (b.equipment||[]).filter(function(e){return !(a.equipment||[]).some(function(x){return x.id===e.id;});}).forEach(function(e){changes.push([e.name||e.id,'Added equipment','—',e.type]);affected.add(e.id);});
+      var section=document.createElement('section');section.className='comparison-section';
+      var title=document.createElement('h3');title.textContent='Changed inputs · '+changes.length+' changes · '+affected.size+' equipment affected';section.appendChild(title);
+      if(!changes.length){var message=document.createElement('p');message.className='chart-note';message.textContent='No equipment input differences. Run settings are listed below.';section.appendChild(message);}
+      else {
+        var scroll=document.createElement('div');scroll.className='table-scroll';var table=document.createElement('table');table.innerHTML='<thead><tr><th>Equipment</th><th>Parameter</th><th>Baseline</th><th>Proposed</th></tr></thead><tbody></tbody>';
+        changes.forEach(function(change){var tr=document.createElement('tr');change.forEach(function(v){var td=document.createElement('td');td.textContent=v;tr.appendChild(td);});table.querySelector('tbody').appendChild(tr);});scroll.appendChild(table);section.appendChild(scroll);
+      }
+      target.appendChild(section);
+    }
+    function appendComparisonContext(target, left, right) {
+      var context = document.createElement('section');
+      context.className = 'comparison-context';
+      var leftSeed = left.results?.seed;
+      var rightSeed = right.results?.seed;
+      var leftDuration = left.results?.durationSeconds;
+      var rightDuration = right.results?.durationSeconds;
+      var bothSaved = hasSavedSimulationResult(left.results) && hasSavedSimulationResult(right.results);
+      var paired = bothSaved && leftSeed === rightSeed && leftDuration === rightDuration;
+      context.classList.add(paired ? 'comparison-context-paired' : 'comparison-context-caution');
+      var heading = document.createElement('strong');
+      heading.textContent = left.name + ' vs. ' + right.name;
+      context.appendChild(heading);
+      var detail = document.createElement('p');
+      if (!bothSaved) {
+        detail.textContent = 'Configuration can be compared now. Run and save both simulations before interpreting result deltas.';
+      } else if (paired) {
+        detail.textContent = 'Paired run: both used seed ' + leftSeed + ' and ' + leftDuration + ' virtual seconds. Result differences can be attributed to the saved configuration change within this modeled run.';
+      } else {
+        detail.textContent = 'Comparison caution: saved seed or virtual duration differs (' + leftSeed + ' / ' + leftDuration + ' s vs. ' + rightSeed + ' / ' + rightDuration + ' s). Configuration differences remain valid, but rerun both with the same seed and duration for a direct result comparison.';
+      }
+      context.appendChild(detail);
+      target.appendChild(context);
+    }
+
+    function hasSavedSimulationResult(result) {
+      return Boolean(result && result.replay && result.summary &&
+        isFiniteNumber(result.seed) && isFiniteNumber(result.durationSeconds));
+    }
+
+    function comparisonResultMetadata(result) {
+      if (!hasSavedSimulationResult(result)) return {};
+      return {
+        seed: result.seed,
+        durationSeconds: result.durationSeconds,
+        completedAt: result.completedAt,
+        replaySampleCount: Array.isArray(result.replay?.samples) ? result.replay.samples.length : undefined,
+        eventCount: Array.isArray(result.replay?.events) ? result.replay.events.length : undefined
+      };
+    }
+
+    function appendComparisonSection(target, title, left, right) {
+      var section = document.createElement('details'); section.className = 'comparison-section';
+      var heading = document.createElement('summary'); heading.textContent = title; section.appendChild(heading);
+      var flatLeft = flattenComparisonValues(left); var flatRight = flattenComparisonValues(right);
+      section.open = title === 'Scenario provenance' || title === 'Simulation configuration';
+      var keys = Array.from(new Set(Object.keys(flatLeft).concat(Object.keys(flatRight)))).sort();
+      if (!keys.length) { section.appendChild(document.createTextNode('No saved values.')); target.appendChild(section); return; }
+      keys.forEach(function(key) {
+        var leftValue = flatLeft[key]; var rightValue = flatRight[key];
+        var row = document.createElement('div'); row.className = 'comparison-row' + (String(leftValue) !== String(rightValue) ? ' comparison-changed' : '');
+        row.innerHTML = '<strong></strong><span></span><span></span>';
+        row.children[0].textContent = key; row.children[1].textContent = formatComparisonValue(leftValue); row.children[2].textContent = formatComparisonValue(rightValue);
+        section.appendChild(row);
+      });
+      target.appendChild(section);
+    }
+
+    function flattenComparisonValues(value, prefix, output) {
+      var result = output || {}; var base = prefix || '';
+      if (value === null || value === undefined || typeof value !== 'object' || Array.isArray(value)) { result[base || 'value'] = value; return result; }
+      Object.keys(value).forEach(function(key) { var path = base ? base + '.' + key : key; var item = value[key]; if (item && typeof item === 'object' && !Array.isArray(item)) flattenComparisonValues(item, path, result); else result[path] = item; });
+      return result;
+    }
+
+    function formatComparisonValue(value) { return value === undefined || value === null || value === '' ? '—' : Array.isArray(value) ? JSON.stringify(value) : String(value); }
+
+
+return {render:renderCaseComparison};
+};
+</script>

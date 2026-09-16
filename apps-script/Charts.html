@@ -1,0 +1,203 @@
+<script>
+window.STCharts=function(state,formatNumber){
+  function numeric(name){return parseFloat(token(name));}
+  function chartPadding(){return {left:numeric('--chart-pad-left'),right:numeric('--chart-pad-right'),top:numeric('--chart-pad-top'),bottom:numeric('--chart-pad-bottom')};}
+  function token(name){return getComputedStyle(document.documentElement).getPropertyValue(name).trim();}
+    function drawSimulationChart() {
+      var canvas = document.getElementById('simulation-chart');
+      if (!canvas || !state.run.result || state.uiView !== 'results') return;
+      var bounds = canvas.getBoundingClientRect();
+      var width = Math.max(1, Math.floor(bounds.width));
+      var height = parseFloat(token('--chart-height'));
+      var ratio = window.devicePixelRatio || 1;
+      canvas.width = width * ratio;
+      canvas.height = height * ratio;
+      var context = canvas.getContext('2d');
+      context.scale(ratio, ratio);
+      context.clearRect(0, 0, width, height);
+
+      var padding = chartPadding();
+      var plotWidth = width - padding.left - padding.right;
+      var plotHeight = height - padding.top - padding.bottom;
+      var samples = state.run.result.samples;
+      var maxTime = Math.max(state.run.result.durationSeconds, 1);
+      var maxOutput = Math.max(state.run.result.summary.outputCount, 1);
+      context.strokeStyle = token('--chart-grid');
+      context.lineWidth = numeric('--chart-axis-stroke');
+      context.beginPath();
+      context.moveTo(padding.left, padding.top);
+      context.lineTo(padding.left, padding.top + plotHeight);
+      context.lineTo(padding.left + plotWidth, padding.top + plotHeight);
+      context.stroke();
+      context.strokeStyle = token('--series-0');
+      context.lineWidth = numeric('--chart-stroke');
+      context.beginPath();
+      samples.forEach(function(sample, index) {
+        var x = padding.left + (sample.virtualSecond / maxTime) * plotWidth;
+        var y = padding.top + plotHeight - (sample.outputCount / maxOutput) * plotHeight;
+        if (index === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      });
+      context.stroke();
+      context.fillStyle = token('--chart-axis');
+      context.font = token('--font-secondary') + ' ' + token('--font-ui');
+      context.fillText('Output', padding.left, 12);
+      context.fillText('0', padding.left - 8, padding.top + plotHeight + 16);
+      context.fillText(formatNumber(maxOutput), padding.left - 34, padding.top + 6);
+      context.fillText(maxTime + ' s', padding.left + plotWidth - 24, padding.top + plotHeight + 20);
+    }
+
+    function drawEquipmentSpeedChart() {
+      var canvas = document.getElementById('equipment-speed-chart');
+      var legend = document.getElementById('equipment-speed-legend');
+      if (!canvas || !legend || !state.run.result || !state.activeCase || state.uiView !== 'results') return;
+
+      var samples = getRollingSpeedSamples();
+      var models = state.activeCase.equipment || [];
+      var drawing = prepareLineCanvas(canvas, parseFloat(token('--chart-speed-height')));
+      if (!drawing) return;
+      var context = drawing.context;
+      var padding = chartPadding();
+      var plotWidth = drawing.width - padding.left - padding.right;
+      var plotHeight = drawing.height - padding.top - padding.bottom;
+      var endTime = samples.length ? samples[samples.length - 1].virtualSecond : 0;
+      var startTime = samples.length ? samples[0].virtualSecond : 0;
+      var timeRange = Math.max(1, endTime - startTime);
+      var maxRate = Math.max(1, models.reduce(function(maximum, model) {
+        return Math.max(maximum, Number(model.nominalRatePerSecond || 0) * 60);
+      }, 0));
+      samples.forEach(function(sample) {
+        sample.equipment.forEach(function(unit) {
+          maxRate = Math.max(maxRate, Number(unit.actualRatePerSecond || 0) * 60);
+        });
+      });
+      maxRate = Math.ceil(maxRate / 25) * 25 || 25;
+
+      context.strokeStyle = token('--chart-grid');
+      context.lineWidth = numeric('--chart-axis-stroke');
+      context.beginPath();
+      context.moveTo(padding.left, padding.top);
+      context.lineTo(padding.left, padding.top + plotHeight);
+      context.lineTo(padding.left + plotWidth, padding.top + plotHeight);
+      context.stroke();
+      for (var grid = 1; grid < 4; grid += 1) {
+        var gridY = padding.top + plotHeight - grid / 4 * plotHeight;
+        context.strokeStyle = token('--chart-grid');
+        context.beginPath();
+        context.moveTo(padding.left, gridY);
+        context.lineTo(padding.left + plotWidth, gridY);
+        context.stroke();
+      }
+
+      models.forEach(function(model, index) {
+        drawSpeedSeries(
+          context,
+          samples,
+          index,
+          function(sample) { return padding.left + (sample.virtualSecond - startTime) / timeRange * plotWidth; },
+          function(ratePerSecond) { return padding.top + plotHeight - Math.min(maxRate, Number(ratePerSecond || 0) * 60) / maxRate * plotHeight; },
+          speedColor(index),
+          numeric('--chart-series-stroke')
+        );
+      });
+
+      context.fillStyle = token('--chart-axis');
+      context.font = token('--font-secondary') + ' ' + token('--font-ui');
+      context.fillText('Actual BPM', padding.left, 13);
+      context.fillText('0', padding.left - 10, padding.top + plotHeight + 16);
+      context.fillText(formatNumber(maxRate), padding.left - 38, padding.top + 8);
+      context.fillText(startTime + '–' + endTime + ' s', Math.max(padding.left, padding.left + plotWidth - 70), padding.top + plotHeight + 20);
+
+      legend.textContent = '';
+      models.forEach(function(model, index) {
+        var item = document.createElement('span');
+        item.className = 'equipment-speed-legend-item';
+        var swatch = document.createElement('i');
+        swatch.style.backgroundColor = speedColor(index);
+        item.appendChild(swatch);
+        item.appendChild(document.createTextNode(model.name || model.id || ('Unit ' + (index + 1))));
+        legend.appendChild(item);
+      });
+    }
+
+    function drawEquipmentSpeedSparkline(canvas, equipmentIndex, model) {
+      if (!canvas) return;
+      var samples = getRollingSpeedSamples();
+      var drawing = prepareLineCanvas(canvas, parseFloat(token('--chart-spark-height')));
+      if (!drawing) return;
+      var context = drawing.context;
+      var padding = {left:numeric('--chart-spark-x'),right:numeric('--chart-spark-x'),top:numeric('--chart-spark-y'),bottom:numeric('--chart-spark-y')};
+      var plotWidth = drawing.width - padding.left - padding.right;
+      var plotHeight = drawing.height - padding.top - padding.bottom;
+      var endTime = samples.length ? samples[samples.length - 1].virtualSecond : 0;
+      var startTime = samples.length ? samples[0].virtualSecond : 0;
+      var timeRange = Math.max(1, endTime - startTime);
+      var maxRate = Math.max(1, Number(model.nominalRatePerSecond || 0) * 60);
+      samples.forEach(function(sample) {
+        var unit = sample.equipment[equipmentIndex];
+        maxRate = Math.max(maxRate, Number(unit && unit.actualRatePerSecond || 0) * 60);
+      });
+      maxRate *= 1.05;
+
+      context.strokeStyle = token('--chart-grid');
+      context.lineWidth = numeric('--chart-axis-stroke');
+      context.beginPath();
+      context.moveTo(padding.left, padding.top + plotHeight);
+      context.lineTo(padding.left + plotWidth, padding.top + plotHeight);
+      context.stroke();
+      drawSpeedSeries(
+        context,
+        samples,
+        equipmentIndex,
+        function(sample) { return padding.left + (sample.virtualSecond - startTime) / timeRange * plotWidth; },
+        function(ratePerSecond) { return padding.top + plotHeight - Math.min(maxRate, Number(ratePerSecond || 0) * 60) / maxRate * plotHeight; },
+        speedColor(equipmentIndex),
+        1.8
+      );
+    }
+
+    function drawSpeedSeries(context, samples, equipmentIndex, xForSample, yForRate, color, lineWidth) {
+      if (!samples.length) return;
+      context.strokeStyle = color;
+      context.lineWidth = lineWidth;
+      context.lineJoin = 'round';
+      context.lineCap = 'round';
+      context.beginPath();
+      samples.forEach(function(sample, sampleIndex) {
+        var unit = sample.equipment[equipmentIndex];
+        var x = xForSample(sample);
+        var y = yForRate(unit ? unit.actualRatePerSecond : 0);
+        if (sampleIndex === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      });
+      context.stroke();
+    }
+
+    function getRollingSpeedSamples() {
+      if (!state.run.result || !state.run.result.samples) return [];
+      var allSamples = state.uiView === "results" ? state.run.result.samples : state.run.result.samples.slice(0,state.run.sampleIndex+1);
+      if(state.uiView === "results") return allSamples;
+      if (!allSamples.length) return [];
+      var endTime = allSamples[allSamples.length - 1].virtualSecond;
+      var startTime = Math.max(0, endTime - 60);
+      return allSamples.filter(function(sample) { return sample.virtualSecond >= startTime; });
+    }
+
+    function prepareLineCanvas(canvas, height) {
+      var bounds = canvas.getBoundingClientRect();
+      var width = Math.max(1, Math.floor(bounds.width));
+      if (width <= 1) return null;
+      var ratio = window.devicePixelRatio || 1;
+      canvas.width = width * ratio;
+      canvas.height = height * ratio;
+      var context = canvas.getContext('2d');
+      context.scale(ratio, ratio);
+      context.clearRect(0, 0, width, height);
+      return { context: context, width: width, height: height };
+    }
+
+    function speedColor(index) { return token('--series-' + (index % 13)); }
+
+return {drawSimulationChart:drawSimulationChart,drawEquipmentSpeedChart:drawEquipmentSpeedChart,drawEquipmentSpeedSparkline:drawEquipmentSpeedSparkline};
+};
+</script>
