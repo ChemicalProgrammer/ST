@@ -1,40 +1,61 @@
 <script>
 window.STSheetImport=function(state,actions){
-  var preview=null,sequence=0,context=null,lastFocus;
+  var preview=null,plan=null,snapshot=null,sequence=0,context=null,lastFocus;
+  var merge=STSheetImportMerge;
   function el(id){return document.getElementById(id);}
   function validContext(){return context&&state.activeCase?.id===context.caseId&&state.activeSimulationId===context.simulationId&&state.requestEpoch===context.epoch;}
-  function clear(){preview=null;el('sheet-import-preview').textContent='';el('sheet-import-ack').checked=false;el('sheet-import-apply').disabled=true;}
+  function clear(){preview=null;plan=null;el('sheet-import-preview').textContent='';el('sheet-import-ack').checked=false;el('sheet-import-apply').disabled=true;el('sheet-import-summary').textContent='';}
   function busy(value){el('sheet-import-read').disabled=value;el('sheet-import-read').setAttribute('aria-busy',String(value));el('sheet-import-url').disabled=value;el('sheet-import-tab').disabled=value;}
-  function close(){sequence++;clear();busy(false);el('sheet-import-dialog').close();if(lastFocus&&lastFocus.isConnected)lastFocus.focus();}
+  function close(){sequence++;clear();snapshot=null;busy(false);el('sheet-import-dialog').close();if(lastFocus&&lastFocus.isConnected)lastFocus.focus();}
   function node(tag,text){var n=document.createElement(tag);n.textContent=text;return n;}
-  function render(data){
-    var host=el('sheet-import-preview');host.textContent='';
-    host.appendChild(node('h3',data.equipment.length+' equipment · '+data.source.sheetName));
-    var metadata=node('dl','');metadata.className='sheet-metadata';
-    Object.entries(data.metadata).forEach(function(entry){metadata.appendChild(node('dt',({site:'Site',packagingLine:'Packaging line',formatName:'Format',containerSizeOz:'Container size (oz)',bottlesPerCase:'Bottles per case',dateOfAnalysis:'Analysis date',by:'By'})[entry[0]]));metadata.appendChild(node('dd',entry[1]===null?'NA':String(entry[1])));});host.appendChild(metadata);
-    var table=document.createElement('table'),head=document.createElement('thead'),tr=document.createElement('tr');
-    ['Row','Equipment','Type','Critical','MTBF (min)','MTTR (min)','Nominal (bpm)'].forEach(function(label){tr.appendChild(node('th',label));});head.appendChild(tr);table.appendChild(head);
-    var body=document.createElement('tbody');data.equipment.forEach(function(unit){var r=document.createElement('tr');[unit.characteristics.sourceSheetRow,unit.name,unit.type,unit.characteristics.criticalMachine?'Y':'N',unit.processData.equipment.mtbfMinutes,unit.processData.equipment.mttrMinutes,unit.nominalRatePerSecond===null?null:Math.round(unit.nominalRatePerSecond*60000)/1000].forEach(function(value){r.appendChild(node('td',value===null?'NA':String(value)));});body.appendChild(r);});table.appendChild(body);var scroll=document.createElement('div');scroll.className='table-scroll';scroll.appendChild(table);host.appendChild(scroll);
-    var validation=window.SimulatorEngine.validateSimulationInput({case:{equipment:data.equipment},run:{durationSeconds:1,tickSeconds:1,seed:1}});
-    var draftIssues=validation.ok?[]:validation.error.details.map(function(d){return {cell:d.path||'Model',message:d.message||JSON.stringify(d)};});
-    [['Import errors',data.errors],['Review before running',data.warnings.concat(draftIssues)]].forEach(function(group){if(!group[1].length)return;host.appendChild(node('h4',group[0]));var list=document.createElement('ul');group[1].forEach(function(item){list.appendChild(node('li',item.cell+': '+item.message));});host.appendChild(list);});
-    var detail=document.createElement('details');detail.open=true;detail.appendChild(node('summary','Mapping and model assumptions'));var list=document.createElement('ul');data.notes.forEach(function(text){list.appendChild(node('li',text));});detail.appendChild(list);host.appendChild(detail);
-    var source=document.createElement('details');source.appendChild(node('summary','All imported values (A–W)'));var pre=node('pre',JSON.stringify(data.sourceRows,null,2));source.appendChild(pre);host.appendChild(source);
-    el('sheet-import-error').textContent=data.canImport?'': 'Fix the listed import errors in the source Sheet, then preview again.';
+  function refresh(){
+    if(!preview||!plan)return;var result=merge.build(preview,plan,snapshot.equipment,snapshot.sourceImport);
+    el('sheet-import-summary').textContent=result.added+' to add · '+result.updated+' to update · '+result.metadataChanges+' metadata changes'+(result.equipmentChanged?' · Existing results will be cleared; run again.':'');
+    el('sheet-import-error').textContent=result.errors.join('\n');
+    var review=el('sheet-import-model-review');if(review){review.textContent='';var validation=window.SimulatorEngine.validateSimulationInput({case:{equipment:result.equipment},run:{durationSeconds:1,tickSeconds:1,seed:1}});review.classList.toggle('hidden',validation.ok);if(!validation.ok){review.appendChild(node('summary','Physical model review (drafts can be saved)'));review.appendChild(node('pre',JSON.stringify(validation.error.details,null,2)));}}
+    el('sheet-import-apply').disabled=!result.hasChanges||result.errors.length>0||!el('sheet-import-ack').checked;
+  }
+  function header(){var table=document.createElement('table');table.innerHTML='<thead><tr><th>Import</th><th>Field</th><th>Current</th><th>Sheet</th><th>Status</th></tr></thead>';var body=document.createElement('tbody');table.appendChild(body);return {table:table,body:body};}
+  function choice(body,label,before,after,selected,disabled,changed,callback,field){
+    var row=document.createElement('tr');if(changed)row.className='sheet-field-changed';
+    var cell=document.createElement('td'),input=document.createElement('input');input.type='checkbox';input.checked=selected;input.disabled=disabled;input.setAttribute('aria-label','Import '+label);input.dataset.field=field?.id||'';input.onchange=function(){callback(input.checked);refresh();};cell.appendChild(input);row.appendChild(cell);
+    [label,merge.display(before,field),merge.display(after,field),disabled?'Unavailable':!changed?'Unchanged':after==null?'Clear to NA (optional)':'Changed'].forEach(function(text){row.appendChild(node('td',text));});body.appendChild(row);
+  }
+  function render(){
+    var data=preview,host=el('sheet-import-preview');host.textContent='';
+    host.appendChild(node('h3',data.equipment.length+' source equipment · '+data.source.sheetName));
+    host.appendChild(node('p','Choose what to apply to this simulation. Existing equipment keeps its ID and position; new equipment is appended in Sheet order. Missing Sheet rows never delete equipment. NA fields are not selected by default for existing equipment.'));
+    var toolbar=document.createElement('div');toolbar.className='button-row';
+    [['Select differences',function(){plan.records.forEach(function(r){merge.defaults(data,r,snapshot.equipment);});merge.metadataFields.forEach(function(f,i){plan.metadata[f[0]]=!merge.errorsFor(data,'C',i+1).length&&data.metadata[f[0]]!=null&&!merge.equal(snapshot.sourceImport?.metadata?.[f[0]],data.metadata[f[0]]);});render();}],['Deselect all fields',function(){plan.records.forEach(function(r){Object.keys(r.selected).forEach(function(k){r.selected[k]=false;});});Object.keys(plan.metadata).forEach(function(k){plan.metadata[k]=false;});render();}]].forEach(function(item){var b=node('button',item[0]);b.type='button';b.className='secondary';b.onclick=item[1];toolbar.appendChild(b);});host.appendChild(toolbar);
+    var meta=document.createElement('details');meta.open=!snapshot.equipment.length;meta.appendChild(node('summary','Case/format information — select metadata to update'));
+    var mt=header();merge.metadataFields.forEach(function(f,i){var before=snapshot.sourceImport?.metadata?.[f[0]],after=data.metadata[f[0]];choice(mt.body,'C'+(i+1)+' · '+f[1],before,after,plan.metadata[f[0]],Boolean(merge.errorsFor(data,'C',i+1).length),!merge.equal(before,after),function(v){plan.metadata[f[0]]=v;});});meta.appendChild(mt.table);host.appendChild(meta);
+    plan.records.forEach(function(record){
+      var unit=data.equipment[record.index],current=snapshot.equipment.find(function(e){return e.id===record.target;}),section=document.createElement('details');section.className='sheet-equipment-choice';section.dataset.sourceIndex=record.index;
+      section.appendChild(node('summary','Row '+record.row+' · '+unit.name+' · '+(record.target==='skip'?'Skipped':record.target==='new'?'Add equipment':'Update '+current.name)));
+      var label=node('label','Import into '),select=document.createElement('select');select.className='sheet-target';select.setAttribute('aria-label','Import target for row '+record.row);
+      [['skip','Skip this equipment'],['new','Add as new equipment']].concat(snapshot.equipment.map(function(e){return [e.id,'Update: '+e.name+' ('+e.id+')'];})).forEach(function(option){select.add(new Option(option[1],option[0]));});select.value=record.target;
+      select.onchange=function(){record.target=select.value;merge.defaults(data,record,snapshot.equipment);render();var next=host.querySelector('[data-source-index="'+record.index+'"]');next.open=true;next.querySelector('select').focus();};label.appendChild(select);section.appendChild(label);section.appendChild(node('p',record.reason));
+      var table=header();merge.fields.forEach(function(f){var before=current?f.read(current):null,after=merge.incomingValue(data,record,f),errors=merge.errorsFor(data,f.col,record.row);choice(table.body,f.col+record.row+' · '+f.label,before,after,record.target!=='skip'&&record.selected[f.id],record.target==='skip'||errors.length>0,!merge.equal(before,after),function(v){record.selected[f.id]=v;},f);});
+      var scroll=document.createElement('div');scroll.className='table-scroll';scroll.appendChild(table.table);section.appendChild(scroll);host.appendChild(section);
+    });
+    [['Source errors — affected fields are unavailable',data.errors||[]],['Source warnings',data.warnings||[]]].forEach(function(group){if(!group[1].length)return;var d=document.createElement('details');d.appendChild(node('summary',group[0]+' ('+group[1].length+')'));var list=document.createElement('ul');group[1].forEach(function(item){list.appendChild(node('li',item.cell+': '+item.message));});d.appendChild(list);host.appendChild(d);});
+    var detail=document.createElement('details');detail.appendChild(node('summary','Mapping and model assumptions'));var list=document.createElement('ul');data.notes.forEach(function(text){list.appendChild(node('li',text));});detail.appendChild(list);host.appendChild(detail);
+    var review=document.createElement('details');review.id='sheet-import-model-review';host.appendChild(review);
+    refresh();
   }
   function init(){
-    el('open-sheet-import').onclick=function(){if(!state.activeCase||state.saving)return;context={caseId:state.activeCase.id,simulationId:state.activeSimulationId,epoch:state.requestEpoch};lastFocus=document.activeElement;clear();el('sheet-import-error').textContent='';el('sheet-import-dialog').showModal();el('sheet-import-url').focus();};
+    el('open-sheet-import').onclick=function(){if(!state.activeCase||state.saving)return;snapshot=actions.capture();if(!snapshot)return;context={caseId:state.activeCase.id,simulationId:state.activeSimulationId,epoch:state.requestEpoch};lastFocus=document.activeElement;clear();el('sheet-import-error').textContent='';var source=snapshot.sourceImport?.source;el('sheet-import-url').value=source?.spreadsheetId||'';el('sheet-import-tab').value=source?.sheetName||'';el('sheet-import-dialog').showModal();el('sheet-import-url').focus();};
     el('sheet-import-close').onclick=close;el('sheet-import-cancel').onclick=close;
     el('sheet-import-dialog').addEventListener('cancel',function(e){e.preventDefault();close();});
     ['sheet-import-url','sheet-import-tab'].forEach(function(id){el(id).addEventListener('input',clear);});
-    el('sheet-import-ack').onchange=function(){el('sheet-import-apply').disabled=!(preview?.canImport&&el('sheet-import-ack').checked);};
+    el('sheet-import-ack').onchange=refresh;
     el('sheet-import-form').onsubmit=function(e){
-      e.preventDefault();if(!validContext())return close();clear();busy(true);el('sheet-import-error').textContent='';var ticket=++sequence;
-      function finish(response){if(ticket!==sequence||!validContext())return;busy(false);if(!response.ok){el('sheet-import-error').textContent=response.error.message;return;}preview=response.data;render(preview);}
+      e.preventDefault();if(!validContext())return close();clear();snapshot=actions.capture();if(!snapshot)return;busy(true);el('sheet-import-error').textContent='';var ticket=++sequence;
+      function finish(response){if(ticket!==sequence||!validContext())return;busy(false);if(!response.ok){el('sheet-import-error').textContent=response.error.message;return;}preview=response.data;plan=merge.create(preview,snapshot.equipment,snapshot.sourceImport);render();}
       google.script.run.withFailureHandler(function(){finish({ok:false,error:{message:'The Sheet could not be read. Check your access and try again.'}});}).withSuccessHandler(finish).previewSheetImport({caseId:context.caseId,spreadsheet:el('sheet-import-url').value,sheetName:el('sheet-import-tab').value});
     };
-    el('sheet-import-apply').onclick=function(){if(!validContext()||!preview?.canImport||!el('sheet-import-ack').checked)return;if(actions.apply(preview))close();};
+    el('sheet-import-apply').onclick=function(){if(!validContext()||!preview||!plan||!el('sheet-import-ack').checked)return;var result=merge.build(preview,plan,snapshot.equipment,snapshot.sourceImport);if(result.errors.length||!result.hasChanges)return;var current=actions.capture();if(!current||!merge.equal(current,snapshot)){el('sheet-import-error').textContent='The simulation changed after preview. Preview again before applying.';return;}if(actions.apply(result))close();};
   }
-  return {init:init};
+  return {init:init,close:close};
 };
 </script>

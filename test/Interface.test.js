@@ -7,17 +7,19 @@ import postcss from 'postcss';
 import selectorParser from 'postcss-selector-parser';
 const read = file => fs.readFileSync(new URL('../apps-script/'+file,import.meta.url),'utf8');
 const settle = () => new Promise(resolve=>setTimeout(resolve,35));
-async function setup({remember=false,fail=false,many=false,invalidSheet=false}={}) {
+async function setup({remember=false,fail=false,many=false,invalidSheet=false,empty=false}={}) {
  const context={}; vm.createContext(context);vm.runInContext(read('PublicDemoCaseFactory.gs'),context);
  const initial=JSON.parse(JSON.stringify(context.createPublicDemoCaseRequest_()));
  Object.assign(initial,{id:'demo',revision:1,updatedAt:'2026-09-15T10:00:00Z'});
+ const sourceEquipment=JSON.parse(JSON.stringify(initial.equipment));
+ if(empty)initial.equipment=[];
  let cases=[initial], stored={workspaceRootFolderId:'preview',preferredPlaybackRate:10}, calls=[];
  if(many) cases=Array.from({length:60},(_,i)=>({...initial,id:'case-'+i,name:'Line '+String(i).padStart(2,'0')}));
  const copy=x=>JSON.parse(JSON.stringify(x));
  const api={
   getBootstrap:()=>({user:{email:'preview@example.test'},settings:stored,globalConfig:{},gemini:{configured:true,model:'gemini-2.5-flash'},cases:cases.map(c=>({id:c.id,name:c.name,equipmentCount:c.equipment.length,isSimulationReady:c.equipment.length>1,updatedAt:c.updatedAt}))}),
   askGemini:()=>({text:'Analysis of the saved case.'}),
-  previewSheetImport:()=>({canImport:!invalidSheet,source:{schemaVersion:'plant-sheet-v1',sheetName:'Synthetic sheet',readAt:'2026-09-16',spreadsheetId:'synthetic-id'},metadata:{site:'Synthetic site',formatName:'Imported format'},equipment:copy(initial.equipment.slice(0,3)).map((e,i)=>({...e,characteristics:{...e.characteristics,sourceSheetRow:i+10}})),sourceRows:[],errors:invalidSheet?[{cell:'D10:E10',message:'Supply both MTBF and MTTR.'}]:[],warnings:[],notes:['Review model assumptions.']}),
+  previewSheetImport:()=>({canImport:!invalidSheet,source:{schemaVersion:'plant-sheet-v1',sheetName:'Synthetic sheet',readAt:'2026-09-16',spreadsheetId:'synthetic-id'},metadata:{site:'Synthetic site',formatName:'Imported format'},equipment:copy(sourceEquipment.slice(0,3)).map((e,i)=>({...e,noiseProfile:{...e.noiseProfile,reliability:{...e.noiseProfile.reliability,mtbfMinutes:e.noiseProfile.reliability.mtbfMinutes+60}},processData:{...e.processData,equipment:{...e.processData.equipment,mtbfMinutes:e.processData.equipment.mtbfMinutes+60}},characteristics:{...e.characteristics,sourceSheetRow:i+10}})),sourceRows:[],errors:invalidSheet?[{cell:'D10:E10',message:'Supply both MTBF and MTTR.'}]:[],warnings:[],notes:['Review model assumptions.']}),
   getCase:id=>copy(cases.find(c=>c.id===id)),
   saveCase:c=>{c=copy(c);c.revision++;cases=cases.map(x=>x.id===c.id?c:x);return c;},
   saveUserSettings:s=>(stored=s),
@@ -131,22 +133,33 @@ test('UI: compact editor reorders equipment with keyboard and preserves values',
  }finally{h.dom.window.close();}
 });
 
-test('UI: Sheet preview creates a separate saved simulation and preserves current editor changes',async()=>{
+test('UI: selective Sheet reload updates the active simulation, preserves other runs and saves selection',async()=>{
  const h=await setup();try{
- await h.click('#sign-in-button');await h.click('.open-case');await h.click('.sidebar [data-view="editor"]');
- const field=h.d.querySelector('.equipment-name');field.value='Original equipment edited';field.dispatchEvent(new h.w.Event('input',{bubbles:true}));
+ async function waitFor(predicate){for(let i=0;i<30;i++){if(predicate())return;await settle();}assert(predicate(),'Asynchronous UI did not settle');}
+ await h.click('#sign-in-button');await h.click('.open-case');h.d.getElementById('run-duration').value='30';await h.click('#run-simulation');await h.click('#pause-simulation');await h.click('.sidebar [data-view="editor"]');await h.click('#clone-case');await waitFor(()=>JSON.parse(h.d.getElementById('case-json-preview').value).simulations.length===2);await h.click('#run-simulation');await h.click('#pause-simulation');await h.click('.sidebar [data-view="editor"]');
+ let before=JSON.parse(h.d.getElementById('case-json-preview').value);assert.equal(before.simulations.length,2,JSON.stringify({calls:h.calls,errors:h.errors,status:h.d.getElementById('status').textContent}));const simId=before.simulations[1].id,firstId=before.equipment[0].id,oldMTBF=before.equipment[0].noiseProfile.reliability.mtbfMinutes;
+ const field=h.d.querySelector('.equipment-name');field.value='Local equipment name';field.dispatchEvent(new h.w.Event('input',{bubbles:true}));
  await h.click('#open-sheet-import');h.d.getElementById('sheet-import-url').value='synthetic-sheet-id';await h.click('#sheet-import-read');
- assert.match(h.d.getElementById('sheet-import-preview').textContent,/Synthetic sheet/);assert(h.d.getElementById('sheet-import-apply').disabled);
- h.d.getElementById('sheet-import-ack').checked=true;h.d.getElementById('sheet-import-ack').dispatchEvent(new h.w.Event('change'));await h.click('#sheet-import-apply');
- assert(!h.d.getElementById('sheet-import-dialog').open);assert(h.visible('editor-panel'));assert.equal(h.d.querySelectorAll('.equipment-card').length,3);
- let record=JSON.parse(h.d.getElementById('case-json-preview').value);assert.equal(record.simulations.length,2);assert.equal(record.simulations[0].equipment[0].name,'Original equipment edited');assert.equal(record.simulations[0].equipment.length,13);assert.equal(record.simulations[1].sourceImport.metadata.site,'Synthetic site');
- assert(!h.d.getElementById('save-workspace-case').disabled);await h.click('#save-workspace-case');await h.click('#reload-case');
- record=JSON.parse(h.d.getElementById('case-json-preview').value);assert.equal(record.simulations.length,2);assert.equal(record.simulations[1].sourceImport.metadata.site,'Synthetic site');assert.deepEqual(h.errors,[]);
+ assert.match(h.d.getElementById('sheet-import-preview').textContent,/Current/);assert.match(h.d.getElementById('sheet-import-preview').textContent,/Local equipment name/);
+ const target=h.d.querySelector('.sheet-target');target.value=firstId;target.dispatchEvent(new h.w.Event('change'));
+ Array.from(h.d.querySelectorAll('#sheet-import-preview button')).find(b=>b.textContent==='Deselect all fields').click();
+ const mtbf=h.d.querySelector('[data-source-index="0"] [data-field="mtbf"]');mtbf.checked=true;mtbf.dispatchEvent(new h.w.Event('change'));
+ h.d.getElementById('sheet-import-ack').checked=true;h.d.getElementById('sheet-import-ack').dispatchEvent(new h.w.Event('change'));assert(!h.d.getElementById('sheet-import-apply').disabled);await h.click('#sheet-import-apply');
+ let record=JSON.parse(h.d.getElementById('case-json-preview').value);assert.equal(record.simulations.length,2);assert.equal(record.simulations[1].id,simId);assert.equal(record.equipment.length,13);assert.equal(record.equipment[0].id,firstId);assert.equal(record.equipment[0].name,'Local equipment name');assert.equal(record.equipment[0].noiseProfile.reliability.mtbfMinutes,oldMTBF+60);assert.equal(record.simulations[1].results,null);assert(record.simulations[0].results.summary);
+ assert.deepEqual(record.simulations[1].sourceImport.lastApplied.equipment[0].fields.map(f=>f.field),['mtbf']);
+ await h.click('#save-workspace-case');await h.click('#reload-case');record=JSON.parse(h.d.getElementById('case-json-preview').value);assert.equal(record.simulations.length,2);assert.equal(record.simulations[1].equipment[0].name,'Local equipment name');assert.equal(record.simulations[1].equipment[0].noiseProfile.reliability.mtbfMinutes,oldMTBF+60);assert.deepEqual(h.errors,[]);
  }finally{h.dom.window.close();}
 });
-test('UI: invalid Sheet cannot import; cancel leaves equipment intact',async()=>{
+test('UI: empty simulation imports all selected equipment without creating another simulation',async()=>{
+ const h=await setup({empty:true});try{
+ await h.click('#sign-in-button');await h.click('.open-case');await h.click('.sidebar [data-view="editor"]');await h.click('#open-sheet-import');h.d.getElementById('sheet-import-url').value='synthetic-sheet-id';await h.click('#sheet-import-read');
+ h.d.getElementById('sheet-import-ack').checked=true;h.d.getElementById('sheet-import-ack').dispatchEvent(new h.w.Event('change'));await h.click('#sheet-import-apply');
+ const record=JSON.parse(h.d.getElementById('case-json-preview').value);assert.equal(record.simulations.length,1);assert.equal(record.equipment.length,3);assert.equal(record.simulations[0].sourceImport.metadata.site,'Synthetic site');assert.deepEqual(h.errors,[]);
+ }finally{h.dom.window.close();}
+});
+test('UI: invalid source fields are unavailable and cancel leaves equipment intact',async()=>{
  const h=await setup({invalidSheet:true});try{
  await h.click('#sign-in-button');await h.click('.open-case');await h.click('.sidebar [data-view="editor"]');await h.click('#open-sheet-import');h.d.getElementById('sheet-import-url').value='synthetic-sheet-id';await h.click('#sheet-import-read');
- assert.match(h.d.getElementById('sheet-import-preview').textContent,/D10:E10/);h.d.getElementById('sheet-import-ack').checked=true;h.d.getElementById('sheet-import-ack').dispatchEvent(new h.w.Event('change'));assert(h.d.getElementById('sheet-import-apply').disabled);await h.click('#sheet-import-cancel');assert.equal(h.d.querySelectorAll('.equipment-card').length,13);assert.equal(h.d.getElementById('sheet-import-preview').textContent,'');assert.deepEqual(h.errors,[]);
+ assert.match(h.d.getElementById('sheet-import-preview').textContent,/D10:E10/);assert(h.d.querySelector('[data-source-index="0"] [data-field="mtbf"]').disabled);await h.click('#sheet-import-cancel');assert.equal(h.d.querySelectorAll('.equipment-card').length,13);assert.equal(h.d.getElementById('sheet-import-preview').textContent,'');assert.deepEqual(h.errors,[]);
  }finally{h.dom.window.close();}
 });
