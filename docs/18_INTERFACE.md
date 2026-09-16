@@ -109,8 +109,13 @@ Publishing GitHub changes does not update the running Apps Script deployment.
 
 ## Case workspace navigation and Gemini
 
-Cases now has no sidebar. Once a case is open, the sidebar groups saved simulations and comparison, the selected simulation's views, and workspace actions. What-If contains recommendations only. Settings is the sole location for theme selection and six accent colors. Semantic state colors remain independent of the accent; their left stripes share `--state-border-width` (5px). Equipment controls use an accessible 2-column, 3-row icon grid beside the sparkline.
+Cases now has no sidebar. Once a case is open, the sidebar groups saved simulations and comparison, the selected simulation's views, and workspace actions. What-If contains recommendations only. Settings is the sole location for theme selection and 25 accent colors. Semantic state colors remain independent of the accent; their left stripes share `--state-border-width` (5px). Equipment controls use an accessible 2-column, 3-row icon grid beside the sparkline.
 
 The right Gemini panel sends questions about the **saved** case, including saved simulation results. Save edits/results before asking. Configure your own Gemini API key and model in Settings; default model is `gemini-2.5-flash`. The key lives in Apps Script UserProperties and is never returned by bootstrap or written to browser storage. A blank key preserves the existing key; the explicit removal checkbox deletes it. Chat messages are transient and clear when closing/changing the case or signing out. Requests are only sent by pressing Send; case data is sent to Google's Gemini API. Oversized context is rejected with a clear error instead of silently dropping case data.
 
 Deploy the regenerated `Code.gs` and `Index.html` together. Apps Script may ask for authorization for external requests after adding UrlFetchApp. Reference: [Gemini generateContent API](https://ai.google.dev/api/generate-content). The integration is tested with mocked API responses; a live request requires the user's API key. DOM and CSS checks do not substitute for final visual review in the deployed Apps Script web app.
+
+
+### Workspace polish
+
+Settings uses a fixed header/footer with only the body scrolling. The Gemini panel starts at the top edge; drag its left separator or use Left/Right arrows while focused to change its width (360px minimum, viewport constrained). Width is remembered locally. Line setup uses compact edit/delete actions and a drag handle for reordering; Up/Down arrows on the handle offer the same operation. Reordering preserves editor values and honors reduced motion. The sidebar uses “Compare” and wraps/clips long labels without horizontal scrolling.

@@ -39,6 +39,7 @@ const htmlIncludes = [
   ['Comparison', 'Comparison.html'],
   ['AssistantStyles', 'AssistantStyles.html'],
   ['Assistant', 'Assistant.html'],
+  ['EquipmentDrag', 'EquipmentDrag.html'],
   ['Client', 'Client.html']
 ];
 

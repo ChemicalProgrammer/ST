@@ -60,4 +60,12 @@
  .topbar .button-row { flex-wrap:wrap; }
  .app-shell:not(.case-open) { padding:0; }
 }
+
+.sidebar,.sidebar-simulations,.simulation-navigation { overflow-x:hidden; min-width:0; }
+.sidebar .nav-item { min-width:0; white-space:normal; overflow-wrap:anywhere; }
+.sidebar .nav-item .icon { flex-shrink:0; }
+.sidebar .nav-label { min-width:0; }
+#breadcrumb-case { font-size:var(--font-page); font-weight:var(--weight-semibold); color:var(--ink); letter-spacing:var(--tracking-tight); }
+#breadcrumb-view { font-size:var(--font-secondary); color:var(--muted); }
+#status:empty { display:none; }
 </style>

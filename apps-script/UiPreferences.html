@@ -9,7 +9,7 @@ window.STPreferences = (function() {
   }
   var media = window.matchMedia('(prefers-color-scheme: dark)');
   var theme = read('theme') || 'light';
-  var colors=['violet','blue','teal','green','amber','rose'];
+  var colors=['violet','blue','teal','green','amber','rose','red','coral','orange','copper','gold','olive','lime','forest','mint','aqua','cyan','sky','cobalt','indigo','purple','plum','magenta','pink','slate'];
   function setAccent(value){if(!colors.includes(value))value='violet';document.documentElement.dataset.accent=value;write('accent',value);document.querySelectorAll('.accent-choice').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.accent===value));});window.dispatchEvent(new Event('st:theme'));}
   setAccent(read('accent'));
   function apply() {

@@ -119,7 +119,7 @@
             <h3>Equipment sequence</h3>
             <p>Order defines material flow. Use alternating machine → conveyor → machine steps; every conveyor requires physical geometry.</p>
           </div>
-          <button id="add-equipment" data-icon="plus" class="secondary" type="button">Add equipment</button>
+          <button id="add-equipment" data-icon="plus" class="secondary icon-button" type="button" aria-label="Add equipment" title="Add equipment"></button>
         </div>
         <div id="equipment-list" class="equipment-list"></div>
 
@@ -233,7 +233,7 @@
       </section>
       </div>
       <aside id="gemini-panel" class="gemini-panel hidden" aria-labelledby="gemini-title">
-        <header class="gemini-heading"><div><h2 id="gemini-title">Gemini</h2><span id="gemini-context" class="chart-note"></span></div><button id="close-gemini" class="ghost icon-button" data-icon="chevron" aria-label="Collapse Gemini panel" title="Collapse Gemini panel"></button></header>
+        <div id="gemini-resize" role="separator" aria-orientation="vertical" aria-label="Resize Gemini panel" tabindex="0" title="Drag to resize; use Left and Right arrows"></div><header class="gemini-heading"><div><h2 id="gemini-title">Gemini</h2><span id="gemini-context" class="chart-note"></span></div><button id="close-gemini" class="ghost icon-button" data-icon="chevron" aria-label="Collapse Gemini panel" title="Collapse Gemini panel"></button></header>
         <p id="gemini-notice" class="gemini-notice">Ask about the saved case, equipment and simulation results.</p>
         <div id="gemini-messages" class="gemini-messages" role="log" aria-label="Case conversation" aria-live="polite"></div>
         <form id="gemini-form" class="gemini-composer"><label class="sr-only" for="gemini-question">Question for Gemini</label><textarea id="gemini-question" rows="3" maxlength="6000" placeholder="Ask about this case…" required></textarea><div class="gemini-actions"><button id="clear-gemini" type="button" class="ghost icon-button" data-icon="trash" aria-label="Clear case conversation" title="Clear case conversation"></button><button id="send-gemini" type="submit" data-icon="send">Send</button></div><p id="gemini-error" class="chart-note" role="alert"></p><p class="chart-note">Sending shares this saved case with Google Gemini. Conversations clear when you close the case, refresh or sign out.</p></form>
@@ -247,8 +247,9 @@
         <form id="workspace-form"><label for="workspace-folder-id">Drive folder ID</label><input id="workspace-folder-id" autocomplete="off" required>
         <label for="playback-rate">Default playback speed</label><select id="playback-rate"><option value="0.5">0.5×</option><option value="1">1×</option><option value="1.5">1.5×</option><option value="5">5×</option><option value="10">10×</option></select>
         <fieldset class="gemini-settings"><legend>Gemini</legend><p class="chart-note">Your API key is stored in your Apps Script user properties and used only by the server.</p><label for="gemini-model">Model ID</label><input id="gemini-model" value="gemini-2.5-flash" maxlength="100" pattern="gemini-[a-zA-Z0-9.\-]+" required><label for="gemini-api-key">API key</label><input id="gemini-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep your saved key"><span id="gemini-key-status" class="chart-note"></span><label class="remember"><input id="gemini-clear-key" type="checkbox">Remove saved API key</label></fieldset>
-        <p id="settings-error" role="alert"></p><div class="dialog-actions"><span id="settings-unsaved" role="status"></span><button id="settings-cancel" type="button" class="ghost">Cancel</button><button id="settings-save" type="submit" data-icon="save">Save settings</button></div></form></section>
+        <p id="settings-error" role="alert"></p></form></section>
       </div>
+      <div class="dialog-actions"><span id="settings-unsaved" role="status"></span><button id="settings-cancel" type="button" class="ghost">Cancel</button><button id="settings-save" type="submit" form="workspace-form" data-icon="save">Save settings</button></div>
     </dialog>
     <dialog id="command-dialog" aria-label="Command palette"><input id="command-search" class="command-search" type="search" placeholder="Search commands…" aria-label="Search commands"><div id="command-list" class="command-list"></div></dialog>
     <div id="toast" class="hidden" role="status"></div>
@@ -261,6 +262,7 @@
     <?!= include_('Charts'); ?>
     <?!= include_('Comparison'); ?>
     <?!= include_('Assistant'); ?>
+    <?!= include_('EquipmentDrag'); ?>
     <?!= include_('Client'); ?>
   </body>
 </html>

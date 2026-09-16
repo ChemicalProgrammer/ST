@@ -1,0 +1,20 @@
+<script>
+window.STEquipmentDrag=(function(){
+ function cards(){return Array.from(document.querySelectorAll('#equipment-list .equipment-card'));}
+ function positions(){var map={};cards().forEach(function(c){map[c.querySelector('.equipment-id').value]=c.getBoundingClientRect().top;});return map;}
+ function animate(before,index){cards().forEach(function(c){var y=before[c.querySelector('.equipment-id').value];if(Number.isFinite(y)&&c.animate&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches)c.animate([{transform:'translateY('+(y-c.getBoundingClientRect().top)+'px)'},{transform:'translateY(0)'}],{duration:180,easing:'ease-out'});});cards()[index]?.querySelector('.equipment-drag').focus();}
+ function bind(card,index,move){
+  var handle=card.querySelector('.equipment-drag');handle.innerHTML=STIcons.svg('grip');
+  handle.onkeydown=function(e){if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();move(index,e.key==='ArrowUp'?-1:1);}};
+  handle.onpointerdown=function(e){
+   if(e.button!==0)return;e.preventDefault();handle.setPointerCapture(e.pointerId);var target=index,start=e.clientY;
+   card.classList.add('equipment-dragging');
+   function clear(){cards().forEach(function(c){c.classList.remove('equipment-drop-target','equipment-dragging');});handle.onpointermove=null;handle.onpointerup=null;handle.onpointercancel=null;handle.onlostpointercapture=null;}
+   handle.onpointermove=function(ev){if(Math.abs(ev.clientY-start)<5)return;var all=cards();target=all.reduce(function(best,c,i){var r=c.getBoundingClientRect();return Math.abs(ev.clientY-(r.top+r.height/2))<best.distance?{index:i,distance:Math.abs(ev.clientY-(r.top+r.height/2))}:best;},{index:index,distance:Infinity}).index;all.forEach(function(c,i){c.classList.toggle('equipment-drop-target',i===target&&i!==index);});if(ev.clientY<60)window.scrollBy(0,-18);else if(ev.clientY>window.innerHeight-60)window.scrollBy(0,18);};
+   handle.onpointerup=function(ev){clear();if(handle.hasPointerCapture(ev.pointerId))handle.releasePointerCapture(ev.pointerId);if(target!==index)move(index,target-index);};
+   handle.onpointercancel=clear;handle.onlostpointercapture=clear;
+  };
+ }
+ return {bind:bind,positions:positions,animate:animate};
+})();
+</script>

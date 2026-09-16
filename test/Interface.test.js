@@ -115,3 +115,17 @@ test('UI: Gemini panel sends case questions, closes, and clears on sign out',asy
  await h.click('#sign-out');assert.equal(h.d.getElementById('gemini-messages').textContent,'');assert(!h.visible('gemini-panel'));assert.deepEqual(h.errors,[]);
  }finally{h.dom.window.close();}
 });
+
+test('UI: compact editor reorders equipment with keyboard and preserves values',async()=>{
+ const h=await setup();try{
+ await h.click('#sign-in-button');await h.click('.open-case');await h.click('.sidebar [data-view="editor"]');
+ const ids=()=>Array.from(h.d.querySelectorAll('.equipment-id')).map(x=>x.value);const before=ids();
+ h.d.querySelector('.equipment-drag').dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+ assert.equal(ids()[1],before[0]);assert.equal(ids()[0],before[1]);assert.equal(h.d.querySelectorAll('.move-up,.move-down').length,0);
+ assert.equal(h.d.querySelector('.remove-equipment').textContent,'');assert.equal(h.d.querySelector('.toggle-step').textContent,'');
+ await h.click('#open-settings');assert.equal(h.d.querySelectorAll('.accent-choice').length,25);assert.equal(h.d.getElementById('settings-save').getAttribute('form'),'workspace-form');assert(!h.d.querySelector('.dialog-body #settings-save'));
+ await h.click('#settings-save');assert(!h.d.getElementById('status').textContent.includes('Loading console'));
+ await h.click('#toggle-gemini');const grip=h.d.getElementById('gemini-resize');const initial=Number(grip.getAttribute('aria-valuenow'));grip.dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'ArrowLeft'}));assert(Number(grip.getAttribute('aria-valuenow'))>initial);
+ assert.deepEqual(h.errors,[]);
+ }finally{h.dom.window.close();}
+});
