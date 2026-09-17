@@ -70,3 +70,14 @@ P combines ramp-up and Prime delay. The existing engine consumes a ramp duration
 Replace generated **Code.gs and Index.html** together, then update the Apps Script deployment. SpreadsheetApp introduces a Sheets authorization requirement; reauthorize the executing account if prompted. No separate Sheets service or Gemini key is needed for import. Apps Script reference: [SpreadsheetApp.openById](https://developers.google.com/apps-script/reference/spreadsheet/spreadsheet-app#openbyidid), [Range.getValues and getNumberFormats](https://developers.google.com/apps-script/reference/spreadsheet/range).
 
 Tests use synthetic rows only. They cover all 23 columns, metadata, NA, percent formatting, errors by cell, date serialization, ownership before read, provenance persistence, actual engine reliability events and the UI's preview/cancel/selective-update/save workflow, unchanged equipment preservation, empty simulations, name ambiguity, NA clearing, repeated imports after renames/row moves, metadata-only changes and results invalidation. No confidential plant sheet was accessed. Live Sheets authorization and final rendering must be verified in the deployed Web App.
+
+
+## Import access diagnostics (sheet-import-20260917-2)
+
+Deploy the generated Code.gs and Index.html together. For manual deployment, do not also copy the modular .gs files: they duplicate global functions defined in Code.gs. An old duplicate definition or an old versioned deployment can keep returning the legacy message.
+
+Import failures now include a server version and error code. The browser displays Google service details as plain text, including failures before a server response. If only the browser is updated, it reports that the server version is unavailable. Sheets is opened first; Drive metadata is only checked after failure to identify non-native files without making Drive metadata access a prerequisite for readable Sheets.
+
+The old message “Cannot open this Google Sheet. Check its URL and access for your signed-in Google account.” is absent from this release. Seeing it without the new version marker means an older function/deployment is responding. Search all Apps Script files for that literal and for duplicate previewSheetImport_ definitions, then verify the deployment URL. Editor execution uses current code; a versioned Web App requires a deployment update. Google documentation: https://developers.google.com/apps-script/concepts/deployments and https://developers.google.com/apps-script/concepts/scopes .
+
+Mock-based tests cannot verify the user’s live OAuth grant, file type or organization policy. Preserve the returned Google message to diagnose the actual service failure before changing scopes or account settings.

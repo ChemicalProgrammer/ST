@@ -21,9 +21,7 @@ function previewSheetImport_(request, user) {
   if (!request || typeof request !== 'object') throw createSimulatorError_('INVALID_SHEET_REQUEST','Enter a Google Sheets URL or spreadsheet ID.');
   getCase_(request.caseId, user); // Check target ownership before reading any spreadsheet.
   var reference = parseSheetReference_(request.spreadsheet);
-  var book;
-  try { book = SpreadsheetApp.openById(reference.id); }
-  catch (_) { throw createSimulatorError_('SHEET_UNAVAILABLE','Cannot open this Google Sheet. Check its URL and access for your signed-in Google account.'); }
+  var book = openImportSpreadsheet_(reference.id);
   var name = typeof request.sheetName === 'string' ? request.sheetName.trim() : '';
   var sheets = book.getSheets();
   var sheet = name ? book.getSheetByName(name) : reference.gid !== null ? sheets.filter(function(s){return String(s.getSheetId()) === reference.gid;})[0] : sheets[0];
@@ -39,6 +37,36 @@ function previewSheetImport_(request, user) {
   var result = parseEquipmentSheet_(metadata, rows, formats);
   result.source = {schemaVersion:'plant-sheet-v1',spreadsheetId:reference.id,sheetId:sheet.getSheetId(),sheetName:sheet.getName(),readAt:new Date().toISOString(),equipmentRange:count?'A10:W'+lastRow:'A10:W10'};
   return result;
+}
+
+function openImportSpreadsheet_(spreadsheetId) {
+  // Sheets is authoritative. A Drive metadata failure must not block a readable Sheet.
+  var sheetError;
+  try { return SpreadsheetApp.openById(spreadsheetId); }
+  catch (error) { sheetError = error; }
+  var detail = safeSheetErrorDetail_(sheetError), driveDetail = '';
+  try {
+    var file = DriveApp.getFileById(spreadsheetId);
+    var mime = file.getMimeType();
+    if (mime !== 'application/vnd.google-apps.spreadsheet') {
+      throw createSimulatorError_(
+        'SHEET_NOT_NATIVE',
+        'This file is ' + (mime || 'not a native Google Sheet') + '. In Google Sheets use File → Save as Google Sheets, then paste the URL of the new copy.'
+      );
+    }
+  } catch (error) {
+    if (error && error.simulatorError) throw error;
+    driveDetail = 'Drive diagnostic: ' + safeSheetErrorDetail_(error);
+  }
+  var authorization = /authoriz|permission|scope|privilege|autoriz|permiso/i.test(detail);
+  throw createSimulatorError_(authorization ? 'SHEET_AUTHORIZATION_REQUIRED' : 'SHEET_OPEN_FAILED',
+    'Google Sheets could not open the file. Google reported: ' + detail,
+    driveDetail ? [driveDetail] : []);
+}
+
+function safeSheetErrorDetail_(error) {
+  var message = error && error.message ? String(error.message) : String(error || 'Unknown Google service error');
+  return message.replace(/\s+/g, ' ').trim().slice(0, 300);
 }
 
 function parseSheetReference_(input) {

@@ -53,10 +53,30 @@ test('import provenance survives case normalization independently for each simul
 test('Sheet reader authenticates, checks case ownership, respects URL gid and serializes dates',()=>{
  const f=fixture(),ranges=[],reads=[];
  function tab(id){return {getSheetId:()=>id,getName:()=> 'Tab '+id,getLastRow:()=>12,getMaxColumns:()=>23,getMaxRows:()=>100,getRange:(row,col,num,width)=>{ranges.push([row,col,num,width]);return {getValues:()=>row===1?f.metadata.map((v,i)=>[i===5?new Date('2026-09-16'):v]):f.rows,getNumberFormats:()=>f.formats};}};}
- const tabs=[tab(0),tab(22)];const r=runtime({SpreadsheetApp:{openById:id=>{reads.push(id);return {getSheets:()=>tabs,getSheetByName:()=>null,getSpreadsheetTimeZone:()=> 'Etc/UTC'};}}});
+ const tabs=[tab(0),tab(22)];const r=runtime({DriveApp:{getFileById:()=>({getMimeType:()=> 'application/vnd.google-apps.spreadsheet'})},SpreadsheetApp:{openById:id=>{reads.push(id);return {getSheets:()=>tabs,getSheetByName:()=>null,getSpreadsheetTimeZone:()=> 'Etc/UTC'};}}});
  let checked=false;r.requireCurrentUser_=()=>({email:'owner@test'});r.getCase_=(id,user)=>{assert.equal(id,'mine');assert.equal(user.email,'owner@test');checked=true;};
  const response=r.previewSheetImport({caseId:'mine',spreadsheet:'https://docs.google.com/spreadsheets/d/synthetic-sheet-id/edit#gid=22'});
  assert(checked);assert.equal(response.ok,true);assert.equal(response.data.source.sheetId,22);assert.equal(response.data.metadata.dateOfAnalysis,'2026-09-16');assert.deepEqual(ranges,[[1,3,7,1],[10,1,3,23]]);
  r.getCase_=()=>{throw Error('Denied');};assert.equal(r.previewSheetImport({caseId:'mine',spreadsheet:'synthetic-sheet-id'}).ok,false);assert.equal(reads.length,1);
  assert.throws(()=>r.parseSheetReference_('https://evil.test/synthetic-sheet-id'));
+});
+test('Sheet reader distinguishes Excel files and missing Sheets authorization',()=>{
+ const excel=runtime({DriveApp:{getFileById:()=>({getMimeType:()=> 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})}});
+ assert.throws(()=>excel.openImportSpreadsheet_('synthetic-sheet-id'),e=>e.simulatorError.code==='SHEET_NOT_NATIVE');
+ const denied=runtime({DriveApp:{getFileById:()=>({getMimeType:()=> 'application/vnd.google-apps.spreadsheet'})},SpreadsheetApp:{openById:()=>{throw Error('You do not have permission to call openById');}}});
+ assert.throws(()=>denied.openImportSpreadsheet_('synthetic-sheet-id'),e=>e.simulatorError.code==='SHEET_AUTHORIZATION_REQUIRED'&&e.simulatorError.message.includes('permission'));
+});
+test('readable Sheets do not depend on Drive metadata access',()=>{
+ const book={};const r=runtime({DriveApp:{getFileById:()=>{throw Error('Drive unavailable');}},SpreadsheetApp:{openById:()=>book}});
+ assert.equal(r.openImportSpreadsheet_('synthetic-sheet-id'),book);
+});
+test('RPC preserves Google errors and identifies the responding importer',()=>{
+ const r=runtime({SpreadsheetApp:{openById:()=>{throw Error('Sheets service unavailable');}},DriveApp:{getFileById:()=>{throw Error('Drive access denied');}}});
+ r.requireCurrentUser_=()=>({email:'owner@test'});r.getCase_=()=>({});
+ const response=r.previewSheetImport({caseId:'mine',spreadsheet:'synthetic-sheet-id'});
+ assert.equal(response.ok,false);assert.equal(response.importVersion,'sheet-import-20260917-2');
+ assert.match(response.error.message,/sheet-import-20260917-2.*SHEET_OPEN_FAILED.*Sheets service unavailable/);
+ assert.match(response.error.details[0],/Drive access denied/);
+ r.previewSheetImport_=()=>{throw Error('Failed while reading cells');};
+ assert.match(r.previewSheetImport({}).error.message,/SHEET_READ_FAILED.*Failed while reading cells/);
 });

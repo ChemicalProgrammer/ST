@@ -89,5 +89,14 @@ function askGemini(request) {
 }
 
 function previewSheetImport(request) {
-  return executeServerAction_(function(user) { return previewSheetImport_(request, user); });
+  var response = executeServerAction_(function(user) {
+    try { return previewSheetImport_(request, user); }
+    catch (error) {
+      if (error && error.simulatorError) throw error;
+      throw createSimulatorError_('SHEET_READ_FAILED', safeSheetErrorDetail_(error));
+    }
+  });
+  response.importVersion = 'sheet-import-20260917-2';
+  if (!response.ok) response.error.message = '[' + response.importVersion + ' / ' + response.error.code + '] ' + response.error.message;
+  return response;
 }
