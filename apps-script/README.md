@@ -1,10 +1,7 @@
-# Manual Apps Script deployment
+# Recursos de la aplicación
 
-For the browser-based Apps Script editor, this directory has exactly two files to copy:
+`TextResources.gs` reúne etiquetas, mensajes y ayudas de interfaz con claves descriptivas. Cambia los valores conservando las claves y los espacios de los fragmentos de mensajes. `DesignTokens.html` define los recursos visuales.
 
-1. `Code.gs` → replace the Apps Script file named **Code.gs**.
-2. `Index.html` → replace the Apps Script HTML file named **Index**.
+Los módulos usan `__ST_TEXT__('clave')` para cadenas JavaScript, `__ST_HTML_TEXT__('clave')` para texto en HTML dinámico y `<?= __ST_TEXT__('clave') ?>` en las vistas. Los textos se resuelven durante la generación o al cargar los módulos en Apps Script, sin solicitudes adicionales del navegador. Después de editar recursos, regenera los archivos con `npm run build:apps-script`.
 
-Those files are complete and generated together. Do not paste any file from `source/` into the same Apps Script project; that would duplicate global functions already bundled in `Code.gs` and `Index.html`.
-
-The `source/` folder is only for repository maintenance and optional `clasp` deployment. It is not part of the manual copy/paste workflow.
+`Code.gs` e `Index.html` son archivos generados. Los módulos conservan la lógica de la aplicación; los identificadores técnicos, datos del usuario y parámetros del motor no son textos de interfaz.

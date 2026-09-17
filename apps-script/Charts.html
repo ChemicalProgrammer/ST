@@ -103,7 +103,7 @@ window.STCharts=function(state,formatNumber){
 
       context.fillStyle = token('--chart-axis');
       context.font = token('--font-secondary') + ' ' + token('--font-ui');
-      context.fillText('Actual BPM', padding.left, 13);
+      context.fillText(__ST_TEXT__('charts.actual_bpm'), padding.left, 13);
       context.fillText('0', padding.left - 10, padding.top + plotHeight + 16);
       context.fillText(formatNumber(maxRate), padding.left - 38, padding.top + 8);
       context.fillText(startTime + '–' + endTime + ' s', Math.max(padding.left, padding.left + plotWidth - 70), padding.top + plotHeight + 20);
@@ -115,7 +115,7 @@ window.STCharts=function(state,formatNumber){
         var swatch = document.createElement('i');
         swatch.style.backgroundColor = speedColor(index);
         item.appendChild(swatch);
-        item.appendChild(document.createTextNode(model.name || model.id || ('Unit ' + (index + 1))));
+        item.appendChild(document.createTextNode(model.name || model.id || (__ST_TEXT__('charts.unit') + (index + 1))));
         legend.appendChild(item);
       });
     }

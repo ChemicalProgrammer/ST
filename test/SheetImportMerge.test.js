@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const context={window:{}};vm.createContext(context);vm.runInContext(fs.readFileSync('apps-script/SheetImportMerge.html','utf8').replace(/<\/?script>/g,''),context);const merge=context.window.STSheetImportMerge;
+const context={window:{}};vm.createContext(context);vm.runInContext(fs.readFileSync('apps-script/TextResources.gs','utf8'),context);vm.runInContext(fs.readFileSync('apps-script/SheetImportMerge.html','utf8').replace(/<\/?script>/g,''),context);const merge=context.window.STSheetImportMerge;
 const copy=x=>JSON.parse(JSON.stringify(x));
 function equipment(id,name,mtbf=100){return {id,name,type:'FILLER',nominalRatePerSecond:2,initialMode:'AUTO',characteristics:{custom:'keep'},processData:{role:'MACHINE',equipment:{mtbfMinutes:mtbf,mttrMinutes:5,maximumSpeedBpm:120}},noiseProfile:{reliability:{mtbfMinutes:mtbf,mttrMinutes:5},microStop:{probabilityPerMinute:.01,minDurationSeconds:1,maxDurationSeconds:2}}};}
 function preview(units){return {equipment:units,source:{spreadsheetId:'sheet-id',sheetId:0,sheetName:'Line'},metadata:{site:'Plant'},sourceRows:[],errors:[],warnings:[],notes:[]};}

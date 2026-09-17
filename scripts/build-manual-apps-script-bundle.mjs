@@ -1,11 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const repositoryRoot = path.resolve(path.dirname(scriptPath), '..');
 
 const serverFiles = [
+  'TextResources.gs',
   'ApiResponse.gs',
   'AuthService.gs',
   'ConfigService.gs',
@@ -50,18 +52,24 @@ const htmlIncludes = [
 export function buildManualAppsScriptBundle(rootDirectory = repositoryRoot) {
   const appsScriptSourceDirectory = path.join(rootDirectory, 'apps-script');
   const manualOutputDirectory = path.join(rootDirectory, 'apps-script');
-  const readSource = (file) => fs.readFileSync(path.join(appsScriptSourceDirectory, file), 'utf8').trimEnd();
+  const resources = fs.readFileSync(path.join(appsScriptSourceDirectory, 'TextResources.gs'), 'utf8');
+  const resourceContext = vm.createContext({});
+  vm.runInContext(resources, resourceContext);
+  const readSource = (file) => {
+    const source = fs.readFileSync(path.join(appsScriptSourceDirectory, file), 'utf8').trimEnd();
+    return file === 'TextResources.gs' ? source : resourceContext.resolveTextResources_(source);
+  };
   const readServerSource = (file) => {
     var source = readSource(file);
     if (file !== 'Main.gs') return source;
     return source.replace(
-      /\nfunction include_\(filename\) \{\n  return HtmlService\.createHtmlOutputFromFile\(filename\)\.getContent\(\);\n\}\n?/,
+      /\nfunction include_\(filename\) \{\n  return resolveTextResources_\(HtmlService\.createHtmlOutputFromFile\(filename\)\.getContent\(\)\);\n\}\n?/,
       '\n'
     ).replace("createTemplateFromFile('WebApp')", "createTemplateFromFile('Index')");
   };
 
   const code = [
-    '// MANUAL APPS SCRIPT DEPLOYMENT FILE — copy this file as Code.gs.',
+    '// GENERATED SERVER BUNDLE.',
     '// GENERATED from apps-script/; edit the modular sources, not this file.',
     ''
   ].concat(serverFiles.flatMap((file) => [
@@ -83,7 +91,7 @@ export function buildManualAppsScriptBundle(rootDirectory = repositoryRoot) {
   if (index.includes('<?')) {
     throw new Error('Manual bundle still contains an unresolved Apps Script template expression.');
   }
-  index = '<!-- MANUAL APPS SCRIPT DEPLOYMENT FILE — copy this file as Index.html. GENERATED from apps-script/; do not edit it directly. -->\n' + index + '\n';
+  index = '<!-- GENERATED CLIENT BUNDLE. Source modules: apps-script/. -->\n' + index + '\n';
 
   const codePath = path.join(manualOutputDirectory, 'Code.gs');
   const indexPath = path.join(manualOutputDirectory, 'Index.html');

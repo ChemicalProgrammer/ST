@@ -2,7 +2,7 @@
 window.STEquipmentDrag=(function(){
  function cards(){return Array.from(document.querySelectorAll('#equipment-list .equipment-card'));}
  function positions(){var map={};cards().forEach(function(c){map[c.querySelector('.equipment-id').value]=c.getBoundingClientRect().top;});return map;}
- function animate(before,index){cards().forEach(function(c){var y=before[c.querySelector('.equipment-id').value];if(Number.isFinite(y)&&c.animate&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches)c.animate([{transform:'translateY('+(y-c.getBoundingClientRect().top)+'px)'},{transform:'translateY(0)'}],{duration:180,easing:'ease-out'});});cards()[index]?.querySelector('.equipment-drag').focus();}
+ function animate(before,index){cards().forEach(function(c){var y=before[c.querySelector('.equipment-id').value];if(Number.isFinite(y)&&c.animate&&!window.matchMedia(__ST_TEXT__('equipmentdrag.prefers_reduced_motion_reduce')).matches)c.animate([{transform:'translateY('+(y-c.getBoundingClientRect().top)+'px)'},{transform:'translateY(0)'}],{duration:180,easing:'ease-out'});});cards()[index]?.querySelector('.equipment-drag').focus();}
  function bind(card,index,move){
   var handle=card.querySelector('.equipment-drag');handle.innerHTML=STIcons.svg('grip');
   handle.onkeydown=function(e){if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();move(index,e.key==='ArrowUp'?-1:1);}};

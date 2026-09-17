@@ -8,27 +8,27 @@ window.STSheetImportMerge=(function(){
   function name(v){return String(v||'').trim().toLowerCase();}
   function key(source){return (source?.spreadsheetId||'')+':'+(source?.sheetId===undefined?source?.sheetName:source.sheetId);}
   function field(id,col,label,paths){return {id:id,col:col,label:label,paths:paths,read:function(e){return get(e,paths[0]);},write:function(e,v){paths.forEach(function(p){put(e,p,v);});}};}
-  var fields=[field('type','A','Type',['type']),field('name','B','Name',['name']),
-    field('critical','C','Critical machine',['characteristics.criticalMachine']),
-    field('mtbf','D','MTBF (min)',['processData.equipment.mtbfMinutes']),field('mttr','E','MTTR (min)',['processData.equipment.mttrMinutes']),
-    field('maxSpeed','F','Maximum speed (bpm)',['processData.equipment.maximumSpeedBpm']),
-    field('nominalSpeed','F','Nominal running speed (bpm) — initialized from F',['nominalRatePerSecond']),
-    field('length','G','Total length (mm)',['processData.geometry.lactMm']),field('prime','H','Prime zone (mm)',['processData.geometry.lpPrimeMm']),
-    field('discharge','I','Discharge actual (mm)',['processData.geometry.actualDischargeMm']),field('coding','J','Coding actual (mm)',['processData.geometry.actualCodingMm']),
-    field('package','K','Package length (mm)',['processData.upstream.packageLengthMm']),field('pitch','L','Discharge pitch (mm)',['processData.upstream.dischargePitchMm']),
-    field('startup','M','Startup time (s)',['processData.upstream.startupTimeSeconds']),field('residual','N','Bottles discharged at stop',['processData.upstream.bottlesDischargedAtStop','processData.accumulation.bottlesDischargedAtStop']),
-    field('infeed','O','Downstream infeed pitch (mm)',['processData.downstream.infeedPitchMm']),field('ramp','P','Ramp-up including Prime delay (s)',['processData.downstream.rampUpTimeSeconds','processData.accumulation.downstreamRampUpSeconds']),
-    field('speedFactor','Q','Speed factor vs discharge (%)',['processData.speedAndSensors.conveyorSpeedFactorVsDischargeVelocityPercent','processData.accumulation.conveyorSpeedFactorPercent']),
-    field('codingFactor','R','Coding speed factor vs previous (%)',['processData.speedAndSensors.codingConveyorSpeedFactorVsPreviousConveyorPercent']),
-    field('previousFactor','S','Conveyor factor vs previous (%)',['processData.speedAndSensors.conveyorSpeedFactorVsPreviousConveyorPercent']),
-    field('blocked','T','Back-up blocked delay (s)',['processData.speedAndSensors.blockedTimeDelaySeconds','processData.accumulation.blockedTimeDelaySeconds']),
-    field('clear','U','Back-up clear delay (s)',['processData.speedAndSensors.clearTimeDelaySeconds','processData.accumulation.clearTimeDelaySeconds']),
-    field('insurance','V','Insurance factor (packages)',['processData.speedAndSensors.insuranceFactorUnits','processData.accumulation.insuranceFactorUnits']),
-    field('overspeed','W','Overspeed vs infeed screw (%)',['processData.speedAndSensors.overspeedVsInfeedScrewPercent'])];
+  var fields=[field('type','A',__ST_TEXT__('sheetimportmerge.type'),['type']),field('name','B',__ST_TEXT__('sheetimportmerge.name'),['name']),
+    field('critical','C',__ST_TEXT__('sheetimportmerge.critical_machine'),['characteristics.criticalMachine']),
+    field('mtbf','D',__ST_TEXT__('sheetimportmerge.mtbf_min'),['processData.equipment.mtbfMinutes']),field('mttr','E',__ST_TEXT__('sheetimportmerge.mttr_min'),['processData.equipment.mttrMinutes']),
+    field('maxSpeed','F',__ST_TEXT__('sheetimportmerge.maximum_speed_bpm'),['processData.equipment.maximumSpeedBpm']),
+    field('nominalSpeed','F',__ST_TEXT__('sheetimportmerge.nominal_running_speed_bpm_initialized_from_f'),['nominalRatePerSecond']),
+    field('length','G',__ST_TEXT__('sheetimportmerge.total_length_mm'),['processData.geometry.lactMm']),field('prime','H',__ST_TEXT__('sheetimportmerge.prime_zone_mm'),['processData.geometry.lpPrimeMm']),
+    field('discharge','I',__ST_TEXT__('sheetimportmerge.discharge_actual_mm'),['processData.geometry.actualDischargeMm']),field('coding','J',__ST_TEXT__('sheetimportmerge.coding_actual_mm'),['processData.geometry.actualCodingMm']),
+    field('package','K',__ST_TEXT__('sheetimportmerge.package_length_mm'),['processData.upstream.packageLengthMm']),field('pitch','L',__ST_TEXT__('sheetimportmerge.discharge_pitch_mm'),['processData.upstream.dischargePitchMm']),
+    field('startup','M',__ST_TEXT__('sheetimportmerge.startup_time_s'),['processData.upstream.startupTimeSeconds']),field('residual','N',__ST_TEXT__('sheetimportmerge.bottles_discharged_at_stop'),['processData.upstream.bottlesDischargedAtStop','processData.accumulation.bottlesDischargedAtStop']),
+    field('infeed','O',__ST_TEXT__('sheetimportmerge.downstream_infeed_pitch_mm'),['processData.downstream.infeedPitchMm']),field('ramp','P',__ST_TEXT__('sheetimportmerge.ramp_up_including_prime_delay_s'),['processData.downstream.rampUpTimeSeconds','processData.accumulation.downstreamRampUpSeconds']),
+    field('speedFactor','Q',__ST_TEXT__('sheetimportmerge.speed_factor_vs_discharge'),['processData.speedAndSensors.conveyorSpeedFactorVsDischargeVelocityPercent','processData.accumulation.conveyorSpeedFactorPercent']),
+    field('codingFactor','R',__ST_TEXT__('sheetimportmerge.coding_speed_factor_vs_previous'),['processData.speedAndSensors.codingConveyorSpeedFactorVsPreviousConveyorPercent']),
+    field('previousFactor','S',__ST_TEXT__('sheetimportmerge.conveyor_factor_vs_previous'),['processData.speedAndSensors.conveyorSpeedFactorVsPreviousConveyorPercent']),
+    field('blocked','T',__ST_TEXT__('client.back_up_blocked_delay_s'),['processData.speedAndSensors.blockedTimeDelaySeconds','processData.accumulation.blockedTimeDelaySeconds']),
+    field('clear','U',__ST_TEXT__('client.back_up_clear_delay_s'),['processData.speedAndSensors.clearTimeDelaySeconds','processData.accumulation.clearTimeDelaySeconds']),
+    field('insurance','V',__ST_TEXT__('sheetimportmerge.insurance_factor_packages'),['processData.speedAndSensors.insuranceFactorUnits','processData.accumulation.insuranceFactorUnits']),
+    field('overspeed','W',__ST_TEXT__('sheetimportmerge.overspeed_vs_infeed_screw'),['processData.speedAndSensors.overspeedVsInfeedScrewPercent'])];
   fields.find(function(f){return f.id==='critical';}).read=function(e){return e.characteristics?.criticalMachine===undefined?['CRITICAL_MACHINE','PACEMAKER'].includes(e.processData?.role):e.characteristics.criticalMachine;};
   ['mtbf','mttr'].forEach(function(id){var f=fields.find(function(f){return f.id===id;});f.read=function(e){return get(e,'noiseProfile.reliability.'+(id==='mtbf'?'mtbfMinutes':'mttrMinutes'))??get(e,f.paths[0]);};});
   ['residual','ramp','speedFactor','blocked','clear','insurance'].forEach(function(id){var f=fields.find(function(f){return f.id===id;});f.read=function(e){return e.type==='CONVEYOR'?(get(e,f.paths[1])??get(e,f.paths[0])):get(e,f.paths[0]);};});
-  var metadataFields=[['site','Site'],['packagingLine','Packaging line'],['formatName','Format name'],['containerSizeOz','Container size (oz)'],['bottlesPerCase','Bottles per case'],['dateOfAnalysis','Date of analysis'],['by','By']];
+  var metadataFields=[['site','Site'],['packagingLine',__ST_TEXT__('sheetimportmerge.packaging_line')],['formatName',__ST_TEXT__('sheetimportmerge.format_name')],['containerSizeOz',__ST_TEXT__('sheetimportmerge.container_size_oz')],['bottlesPerCase',__ST_TEXT__('sheetimportmerge.bottles_per_case')],['dateOfAnalysis',__ST_TEXT__('sheetimportmerge.date_of_analysis')],['by','By']];
   function errorsFor(preview,col,row){return (preview.errors||[]).filter(function(e){var m=String(e.cell).match(/^([A-W])(\d+)(?::([A-W])(\d*)?)?$/);if(!m)return false;return row>=Number(m[2])&&row<=Number(m[4]||m[2])&&col>=m[1]&&col<=(m[3]||m[1]);});}
   function incomingValue(preview,record,f){var raw=(preview.sourceRows||[]).find(function(r){return r.row===record.row;});if(f.id==='critical'&&raw?.values?.critical===null)return null;return f.read(preview.equipment[record.index]);}
   function defaults(preview,record,equipment){var current=equipment.find(function(e){return e.id===record.target;}),incoming=preview.equipment[record.index];record.selected={};fields.forEach(function(f){var v=incomingValue(preview,record,f);record.selected[f.id]=!errorsFor(preview,f.col,record.row).length&&(!current||v!=null&&!equal(f.read(current),v));});return record;}
@@ -46,7 +46,7 @@ window.STSheetImportMerge=(function(){
       var target=ambiguous?'skip':candidates.size===1?Array.from(candidates)[0]:renamed?'skip':'new';
       // Invalid source rows require explicit selection of a target and valid fields.
       if((preview.errors||[]).some(function(e){return fields.some(function(f){return errorsFor(preview,f.col,row).includes(e);});}))target='skip';
-      return defaults(preview,{index:index,row:row,target:target,reason:ambiguous?'Ambiguous name: choose the equipment to update.':renamed&&!candidates.size?'Name changed at this source row: choose an existing equipment or add new.':target==='new'?'New equipment — appended to the line.':'Matched by a unique name or previous import.',selected:{}},current);
+      return defaults(preview,{index:index,row:row,target:target,reason:ambiguous?__ST_TEXT__('sheetimportmerge.ambiguous_name_choose_the_equipment_to_update'):renamed&&!candidates.size?__ST_TEXT__('sheetimportmerge.name_changed_at_this_source_row_choose_an_existing_equipment_or_add_new'):target==='new'?__ST_TEXT__('sheetimportmerge.new_equipment_appended_to_the_line'):__ST_TEXT__('sheetimportmerge.matched_by_a_unique_name_or_previous_import'),selected:{}},current);
     });
     var metadata={};metadataFields.forEach(function(f,i){metadata[f[0]]=!errorsFor(preview,'C',i+1).length&&preview.metadata[f[0]]!=null&&!equal(sourceImport?.metadata?.[f[0]],preview.metadata[f[0]]);});
     return {records:records,metadata:metadata,bindings:bindings};
@@ -58,23 +58,23 @@ window.STSheetImportMerge=(function(){
       if(record.target==='skip')return;
       var incoming=preview.equipment[record.index],isNew=record.target==='new';
       var selected=fields.filter(function(f){return record.selected[f.id];});if(!selected.length)return;
-      if(!isNew&&used.has(record.target)){issues.push('Two Sheet rows target the same equipment. Skip one or choose another target.');return;}if(!isNew)used.add(record.target);
+      if(!isNew&&used.has(record.target)){issues.push(__ST_TEXT__('sheetimportmerge.two_sheet_rows_target_the_same_equipment_skip_one_or_choose_another_target'));return;}if(!isNew)used.add(record.target);
       var currentUnit=equipment.find(function(e){return e.id===record.target;});
-      if(!isNew&&!currentUnit){issues.push('Target equipment no longer exists. Preview again.');return;}
+      if(!isNew&&!currentUnit){issues.push(__ST_TEXT__('sheetimportmerge.target_equipment_no_longer_exists_preview_again'));return;}
       var unit=isNew?{id:incoming.id,type:'CUSTOM',name:'',nominalRatePerSecond:null,initialMode:'AUTO',characteristics:{},noiseProfile:{},processData:{}}:copy(currentUnit);
       if(isNew){var suffix=2,base=unit.id;while(equipment.some(function(e){return e.id===unit.id;}))unit.id=base+'-'+suffix++;}
       var applied=[];
-      selected.forEach(function(f){var errs=errorsFor(preview,f.col,record.row);if(errs.length){issues.push(f.col+record.row+': fix this cell or deselect the field.');return;}var value=incomingValue(preview,record,f),before=f.read(unit);f.write(unit,value);applied.push({field:f.id,cell:f.col+record.row,before:before==null?null:before,after:value==null?null:value});});
+      selected.forEach(function(f){var errs=errorsFor(preview,f.col,record.row);if(errs.length){issues.push(f.col+record.row+__ST_TEXT__('sheetimportmerge.fix_this_cell_or_deselect_the_field'));return;}var value=incomingValue(preview,record,f),before=f.read(unit);f.write(unit,value);applied.push({field:f.id,cell:f.col+record.row,before:before==null?null:before,after:value==null?null:value});});
       var reliability=selected.some(function(f){return ['mtbf','mttr'].includes(f.id);});
-      if(reliability){var bf=record.selected.mtbf?fields[3].read(incoming):fields[3].read(currentUnit||{}),tr=record.selected.mttr?fields[4].read(incoming):fields[4].read(currentUnit||{});unit.noiseProfile=unit.noiseProfile||{};if(bf==null&&tr==null)delete unit.noiseProfile.reliability;else if(bf>0&&tr>0)unit.noiseProfile.reliability=Object.assign({},unit.noiseProfile.reliability,{mtbfMinutes:bf,mttrMinutes:tr});else issues.push(unit.name+': MTBF and MTTR must both be positive or both NA. Adjust the field selection.');}
+      if(reliability){var bf=record.selected.mtbf?fields[3].read(incoming):fields[3].read(currentUnit||{}),tr=record.selected.mttr?fields[4].read(incoming):fields[4].read(currentUnit||{});unit.noiseProfile=unit.noiseProfile||{};if(bf==null&&tr==null)delete unit.noiseProfile.reliability;else if(bf>0&&tr>0)unit.noiseProfile.reliability=Object.assign({},unit.noiseProfile.reliability,{mtbfMinutes:bf,mttrMinutes:tr});else issues.push(unit.name+__ST_TEXT__('sheetimportmerge.mtbf_and_mttr_must_both_be_positive_or_both_na_adjust_the_field_selection'));}
       if(isNew||record.selected.type||record.selected.critical){unit.processData.role=unit.type==='CONVEYOR'?'CONVEYOR':unit.type==='PACEMAKER'?'PACEMAKER':unit.characteristics.criticalMachine?'CRITICAL_MACHINE':'MACHINE';unit.processData.machineType=unit.type;}
       if(unit.type!=='CONVEYOR')delete unit.processData.accumulation;
-      if(!unit.name||!(unit.nominalRatePerSecond>0))issues.push('Row '+record.row+': new/updated equipment needs a name and positive nominal speed. Select those fields or skip the row.');
+      if(!unit.name||!(unit.nominalRatePerSecond>0))issues.push(__ST_TEXT__('sheetimport.row')+record.row+__ST_TEXT__('sheetimportmerge.new_updated_equipment_needs_a_name_and_positive_nominal_speed_select_those_'));
       var changed=isNew||!equal(currentUnit,unit);
       if(changed){if(isNew){equipment.push(unit);added++;}else{equipment[equipment.indexOf(currentUnit)]=unit;updated++;}}
       changes.push({equipmentId:unit.id,sourceName:incoming.name,row:record.row,sourceKey:key(preview.source),added:isNew,fields:applied});
     });
-    metadataFields.forEach(function(f,i){if(!plan.metadata[f[0]])return;if(errorsFor(preview,'C',i+1).length){issues.push('C'+(i+1)+': fix or deselect the metadata field.');return;}var value=preview.metadata[f[0]];if(!equal(metadata[f[0]],value))metadataChanges.push({field:f[0],before:metadata[f[0]]??null,after:value??null});metadata[f[0]]=value??null;});
+    metadataFields.forEach(function(f,i){if(!plan.metadata[f[0]])return;if(errorsFor(preview,'C',i+1).length){issues.push('C'+(i+1)+__ST_TEXT__('sheetimportmerge.fix_or_deselect_the_metadata_field'));return;}var value=preview.metadata[f[0]];if(!equal(metadata[f[0]],value))metadataChanges.push({field:f[0],before:metadata[f[0]]??null,after:value??null});metadata[f[0]]=value??null;});
     var effective=added+updated+metadataChanges.length>0;
     sourceImport.source=copy(preview.source);sourceImport.metadata=metadata;sourceImport.rows=copy(preview.sourceRows||[]);sourceImport.warnings=copy(preview.warnings||[]);sourceImport.notes=copy(preview.notes||[]);
     var bindings=copy(plan.bindings);changes.forEach(function(c){bindings=bindings.filter(function(b){return !(b.equipmentId===c.equipmentId&&b.sourceKey===c.sourceKey);});bindings.push({equipmentId:c.equipmentId,sourceKey:c.sourceKey,sourceName:c.sourceName,row:c.row});});sourceImport.bindings=bindings;

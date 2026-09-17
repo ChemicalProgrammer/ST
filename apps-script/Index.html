@@ -1,4 +1,4 @@
-<!-- MANUAL APPS SCRIPT DEPLOYMENT FILE — copy this file as Index.html. GENERATED from apps-script/; do not edit it directly. -->
+<!-- GENERATED CLIENT BUNDLE. Source modules: apps-script/. -->
 <!doctype html>
 <html lang="en">
   <head>
@@ -977,7 +977,7 @@ window.STPreferences = (function() {
               <div>
                 <p class="eyebrow">SIMULATION ANALYSIS</p>
                 <h3 id="simulation-analysis-title">What this run indicates</h3>
-                <p>The recommendation combines this run's losses with the physical conveyor audit. It creates one saved successor simulation; it does not run a design of experiments or claim an untested optimum.</p>
+                <p>The recommendation combines this run&#39;s losses with the physical conveyor audit. It creates one saved successor simulation; it does not run a design of experiments or claim an untested optimum.</p>
               </div>
             </div>
             <div id="simulation-analysis-content" class="simulation-analysis-content"></div>
@@ -3122,7 +3122,7 @@ window.STSettings = (function() {
   var snapshot = '', lastFocus, saving = false;
   function formValue() { return JSON.stringify([document.getElementById('workspace-folder-id').value,document.getElementById('playback-rate').value,document.getElementById('gemini-model').value,document.getElementById('gemini-api-key').value,document.getElementById('gemini-clear-key').checked]); }
   function dirty() { return snapshot !== formValue(); }
-  function refresh() { document.getElementById('settings-unsaved').textContent = dirty() ? 'Unsaved changes' : ''; }
+  function refresh() { document.getElementById('settings-unsaved').textContent = dirty() ? "Unsaved changes" : ''; }
   function open() {
     var dialog=document.getElementById('settings-dialog');
     if(dialog.open) return;
@@ -3131,7 +3131,7 @@ window.STSettings = (function() {
   }
   function close() {
     if(saving) return;
-    if(dirty() && !window.confirm('Discard unsaved settings?')) return;
+    if(dirty() && !window.confirm("Discard unsaved settings?")) return;
     var values=JSON.parse(snapshot); document.getElementById('workspace-folder-id').value=values[0]; document.getElementById('playback-rate').value=values[1];
     document.getElementById('gemini-model').value=values[2]; document.getElementById('gemini-api-key').value=''; document.getElementById('gemini-clear-key').checked=values[4];
     document.getElementById('settings-dialog').close(); if(lastFocus) lastFocus.focus();
@@ -3153,7 +3153,7 @@ window.STSettings = (function() {
     document.getElementById('settings-dialog').addEventListener('cancel',function(e){ e.preventDefault(); close(); });
     document.getElementById('workspace-form').addEventListener('input',refresh);
   }
-  function configureGemini(config){document.getElementById('gemini-model').value=config.model||'gemini-2.5-flash';document.getElementById('gemini-key-status').textContent=config.configured?'API key saved for your Google account.':'No API key configured.';}
+  function configureGemini(config){document.getElementById('gemini-model').value=config.model||'gemini-2.5-flash';document.getElementById('gemini-key-status').textContent=config.configured?"API key saved for your Google account.":"No API key configured.";}
   return { configureGemini:configureGemini,init:init,open:open,close:close,saved:saved,error:error,setSaving:setSaving };
 })();
 </script>
@@ -3171,26 +3171,26 @@ window.STCaseGallery = (function() {
     page=Math.min(page,Math.max(0,Math.ceil(items.length/pageSize)-1));
     target.textContent=''; pagination.textContent=''; target.classList.toggle('grid',grid);
     document.getElementById('case-count').textContent=items.length+' '+(items.length===1?'case':'cases');
-    var layout=document.getElementById('case-layout'); layout.innerHTML=STIcons.svg(grid?'list':'grid'); layout.setAttribute('aria-label','Switch to '+(grid?'list':'grid')+' view');layout.title=layout.getAttribute('aria-label');
+    var layout=document.getElementById('case-layout'); layout.innerHTML=STIcons.svg(grid?'list':'grid'); layout.setAttribute('aria-label',"Switch to "+(grid?'list':'grid')+" view");layout.title=layout.getAttribute('aria-label');
     layout.onclick=function(){grid=!grid;STPreferences.write('caseLayout',grid?'grid':'list');render(cases,openCase,requestCaseDeletion);};
     if(!items.length) {
-      target.innerHTML='<div class="empty">'+STIcons.svg('folder')+'<h3>'+(query||filter!=='all'?'No matching cases':'Your workspace starts here')+'</h3><p>'+(query||filter!=='all'?'Try a different search or filter.':'Create a case to model a line, or start with the demonstration case.')+'</p></div>'; return;
+      target.innerHTML=("<div class=\"empty\">")+STIcons.svg('folder')+'<h3>'+(query||filter!=='all'?"No matching cases":"Your workspace starts here")+'</h3><p>'+(query||filter!=='all'?"Try a different search or filter.":"Create a case to model a line, or start with the demonstration case.")+'</p></div>'; return;
     }
     items.slice(page*pageSize,(page+1)*pageSize).forEach(function(item){
       var row=document.createElement('article');row.className='case-row';
-      row.innerHTML='<div class="case-identity"><span class="case-glyph">'+STIcons.svg('folder')+'</span><div><button class="case-name open-case" type="button"></button><span class="case-description"></span></div></div><div class="case-actions"><span class="badge"></span><time class="case-date"></time><button class="ghost icon-button delete-case" type="button">'+STIcons.svg('trash')+'</button></div>';
+      row.innerHTML=("<div class=\"case-identity\"><span class=\"case-glyph\">")+STIcons.svg('folder')+("</span><div><button class=\"case-name open-case\" type=\"button\"></button><span class=\"case-description\"></span></div></div><div class=\"case-actions\"><span class=\"badge\"></span><time class=\"case-date\"></time><button class=\"ghost icon-button delete-case\" type=\"button\">")+STIcons.svg('trash')+'</button></div>';
       row.querySelector('.case-name').textContent=item.name;
-      row.querySelector('.case-description').textContent=item.equipmentCount+' equipment units'+(item.dataClassification==='PUBLIC_DEMONSTRATION_ONLY'?' · Public demo':'');
-      var badge=row.querySelector('.badge');badge.classList.toggle('ready',Boolean(item.isSimulationReady));badge.innerHTML=STIcons.svg(item.isSimulationReady?'check':'edit')+(item.isSimulationReady?'Ready':'Draft');
+      row.querySelector('.case-description').textContent=item.equipmentCount+" equipment units"+(item.dataClassification==='PUBLIC_DEMONSTRATION_ONLY'?" · Public demo":'');
+      var badge=row.querySelector('.badge');badge.classList.toggle('ready',Boolean(item.isSimulationReady));badge.innerHTML=STIcons.svg(item.isSimulationReady?'check':'edit')+(item.isSimulationReady?"Ready":"Draft");
       var date=new Date(item.updatedAt);row.querySelector('time').textContent=Number.isNaN(date.getTime())?'':date.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
       row.querySelector('.open-case').onclick=function(){openCase(item.id);};
-      var del=row.querySelector('.delete-case');del.title='Delete '+item.name;del.setAttribute('aria-label',del.title);del.onclick=function(){requestCaseDeletion(item.id,item.name,del);};
+      var del=row.querySelector('.delete-case');del.title="Delete "+item.name;del.setAttribute('aria-label',del.title);del.onclick=function(){requestCaseDeletion(item.id,item.name,del);};
       target.appendChild(row);
     });
     if(items.length>pageSize) {
-      var prev=document.createElement('button');prev.className='ghost';prev.innerHTML=STIcons.svg('back')+'Previous';prev.disabled=page===0;prev.onclick=function(){page--;render(cases,openCase,requestCaseDeletion);};
-      var next=document.createElement('button');next.className='ghost';next.innerHTML='Next'+STIcons.svg('chevron');next.disabled=(page+1)*pageSize>=items.length;next.onclick=function(){page++;render(cases,openCase,requestCaseDeletion);};
-      pagination.append(prev,document.createTextNode('Page '+(page+1)+' of '+Math.ceil(items.length/pageSize)),next);
+      var prev=document.createElement('button');prev.className='ghost';prev.innerHTML=STIcons.svg('back')+"Previous";prev.disabled=page===0;prev.onclick=function(){page--;render(cases,openCase,requestCaseDeletion);};
+      var next=document.createElement('button');next.className='ghost';next.innerHTML="Next"+STIcons.svg('chevron');next.disabled=(page+1)*pageSize>=items.length;next.onclick=function(){page++;render(cases,openCase,requestCaseDeletion);};
+      pagination.append(prev,document.createTextNode("Page "+(page+1)+" of "+Math.ceil(items.length/pageSize)),next);
     }
   }
   return {render:render};
@@ -3202,29 +3202,29 @@ window.STResults=(function(){
   function number(value,digits){return Number.isFinite(value)?value.toLocaleString(undefined,{maximumFractionDigits:digits===undefined?1:digits}):'—';}
   function downtime(result){return Object.values(result.equipmentMetrics||{}).reduce(function(n,m){return n+(m.pausedSeconds||0)+(m.stoppedSeconds||0)+(m.failureSeconds||0)+(m.microStopSeconds||0)+(m.emergencyStopSeconds||0);},0)/60;}
   function metrics(result){var s=result.summary;return [
-    ['Global OEE',s.lineOeePercent,'%',false],['Throughput',s.averageOutputRatePerSecond*60,' / min',false],['Production',s.outputCount,' units',false],
-    ['Equipment downtime',downtime(result),' min',true],['Starving',s.totalStarvedSeconds/60,' min',true],['Blocking',s.totalBlockedSeconds/60,' min',true],['Failure time',s.totalFailureSeconds/60,' min',true]
+    ["Global OEE",s.lineOeePercent,'%',false],["Throughput",s.averageOutputRatePerSecond*60," / min",false],["Production",s.outputCount," units",false],
+    ["Equipment downtime",downtime(result)," min",true],["Starving",s.totalStarvedSeconds/60," min",true],["Blocking",s.totalBlockedSeconds/60," min",true],["Failure time",s.totalFailureSeconds/60," min",true]
   ];}
   function render(result,activeCase){
     var ready=Boolean(result&&result.summary);
     document.getElementById('results-empty').classList.toggle('hidden',ready);document.getElementById('results-body').classList.toggle('hidden',!ready);document.getElementById('export-results').disabled=!ready;
-    if(!ready){document.getElementById('results-meta').textContent='Complete a simulation to inspect the results.';return;}
-    document.getElementById('results-meta').textContent=activeCase.name+' · Full run · '+result.durationSeconds+' s · Seed '+result.seed;
+    if(!ready){document.getElementById('results-meta').textContent="Complete a simulation to inspect the results.";return;}
+    document.getElementById('results-meta').textContent=activeCase.name+" · Full run · "+result.durationSeconds+" s · Seed "+result.seed;
     var target=document.getElementById('results-kpis');target.textContent='';
-    metrics(result).forEach(function(item,index){var card=document.createElement('article');card.className='result-kpi'+(index===0?' primary-kpi':'');var label=document.createElement('span'),value=document.createElement('strong');label.textContent=item[0];value.textContent=number(item[1])+item[2];card.append(label,value);target.appendChild(card);});
-    document.getElementById('results-reference').textContent='OEE reference: '+(result.summary.lineOeePacemakerName||'not available')+'. Quality assumes 100% (no reject model). Loss and downtime totals are equipment-minutes; simultaneous losses are not line downtime.';
+    metrics(result).forEach(function(item,index){var card=document.createElement('article');card.className='result-kpi'+(index===0?" primary-kpi":'');var label=document.createElement('span'),value=document.createElement('strong');label.textContent=item[0];value.textContent=number(item[1])+item[2];card.append(label,value);target.appendChild(card);});
+    document.getElementById('results-reference').textContent="OEE reference: "+(result.summary.lineOeePacemakerName||'not available')+". Quality assumes 100% (no reject model). Loss and downtime totals are equipment-minutes; simultaneous losses are not line downtime.";
     var rows=(activeCase.equipment||[]).map(function(e){return {model:e,metric:(result.equipmentMetrics||{})[e.id]||{}};});
     var worst=rows.filter(function(r){return r.model.type!=='CONVEYOR';}).sort(function(a,b){return (b.metric.starvedSeconds||0)+(b.metric.blockedSeconds||0)+(b.metric.failureSeconds||0)-(a.metric.starvedSeconds||0)-(a.metric.blockedSeconds||0)-(a.metric.failureSeconds||0);})[0];
-    document.getElementById('results-insight').textContent=worst?'Investigate '+worst.model.name+': highest combined starving, blocking and failure time among machines. This is a loss indicator, not proof of the line bottleneck.':'';
-    var table=document.createElement('table'); table.innerHTML='<thead><tr><th>Equipment</th><th>Type</th><th class="numeric">OEE</th><th class="numeric">Produced / processed</th><th class="numeric">Starved · min</th><th class="numeric">Blocked · min</th><th class="numeric">Failure · min</th><th class="numeric">Failures</th></tr></thead>';
+    document.getElementById('results-insight').textContent=worst?"Investigate "+worst.model.name+": highest combined starving, blocking and failure time among machines. This is a loss indicator, not proof of the line bottleneck.":'';
+    var table=document.createElement('table'); table.innerHTML=("<thead><tr><th>" + "Equipment" + "</th><th>" + "Type" + "</th><th class=\"numeric\">" + "OEE" + "</th><th class=\"numeric\">" + "Produced / processed" + "</th><th class=\"numeric\">" + "Starved · min" + "</th><th class=\"numeric\">" + "Blocked · min" + "</th><th class=\"numeric\">" + "Failure · min" + "</th><th class=\"numeric\">" + "Failures" + "</th></tr></thead>");
     var body=document.createElement('tbody'); rows.forEach(function(r){var m=r.metric,tr=document.createElement('tr');[r.model.name,r.model.type,number(m.oeePercent)+'%',number(m.outputCount),number(m.starvedSeconds/60),number(m.blockedSeconds/60),number(m.failureSeconds/60),number(m.failureCount,0)].forEach(function(v,i){var td=document.createElement('td');td.textContent=v; if(i>1)td.className='numeric';tr.appendChild(td);});body.appendChild(tr);});table.appendChild(body);document.getElementById('results-table').replaceChildren(table);
     document.getElementById('export-results').onclick=function(){var blob=new Blob([JSON.stringify(result,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='simulation-results.json';a.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);};
   }
   function compare(target,a,b){
     if(!a.results?.summary||!b.results?.summary)return;
-    var section=document.createElement('section');section.className='comparison-section';section.innerHTML='<h3>Outcome comparison</h3><div class="table-scroll"><table><thead><tr><th>Metric</th><th class="numeric">Baseline</th><th class="numeric">Proposed</th><th class="numeric">Absolute Δ</th><th class="numeric">Relative Δ</th></tr></thead><tbody></tbody></table></div>';
+    var section=document.createElement('section');section.className='comparison-section';section.innerHTML=("<h3>" + "Outcome comparison" + "</h3><div class=\"table-scroll\"><table><thead><tr><th>" + "Metric" + "</th><th class=\"numeric\">" + "Baseline" + "</th><th class=\"numeric\">" + "Proposed" + "</th><th class=\"numeric\">" + "Absolute Δ" + "</th><th class=\"numeric\">" + "Relative Δ" + "</th></tr></thead><tbody></tbody></table></div>");
     var right=metrics(b.results);
-    metrics(a.results).forEach(function(m,i){var n=right[i][1],d=n-m[1],tr=document.createElement('tr');[m[0],number(m[1])+m[2],number(n)+m[2],(d>0?'+':'')+number(d)+(i===0?' pp':m[2]),m[1]===0?'N/A (zero baseline)':(d>0?'+':'')+number(d/Math.abs(m[1])*100)+'%'].forEach(function(v,j){var td=document.createElement('td');td.textContent=v;if(j)td.className='numeric';tr.appendChild(td);});section.querySelector('tbody').appendChild(tr);});target.appendChild(section);
+    metrics(a.results).forEach(function(m,i){var n=right[i][1],d=n-m[1],tr=document.createElement('tr');[m[0],number(m[1])+m[2],number(n)+m[2],(d>0?'+':'')+number(d)+(i===0?" pp":m[2]),m[1]===0?"N/A (zero baseline)":(d>0?'+':'')+number(d/Math.abs(m[1])*100)+'%'].forEach(function(v,j){var td=document.createElement('td');td.textContent=v;if(j)td.className='numeric';tr.appendChild(td);});section.querySelector('tbody').appendChild(tr);});target.appendChild(section);
   }
   return {render:render,compare:compare};
 })();
@@ -3243,10 +3243,10 @@ window.STShell = function(state,actions) {
     actions.assistant();
     document.getElementById('workspace-tabs').classList.toggle('hidden',!active);
     document.getElementById('home-cases').setAttribute('aria-current',view==='cases'?'page':'false');
-    document.querySelectorAll('.sidebar [data-view]').forEach(function(button){button.disabled=!active;button.setAttribute('aria-current',button.dataset.view===view?'page':'false');button.title=active?button.getAttribute('aria-label'):'Open a case first';});
-    document.getElementById('breadcrumb-case').textContent=active?state.activeCase.name:'Workspace';
-    document.getElementById('breadcrumb-view').textContent={cases:'Cases',editor:'Line setup',simulation:'Simulation',results:'Results',whatif:'What-If',comparison:'Compare simulations'}[view];
-    var save=document.getElementById('save-workspace-case');save.classList.toggle('hidden',!active);save.disabled=!state.isDirty || state.saving;save.innerHTML=STIcons.svg('save')+(state.isDirty?'Save changes':'Saved');
+    document.querySelectorAll('.sidebar [data-view]').forEach(function(button){button.disabled=!active;button.setAttribute('aria-current',button.dataset.view===view?'page':'false');button.title=active?button.getAttribute('aria-label'):"Open a case first";});
+    document.getElementById('breadcrumb-case').textContent=active?state.activeCase.name:"Workspace";
+    document.getElementById('breadcrumb-view').textContent={cases:"Cases",editor:"Line setup",simulation:"Simulation",results:"Results",whatif:"What-If",comparison:"Compare simulations"}[view];
+    var save=document.getElementById('save-workspace-case');save.classList.toggle('hidden',!active);save.disabled=!state.isDirty || state.saving;save.innerHTML=STIcons.svg('save')+(state.isDirty?"Save changes":'Saved');
     document.getElementById('show-new-case').disabled=!connected; document.getElementById('create-public-demo-case').disabled=!connected;
     document.getElementById('whatif-empty').classList.toggle('hidden',Boolean(state.run.result));
     if(view==='results') STResults.render(state.run.result,state.activeCase);
@@ -3257,17 +3257,17 @@ window.STShell = function(state,actions) {
     STSettings.init();STIcons.decorate();
     document.getElementById('cases-settings').onclick=STSettings.open;
     document.getElementById('cases-sign-out').onclick=actions.signout;
-    function collapse(){document.getElementById('application').classList.toggle('sidebar-collapsed',collapsed);var el=document.getElementById('collapse-sidebar');el.setAttribute('aria-expanded',String(!collapsed));el.setAttribute('aria-label',collapsed?'Expand sidebar':'Collapse sidebar');el.title=el.getAttribute('aria-label');}
+    function collapse(){document.getElementById('application').classList.toggle('sidebar-collapsed',collapsed);var el=document.getElementById('collapse-sidebar');el.setAttribute('aria-expanded',String(!collapsed));el.setAttribute('aria-label',collapsed?"Expand sidebar":"Collapse sidebar");el.title=el.getAttribute('aria-label');}
     collapse();document.getElementById('collapse-sidebar').onclick=function(){collapsed=!collapsed;STPreferences.write('sidebar',collapsed?'collapsed':'expanded');collapse();setTimeout(actions.redraw,180);};
     document.querySelectorAll('[data-view]').forEach(function(button){button.addEventListener('click',function(){actions.navigate(button.dataset.view);});});
     document.getElementById('save-workspace-case').onclick=function(){actions.save();};
     document.getElementById('cancel-new-case').onclick=function(){document.getElementById('new-case-form').classList.add('hidden');document.getElementById('show-new-case').focus();};
     ['case-filter','case-sort'].forEach(function(id){document.getElementById(id).onchange=actions.cases;});
     var dialog=document.getElementById('command-dialog'),input=document.getElementById('command-search'),list=document.getElementById('command-list');
-    function commands(){list.textContent='';var entries=[['Cases','folder',actions.home],['Settings','settings',STSettings.open]];
-      if(state.activeCase)entries.push(['Line setup','edit',function(){actions.navigate('editor');}],['Simulation','play',function(){actions.navigate('simulation');}],['Results','chart',function(){actions.navigate('results');}],['What-If','flask',function(){actions.navigate('whatif');}]);
+    function commands(){list.textContent='';var entries=[["Cases",'folder',actions.home],["Settings",'settings',STSettings.open]];
+      if(state.activeCase)entries.push(["Line setup",'edit',function(){actions.navigate('editor');}],["Simulation",'play',function(){actions.navigate('simulation');}],["Results",'chart',function(){actions.navigate('results');}],["What-If",'flask',function(){actions.navigate('whatif');}]);
       entries.filter(function(e){return e[0].toLowerCase().includes(input.value.toLowerCase());}).forEach(function(e){var b=document.createElement('button');b.className='ghost';b.innerHTML=STIcons.svg(e[1])+e[0];b.onclick=function(){dialog.close();e[2]();};list.appendChild(b);});
-      if(!list.children.length)list.textContent='No matching commands.';
+      if(!list.children.length)list.textContent="No matching commands.";
     }
     function openCommands(){if(document.getElementById('application').classList.contains('hidden')||document.querySelector('dialog[open]'))return;input.value='';commands();dialog.showModal();input.focus();}
     input.oninput=commands;
@@ -3385,7 +3385,7 @@ window.STCharts=function(state,formatNumber){
 
       context.fillStyle = token('--chart-axis');
       context.font = token('--font-secondary') + ' ' + token('--font-ui');
-      context.fillText('Actual BPM', padding.left, 13);
+      context.fillText("Actual BPM", padding.left, 13);
       context.fillText('0', padding.left - 10, padding.top + plotHeight + 16);
       context.fillText(formatNumber(maxRate), padding.left - 38, padding.top + 8);
       context.fillText(startTime + '–' + endTime + ' s', Math.max(padding.left, padding.left + plotWidth - 70), padding.top + plotHeight + 20);
@@ -3397,7 +3397,7 @@ window.STCharts=function(state,formatNumber){
         var swatch = document.createElement('i');
         swatch.style.backgroundColor = speedColor(index);
         item.appendChild(swatch);
-        item.appendChild(document.createTextNode(model.name || model.id || ('Unit ' + (index + 1))));
+        item.appendChild(document.createTextNode(model.name || model.id || ("Unit " + (index + 1))));
         legend.appendChild(item);
       });
     }
@@ -3489,14 +3489,14 @@ window.STComparison=function(state,isFiniteNumber){
       var a = (state.activeCase.simulations || []).find(function(sim) { return sim.id === document.getElementById('case-compare-a').value; });
       var b = (state.activeCase.simulations || []).find(function(sim) { return sim.id === document.getElementById('case-compare-b').value; });
       var target = document.getElementById('case-comparison-content'); target.textContent = '';
-      if (!a || !b || a.id === b.id) { target.textContent = 'Select two different simulations.'; return; }
+      if (!a || !b || a.id === b.id) { target.textContent = "Select two different simulations."; return; }
       appendComparisonContext(target, a, b);
       STResults.compare(target,a,b);
       appendChangedInputs(target,a,b);
-      appendComparisonSection(target, 'Scenario provenance', a.scenario || {}, b.scenario || {});
-      appendComparisonSection(target, 'Simulation configuration', a.dynamicConfig || {}, b.dynamicConfig || {});
-      appendComparisonSection(target, 'Simulation results', a.results?.summary || {}, b.results?.summary || {});
-      appendComparisonSection(target, 'Saved result metadata', comparisonResultMetadata(a.results), comparisonResultMetadata(b.results));
+      appendComparisonSection(target, "Scenario provenance", a.scenario || {}, b.scenario || {});
+      appendComparisonSection(target, "Simulation configuration", a.dynamicConfig || {}, b.dynamicConfig || {});
+      appendComparisonSection(target, "Simulation results", a.results?.summary || {}, b.results?.summary || {});
+      appendComparisonSection(target, "Saved result metadata", comparisonResultMetadata(a.results), comparisonResultMetadata(b.results));
       var byIdA = Object.fromEntries((a.equipment || []).map(function(item) { return [item.id, item]; }));
       var byIdB = Object.fromEntries((b.equipment || []).map(function(item) { return [item.id, item]; }));
       var equipmentIds = (a.equipment || []).map(function(item) { return item.id; });
@@ -3504,8 +3504,8 @@ window.STComparison=function(state,isFiniteNumber){
       var metricA = a.results?.equipmentMetrics || {};
       var metricB = b.results?.equipmentMetrics || {};
       equipmentIds.forEach(function(equipmentId) {
-        appendComparisonSection(target, 'Equipment · ' + equipmentId, byIdA[equipmentId] || {}, byIdB[equipmentId] || {});
-        appendComparisonSection(target, 'Simulation metrics · ' + equipmentId, metricA[equipmentId] || {}, metricB[equipmentId] || {});
+        appendComparisonSection(target, "Equipment · " + equipmentId, byIdA[equipmentId] || {}, byIdB[equipmentId] || {});
+        appendComparisonSection(target, "Simulation metrics · " + equipmentId, metricA[equipmentId] || {}, metricB[equipmentId] || {});
       });
     }
 
@@ -3518,10 +3518,10 @@ window.STComparison=function(state,isFiniteNumber){
           if(formatComparisonValue(l[key])!==formatComparisonValue(r[key])){changes.push([e.name||e.id,key,formatComparisonValue(l[key]),formatComparisonValue(r[key])]);affected.add(e.id);}
         });
       });
-      (b.equipment||[]).filter(function(e){return !(a.equipment||[]).some(function(x){return x.id===e.id;});}).forEach(function(e){changes.push([e.name||e.id,'Added equipment','—',e.type]);affected.add(e.id);});
+      (b.equipment||[]).filter(function(e){return !(a.equipment||[]).some(function(x){return x.id===e.id;});}).forEach(function(e){changes.push([e.name||e.id,"Added equipment",'—',e.type]);affected.add(e.id);});
       var section=document.createElement('section');section.className='comparison-section';
-      var title=document.createElement('h3');title.textContent='Changed inputs · '+changes.length+' changes · '+affected.size+' equipment affected';section.appendChild(title);
-      if(!changes.length){var message=document.createElement('p');message.className='chart-note';message.textContent='No equipment input differences. Run settings are listed below.';section.appendChild(message);}
+      var title=document.createElement('h3');title.textContent="Changed inputs · "+changes.length+" changes · "+affected.size+" equipment affected";section.appendChild(title);
+      if(!changes.length){var message=document.createElement('p');message.className='chart-note';message.textContent="No equipment input differences. Run settings are listed below.";section.appendChild(message);}
       else {
         var scroll=document.createElement('div');scroll.className='table-scroll';var table=document.createElement('table');table.innerHTML='<thead><tr><th>Equipment</th><th>Parameter</th><th>Baseline</th><th>Proposed</th></tr></thead><tbody></tbody>';
         changes.forEach(function(change){var tr=document.createElement('tr');change.forEach(function(v){var td=document.createElement('td');td.textContent=v;tr.appendChild(td);});table.querySelector('tbody').appendChild(tr);});scroll.appendChild(table);section.appendChild(scroll);
@@ -3539,15 +3539,15 @@ window.STComparison=function(state,isFiniteNumber){
       var paired = bothSaved && leftSeed === rightSeed && leftDuration === rightDuration;
       context.classList.add(paired ? 'comparison-context-paired' : 'comparison-context-caution');
       var heading = document.createElement('strong');
-      heading.textContent = left.name + ' vs. ' + right.name;
+      heading.textContent = left.name + " vs. " + right.name;
       context.appendChild(heading);
       var detail = document.createElement('p');
       if (!bothSaved) {
-        detail.textContent = 'Configuration can be compared now. Run and save both simulations before interpreting result deltas.';
+        detail.textContent = "Configuration can be compared now. Run and save both simulations before interpreting result deltas.";
       } else if (paired) {
-        detail.textContent = 'Paired run: both used seed ' + leftSeed + ' and ' + leftDuration + ' virtual seconds. Result differences can be attributed to the saved configuration change within this modeled run.';
+        detail.textContent = "Paired run: both used seed " + leftSeed + " and " + leftDuration + " virtual seconds. Result differences can be attributed to the saved configuration change within this modeled run.";
       } else {
-        detail.textContent = 'Comparison caution: saved seed or virtual duration differs (' + leftSeed + ' / ' + leftDuration + ' s vs. ' + rightSeed + ' / ' + rightDuration + ' s). Configuration differences remain valid, but rerun both with the same seed and duration for a direct result comparison.';
+        detail.textContent = "Comparison caution: saved seed or virtual duration differs (" + leftSeed + ' / ' + leftDuration + " s vs. " + rightSeed + ' / ' + rightDuration + " s). Configuration differences remain valid, but rerun both with the same seed and duration for a direct result comparison.";
       }
       context.appendChild(detail);
       target.appendChild(context);
@@ -3573,12 +3573,12 @@ window.STComparison=function(state,isFiniteNumber){
       var section = document.createElement('details'); section.className = 'comparison-section';
       var heading = document.createElement('summary'); heading.textContent = title; section.appendChild(heading);
       var flatLeft = flattenComparisonValues(left); var flatRight = flattenComparisonValues(right);
-      section.open = title === 'Scenario provenance' || title === 'Simulation configuration';
+      section.open = title === "Scenario provenance" || title === "Simulation configuration";
       var keys = Array.from(new Set(Object.keys(flatLeft).concat(Object.keys(flatRight)))).sort();
-      if (!keys.length) { section.appendChild(document.createTextNode('No saved values.')); target.appendChild(section); return; }
+      if (!keys.length) { section.appendChild(document.createTextNode("No saved values.")); target.appendChild(section); return; }
       keys.forEach(function(key) {
         var leftValue = flatLeft[key]; var rightValue = flatRight[key];
-        var row = document.createElement('div'); row.className = 'comparison-row' + (String(leftValue) !== String(rightValue) ? ' comparison-changed' : '');
+        var row = document.createElement('div'); row.className = 'comparison-row' + (String(leftValue) !== String(rightValue) ? " comparison-changed" : '');
         row.innerHTML = '<strong></strong><span></span><span></span>';
         row.children[0].textContent = key; row.children[1].textContent = formatComparisonValue(leftValue); row.children[2].textContent = formatComparisonValue(rightValue);
         section.appendChild(row);
@@ -3605,7 +3605,7 @@ window.STAssistant = function(state) {
   function el(id){return document.getElementById(id);}
   function render(){
     el('gemini-messages').textContent='';
-    messages.forEach(function(m){var p=document.createElement('p');p.className='gemini-message';p.dataset.role=m.role;var label=document.createElement('strong');label.textContent=m.role==='user'?'You':'Gemini';p.appendChild(label);p.appendChild(document.createTextNode(m.text));el('gemini-messages').appendChild(p);});
+    messages.forEach(function(m){var p=document.createElement('p');p.className='gemini-message';p.dataset.role=m.role;var label=document.createElement('strong');label.textContent=m.role==='user'?'You':"Gemini";p.appendChild(label);p.appendChild(document.createTextNode(m.text));el('gemini-messages').appendChild(p);});
     el('gemini-messages').scrollTop=el('gemini-messages').scrollHeight;
   }
   function reset(){sequence++;messages=[];pending=false;caseId=null;opened=false;render();el('gemini-question').value='';el('gemini-error').textContent='';sync();}
@@ -3614,9 +3614,9 @@ window.STAssistant = function(state) {
     if(caseId!==(active?.id||null)){sequence++;caseId=active?.id||null;messages=[];pending=false;render();el('gemini-question').value='';el('gemini-error').textContent='';}
     var visible=Boolean(active&&opened);
     el('application').classList.toggle('assistant-open',visible);el('gemini-panel').classList.toggle('hidden',!visible);el('toggle-gemini').setAttribute('aria-expanded',String(visible));
-    el('gemini-context').textContent=active?active.name+' · saved case':'';
+    el('gemini-context').textContent=active?active.name+" · saved case":'';
     var configured=Boolean(state.bootstrap?.gemini?.configured);
-    el('gemini-notice').textContent=pending?'Gemini is analyzing the case…':!configured?'Add your Gemini API key in Settings to ask questions.':state.isDirty?'Save your changes before asking about this case.':'Context includes this saved case and all saved simulation results.';
+    el('gemini-notice').textContent=pending?"Gemini is analyzing the case…":!configured?"Add your Gemini API key in Settings to ask questions.":state.isDirty?"Save your changes before asking about this case.":"Context includes this saved case and all saved simulation results.";
     el('send-gemini').disabled=pending||!configured||state.isDirty||!active;el('send-gemini').setAttribute('aria-busy',String(pending));
     el('clear-gemini').disabled=pending;
   }
@@ -3638,7 +3638,7 @@ window.STAssistant = function(state) {
       var request={caseId:caseId,simulationId:state.activeSimulationId,question:question,history:messages.slice(-24)},ticket=++sequence;
       pending=true;el('gemini-error').textContent='';messages.push({role:'user',text:question});el('gemini-question').value='';render();sync();
       function finish(response){if(ticket!==sequence)return;pending=false;if(response.ok)messages.push({role:'model',text:response.data.text});else {messages.pop();el('gemini-question').value=question;el('gemini-error').textContent=response.error.message;}render();sync();}
-      google.script.run.withFailureHandler(function(){finish({ok:false,error:{message:'Gemini could not be reached. Try again.'}});}).withSuccessHandler(finish).askGemini(request);
+      google.script.run.withFailureHandler(function(){finish({ok:false,error:{message:"Gemini could not be reached. Try again."}});}).withSuccessHandler(finish).askGemini(request);
     };
   }
   return {init:init,sync:sync,reset:reset};
@@ -3648,7 +3648,7 @@ window.STAssistant = function(state) {
 window.STEquipmentDrag=(function(){
  function cards(){return Array.from(document.querySelectorAll('#equipment-list .equipment-card'));}
  function positions(){var map={};cards().forEach(function(c){map[c.querySelector('.equipment-id').value]=c.getBoundingClientRect().top;});return map;}
- function animate(before,index){cards().forEach(function(c){var y=before[c.querySelector('.equipment-id').value];if(Number.isFinite(y)&&c.animate&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches)c.animate([{transform:'translateY('+(y-c.getBoundingClientRect().top)+'px)'},{transform:'translateY(0)'}],{duration:180,easing:'ease-out'});});cards()[index]?.querySelector('.equipment-drag').focus();}
+ function animate(before,index){cards().forEach(function(c){var y=before[c.querySelector('.equipment-id').value];if(Number.isFinite(y)&&c.animate&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches)c.animate([{transform:'translateY('+(y-c.getBoundingClientRect().top)+'px)'},{transform:'translateY(0)'}],{duration:180,easing:'ease-out'});});cards()[index]?.querySelector('.equipment-drag').focus();}
  function bind(card,index,move){
   var handle=card.querySelector('.equipment-drag');handle.innerHTML=STIcons.svg('grip');
   handle.onkeydown=function(e){if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();move(index,e.key==='ArrowUp'?-1:1);}};
@@ -3674,27 +3674,27 @@ window.STSheetImportMerge=(function(){
   function name(v){return String(v||'').trim().toLowerCase();}
   function key(source){return (source?.spreadsheetId||'')+':'+(source?.sheetId===undefined?source?.sheetName:source.sheetId);}
   function field(id,col,label,paths){return {id:id,col:col,label:label,paths:paths,read:function(e){return get(e,paths[0]);},write:function(e,v){paths.forEach(function(p){put(e,p,v);});}};}
-  var fields=[field('type','A','Type',['type']),field('name','B','Name',['name']),
-    field('critical','C','Critical machine',['characteristics.criticalMachine']),
-    field('mtbf','D','MTBF (min)',['processData.equipment.mtbfMinutes']),field('mttr','E','MTTR (min)',['processData.equipment.mttrMinutes']),
-    field('maxSpeed','F','Maximum speed (bpm)',['processData.equipment.maximumSpeedBpm']),
-    field('nominalSpeed','F','Nominal running speed (bpm) — initialized from F',['nominalRatePerSecond']),
-    field('length','G','Total length (mm)',['processData.geometry.lactMm']),field('prime','H','Prime zone (mm)',['processData.geometry.lpPrimeMm']),
-    field('discharge','I','Discharge actual (mm)',['processData.geometry.actualDischargeMm']),field('coding','J','Coding actual (mm)',['processData.geometry.actualCodingMm']),
-    field('package','K','Package length (mm)',['processData.upstream.packageLengthMm']),field('pitch','L','Discharge pitch (mm)',['processData.upstream.dischargePitchMm']),
-    field('startup','M','Startup time (s)',['processData.upstream.startupTimeSeconds']),field('residual','N','Bottles discharged at stop',['processData.upstream.bottlesDischargedAtStop','processData.accumulation.bottlesDischargedAtStop']),
-    field('infeed','O','Downstream infeed pitch (mm)',['processData.downstream.infeedPitchMm']),field('ramp','P','Ramp-up including Prime delay (s)',['processData.downstream.rampUpTimeSeconds','processData.accumulation.downstreamRampUpSeconds']),
-    field('speedFactor','Q','Speed factor vs discharge (%)',['processData.speedAndSensors.conveyorSpeedFactorVsDischargeVelocityPercent','processData.accumulation.conveyorSpeedFactorPercent']),
-    field('codingFactor','R','Coding speed factor vs previous (%)',['processData.speedAndSensors.codingConveyorSpeedFactorVsPreviousConveyorPercent']),
-    field('previousFactor','S','Conveyor factor vs previous (%)',['processData.speedAndSensors.conveyorSpeedFactorVsPreviousConveyorPercent']),
-    field('blocked','T','Back-up blocked delay (s)',['processData.speedAndSensors.blockedTimeDelaySeconds','processData.accumulation.blockedTimeDelaySeconds']),
-    field('clear','U','Back-up clear delay (s)',['processData.speedAndSensors.clearTimeDelaySeconds','processData.accumulation.clearTimeDelaySeconds']),
-    field('insurance','V','Insurance factor (packages)',['processData.speedAndSensors.insuranceFactorUnits','processData.accumulation.insuranceFactorUnits']),
-    field('overspeed','W','Overspeed vs infeed screw (%)',['processData.speedAndSensors.overspeedVsInfeedScrewPercent'])];
+  var fields=[field('type','A',"Type",['type']),field('name','B',"Name",['name']),
+    field('critical','C',"Critical machine",['characteristics.criticalMachine']),
+    field('mtbf','D',"MTBF (min)",['processData.equipment.mtbfMinutes']),field('mttr','E',"MTTR (min)",['processData.equipment.mttrMinutes']),
+    field('maxSpeed','F',"Maximum speed (bpm)",['processData.equipment.maximumSpeedBpm']),
+    field('nominalSpeed','F',"Nominal running speed (bpm) — initialized from F",['nominalRatePerSecond']),
+    field('length','G',"Total length (mm)",['processData.geometry.lactMm']),field('prime','H',"Prime zone (mm)",['processData.geometry.lpPrimeMm']),
+    field('discharge','I',"Discharge actual (mm)",['processData.geometry.actualDischargeMm']),field('coding','J',"Coding actual (mm)",['processData.geometry.actualCodingMm']),
+    field('package','K',"Package length (mm)",['processData.upstream.packageLengthMm']),field('pitch','L',"Discharge pitch (mm)",['processData.upstream.dischargePitchMm']),
+    field('startup','M',"Startup time (s)",['processData.upstream.startupTimeSeconds']),field('residual','N',"Bottles discharged at stop",['processData.upstream.bottlesDischargedAtStop','processData.accumulation.bottlesDischargedAtStop']),
+    field('infeed','O',"Downstream infeed pitch (mm)",['processData.downstream.infeedPitchMm']),field('ramp','P',"Ramp-up including Prime delay (s)",['processData.downstream.rampUpTimeSeconds','processData.accumulation.downstreamRampUpSeconds']),
+    field('speedFactor','Q',"Speed factor vs discharge (%)",['processData.speedAndSensors.conveyorSpeedFactorVsDischargeVelocityPercent','processData.accumulation.conveyorSpeedFactorPercent']),
+    field('codingFactor','R',"Coding speed factor vs previous (%)",['processData.speedAndSensors.codingConveyorSpeedFactorVsPreviousConveyorPercent']),
+    field('previousFactor','S',"Conveyor factor vs previous (%)",['processData.speedAndSensors.conveyorSpeedFactorVsPreviousConveyorPercent']),
+    field('blocked','T',"Back-up blocked delay (s)",['processData.speedAndSensors.blockedTimeDelaySeconds','processData.accumulation.blockedTimeDelaySeconds']),
+    field('clear','U',"Back-up clear delay (s)",['processData.speedAndSensors.clearTimeDelaySeconds','processData.accumulation.clearTimeDelaySeconds']),
+    field('insurance','V',"Insurance factor (packages)",['processData.speedAndSensors.insuranceFactorUnits','processData.accumulation.insuranceFactorUnits']),
+    field('overspeed','W',"Overspeed vs infeed screw (%)",['processData.speedAndSensors.overspeedVsInfeedScrewPercent'])];
   fields.find(function(f){return f.id==='critical';}).read=function(e){return e.characteristics?.criticalMachine===undefined?['CRITICAL_MACHINE','PACEMAKER'].includes(e.processData?.role):e.characteristics.criticalMachine;};
   ['mtbf','mttr'].forEach(function(id){var f=fields.find(function(f){return f.id===id;});f.read=function(e){return get(e,'noiseProfile.reliability.'+(id==='mtbf'?'mtbfMinutes':'mttrMinutes'))??get(e,f.paths[0]);};});
   ['residual','ramp','speedFactor','blocked','clear','insurance'].forEach(function(id){var f=fields.find(function(f){return f.id===id;});f.read=function(e){return e.type==='CONVEYOR'?(get(e,f.paths[1])??get(e,f.paths[0])):get(e,f.paths[0]);};});
-  var metadataFields=[['site','Site'],['packagingLine','Packaging line'],['formatName','Format name'],['containerSizeOz','Container size (oz)'],['bottlesPerCase','Bottles per case'],['dateOfAnalysis','Date of analysis'],['by','By']];
+  var metadataFields=[['site','Site'],['packagingLine',"Packaging line"],['formatName',"Format name"],['containerSizeOz',"Container size (oz)"],['bottlesPerCase',"Bottles per case"],['dateOfAnalysis',"Date of analysis"],['by','By']];
   function errorsFor(preview,col,row){return (preview.errors||[]).filter(function(e){var m=String(e.cell).match(/^([A-W])(\d+)(?::([A-W])(\d*)?)?$/);if(!m)return false;return row>=Number(m[2])&&row<=Number(m[4]||m[2])&&col>=m[1]&&col<=(m[3]||m[1]);});}
   function incomingValue(preview,record,f){var raw=(preview.sourceRows||[]).find(function(r){return r.row===record.row;});if(f.id==='critical'&&raw?.values?.critical===null)return null;return f.read(preview.equipment[record.index]);}
   function defaults(preview,record,equipment){var current=equipment.find(function(e){return e.id===record.target;}),incoming=preview.equipment[record.index];record.selected={};fields.forEach(function(f){var v=incomingValue(preview,record,f);record.selected[f.id]=!errorsFor(preview,f.col,record.row).length&&(!current||v!=null&&!equal(f.read(current),v));});return record;}
@@ -3712,7 +3712,7 @@ window.STSheetImportMerge=(function(){
       var target=ambiguous?'skip':candidates.size===1?Array.from(candidates)[0]:renamed?'skip':'new';
       // Invalid source rows require explicit selection of a target and valid fields.
       if((preview.errors||[]).some(function(e){return fields.some(function(f){return errorsFor(preview,f.col,row).includes(e);});}))target='skip';
-      return defaults(preview,{index:index,row:row,target:target,reason:ambiguous?'Ambiguous name: choose the equipment to update.':renamed&&!candidates.size?'Name changed at this source row: choose an existing equipment or add new.':target==='new'?'New equipment — appended to the line.':'Matched by a unique name or previous import.',selected:{}},current);
+      return defaults(preview,{index:index,row:row,target:target,reason:ambiguous?"Ambiguous name: choose the equipment to update.":renamed&&!candidates.size?"Name changed at this source row: choose an existing equipment or add new.":target==='new'?"New equipment — appended to the line.":"Matched by a unique name or previous import.",selected:{}},current);
     });
     var metadata={};metadataFields.forEach(function(f,i){metadata[f[0]]=!errorsFor(preview,'C',i+1).length&&preview.metadata[f[0]]!=null&&!equal(sourceImport?.metadata?.[f[0]],preview.metadata[f[0]]);});
     return {records:records,metadata:metadata,bindings:bindings};
@@ -3724,23 +3724,23 @@ window.STSheetImportMerge=(function(){
       if(record.target==='skip')return;
       var incoming=preview.equipment[record.index],isNew=record.target==='new';
       var selected=fields.filter(function(f){return record.selected[f.id];});if(!selected.length)return;
-      if(!isNew&&used.has(record.target)){issues.push('Two Sheet rows target the same equipment. Skip one or choose another target.');return;}if(!isNew)used.add(record.target);
+      if(!isNew&&used.has(record.target)){issues.push("Two Sheet rows target the same equipment. Skip one or choose another target.");return;}if(!isNew)used.add(record.target);
       var currentUnit=equipment.find(function(e){return e.id===record.target;});
-      if(!isNew&&!currentUnit){issues.push('Target equipment no longer exists. Preview again.');return;}
+      if(!isNew&&!currentUnit){issues.push("Target equipment no longer exists. Preview again.");return;}
       var unit=isNew?{id:incoming.id,type:'CUSTOM',name:'',nominalRatePerSecond:null,initialMode:'AUTO',characteristics:{},noiseProfile:{},processData:{}}:copy(currentUnit);
       if(isNew){var suffix=2,base=unit.id;while(equipment.some(function(e){return e.id===unit.id;}))unit.id=base+'-'+suffix++;}
       var applied=[];
-      selected.forEach(function(f){var errs=errorsFor(preview,f.col,record.row);if(errs.length){issues.push(f.col+record.row+': fix this cell or deselect the field.');return;}var value=incomingValue(preview,record,f),before=f.read(unit);f.write(unit,value);applied.push({field:f.id,cell:f.col+record.row,before:before==null?null:before,after:value==null?null:value});});
+      selected.forEach(function(f){var errs=errorsFor(preview,f.col,record.row);if(errs.length){issues.push(f.col+record.row+": fix this cell or deselect the field.");return;}var value=incomingValue(preview,record,f),before=f.read(unit);f.write(unit,value);applied.push({field:f.id,cell:f.col+record.row,before:before==null?null:before,after:value==null?null:value});});
       var reliability=selected.some(function(f){return ['mtbf','mttr'].includes(f.id);});
-      if(reliability){var bf=record.selected.mtbf?fields[3].read(incoming):fields[3].read(currentUnit||{}),tr=record.selected.mttr?fields[4].read(incoming):fields[4].read(currentUnit||{});unit.noiseProfile=unit.noiseProfile||{};if(bf==null&&tr==null)delete unit.noiseProfile.reliability;else if(bf>0&&tr>0)unit.noiseProfile.reliability=Object.assign({},unit.noiseProfile.reliability,{mtbfMinutes:bf,mttrMinutes:tr});else issues.push(unit.name+': MTBF and MTTR must both be positive or both NA. Adjust the field selection.');}
+      if(reliability){var bf=record.selected.mtbf?fields[3].read(incoming):fields[3].read(currentUnit||{}),tr=record.selected.mttr?fields[4].read(incoming):fields[4].read(currentUnit||{});unit.noiseProfile=unit.noiseProfile||{};if(bf==null&&tr==null)delete unit.noiseProfile.reliability;else if(bf>0&&tr>0)unit.noiseProfile.reliability=Object.assign({},unit.noiseProfile.reliability,{mtbfMinutes:bf,mttrMinutes:tr});else issues.push(unit.name+": MTBF and MTTR must both be positive or both NA. Adjust the field selection.");}
       if(isNew||record.selected.type||record.selected.critical){unit.processData.role=unit.type==='CONVEYOR'?'CONVEYOR':unit.type==='PACEMAKER'?'PACEMAKER':unit.characteristics.criticalMachine?'CRITICAL_MACHINE':'MACHINE';unit.processData.machineType=unit.type;}
       if(unit.type!=='CONVEYOR')delete unit.processData.accumulation;
-      if(!unit.name||!(unit.nominalRatePerSecond>0))issues.push('Row '+record.row+': new/updated equipment needs a name and positive nominal speed. Select those fields or skip the row.');
+      if(!unit.name||!(unit.nominalRatePerSecond>0))issues.push("Row "+record.row+": new/updated equipment needs a name and positive nominal speed. Select those fields or skip the row.");
       var changed=isNew||!equal(currentUnit,unit);
       if(changed){if(isNew){equipment.push(unit);added++;}else{equipment[equipment.indexOf(currentUnit)]=unit;updated++;}}
       changes.push({equipmentId:unit.id,sourceName:incoming.name,row:record.row,sourceKey:key(preview.source),added:isNew,fields:applied});
     });
-    metadataFields.forEach(function(f,i){if(!plan.metadata[f[0]])return;if(errorsFor(preview,'C',i+1).length){issues.push('C'+(i+1)+': fix or deselect the metadata field.');return;}var value=preview.metadata[f[0]];if(!equal(metadata[f[0]],value))metadataChanges.push({field:f[0],before:metadata[f[0]]??null,after:value??null});metadata[f[0]]=value??null;});
+    metadataFields.forEach(function(f,i){if(!plan.metadata[f[0]])return;if(errorsFor(preview,'C',i+1).length){issues.push('C'+(i+1)+": fix or deselect the metadata field.");return;}var value=preview.metadata[f[0]];if(!equal(metadata[f[0]],value))metadataChanges.push({field:f[0],before:metadata[f[0]]??null,after:value??null});metadata[f[0]]=value??null;});
     var effective=added+updated+metadataChanges.length>0;
     sourceImport.source=copy(preview.source);sourceImport.metadata=metadata;sourceImport.rows=copy(preview.sourceRows||[]);sourceImport.warnings=copy(preview.warnings||[]);sourceImport.notes=copy(preview.notes||[]);
     var bindings=copy(plan.bindings);changes.forEach(function(c){bindings=bindings.filter(function(b){return !(b.equipmentId===c.equipmentId&&b.sourceKey===c.sourceKey);});bindings.push({equipmentId:c.equipmentId,sourceKey:c.sourceKey,sourceName:c.sourceName,row:c.row});});sourceImport.bindings=bindings;
@@ -3763,36 +3763,36 @@ window.STSheetImport=function(state,actions){
   function node(tag,text){var n=document.createElement(tag);n.textContent=text;return n;}
   function refresh(){
     if(!preview||!plan)return;var result=merge.build(preview,plan,snapshot.equipment,snapshot.sourceImport);
-    el('sheet-import-summary').textContent=result.added+' to add · '+result.updated+' to update · '+result.metadataChanges+' metadata changes'+(result.equipmentChanged?' · Existing results will be cleared; run again.':'');
+    el('sheet-import-summary').textContent=result.added+" to add · "+result.updated+" to update · "+result.metadataChanges+" metadata changes"+(result.equipmentChanged?" · Existing results will be cleared; run again.":'');
     el('sheet-import-error').textContent=result.errors.join('\n');
-    var review=el('sheet-import-model-review');if(review){review.textContent='';var validation=window.SimulatorEngine.validateSimulationInput({case:{equipment:result.equipment},run:{durationSeconds:1,tickSeconds:1,seed:1}});review.classList.toggle('hidden',validation.ok);if(!validation.ok){review.appendChild(node('summary','Physical model review (drafts can be saved)'));review.appendChild(node('pre',JSON.stringify(validation.error.details,null,2)));}}
+    var review=el('sheet-import-model-review');if(review){review.textContent='';var validation=window.SimulatorEngine.validateSimulationInput({case:{equipment:result.equipment},run:{durationSeconds:1,tickSeconds:1,seed:1}});review.classList.toggle('hidden',validation.ok);if(!validation.ok){review.appendChild(node('summary',"Physical model review (drafts can be saved)"));review.appendChild(node('pre',JSON.stringify(validation.error.details,null,2)));}}
     el('sheet-import-apply').disabled=!result.hasChanges||result.errors.length>0||!el('sheet-import-ack').checked;
   }
   function header(){var table=document.createElement('table');table.innerHTML='<thead><tr><th>Import</th><th>Field</th><th>Current</th><th>Sheet</th><th>Status</th></tr></thead>';var body=document.createElement('tbody');table.appendChild(body);return {table:table,body:body};}
   function choice(body,label,before,after,selected,disabled,changed,callback,field){
     var row=document.createElement('tr');if(changed)row.className='sheet-field-changed';
-    var cell=document.createElement('td'),input=document.createElement('input');input.type='checkbox';input.checked=selected;input.disabled=disabled;input.setAttribute('aria-label','Import '+label);input.dataset.field=field?.id||'';input.onchange=function(){callback(input.checked);refresh();};cell.appendChild(input);row.appendChild(cell);
-    [label,merge.display(before,field),merge.display(after,field),disabled?'Unavailable':!changed?'Unchanged':after==null?'Clear to NA (optional)':'Changed'].forEach(function(text){row.appendChild(node('td',text));});body.appendChild(row);
+    var cell=document.createElement('td'),input=document.createElement('input');input.type='checkbox';input.checked=selected;input.disabled=disabled;input.setAttribute('aria-label',"Import "+label);input.dataset.field=field?.id||'';input.onchange=function(){callback(input.checked);refresh();};cell.appendChild(input);row.appendChild(cell);
+    [label,merge.display(before,field),merge.display(after,field),disabled?"Unavailable":!changed?"Unchanged":after==null?"Clear to NA (optional)":"Changed"].forEach(function(text){row.appendChild(node('td',text));});body.appendChild(row);
   }
   function render(){
     var data=preview,host=el('sheet-import-preview');host.textContent='';
-    host.appendChild(node('h3',data.equipment.length+' source equipment · '+data.source.sheetName));
-    host.appendChild(node('p','Choose what to apply to this simulation. Existing equipment keeps its ID and position; new equipment is appended in Sheet order. Missing Sheet rows never delete equipment. NA fields are not selected by default for existing equipment.'));
+    host.appendChild(node('h3',data.equipment.length+" source equipment · "+data.source.sheetName));
+    host.appendChild(node('p',"Choose what to apply to this simulation. Existing equipment keeps its ID and position; new equipment is appended in Sheet order. Missing Sheet rows never delete equipment. NA fields are not selected by default for existing equipment."));
     var toolbar=document.createElement('div');toolbar.className='button-row';
-    [['Select differences',function(){plan.records.forEach(function(r){merge.defaults(data,r,snapshot.equipment);});merge.metadataFields.forEach(function(f,i){plan.metadata[f[0]]=!merge.errorsFor(data,'C',i+1).length&&data.metadata[f[0]]!=null&&!merge.equal(snapshot.sourceImport?.metadata?.[f[0]],data.metadata[f[0]]);});render();}],['Deselect all fields',function(){plan.records.forEach(function(r){Object.keys(r.selected).forEach(function(k){r.selected[k]=false;});});Object.keys(plan.metadata).forEach(function(k){plan.metadata[k]=false;});render();}]].forEach(function(item){var b=node('button',item[0]);b.type='button';b.className='secondary';b.onclick=item[1];toolbar.appendChild(b);});host.appendChild(toolbar);
-    var meta=document.createElement('details');meta.open=!snapshot.equipment.length;meta.appendChild(node('summary','Case/format information — select metadata to update'));
+    [["Select differences",function(){plan.records.forEach(function(r){merge.defaults(data,r,snapshot.equipment);});merge.metadataFields.forEach(function(f,i){plan.metadata[f[0]]=!merge.errorsFor(data,'C',i+1).length&&data.metadata[f[0]]!=null&&!merge.equal(snapshot.sourceImport?.metadata?.[f[0]],data.metadata[f[0]]);});render();}],["Deselect all fields",function(){plan.records.forEach(function(r){Object.keys(r.selected).forEach(function(k){r.selected[k]=false;});});Object.keys(plan.metadata).forEach(function(k){plan.metadata[k]=false;});render();}]].forEach(function(item){var b=node('button',item[0]);b.type='button';b.className='secondary';b.onclick=item[1];toolbar.appendChild(b);});host.appendChild(toolbar);
+    var meta=document.createElement('details');meta.open=!snapshot.equipment.length;meta.appendChild(node('summary',"Case/format information — select metadata to update"));
     var mt=header();merge.metadataFields.forEach(function(f,i){var before=snapshot.sourceImport?.metadata?.[f[0]],after=data.metadata[f[0]];choice(mt.body,'C'+(i+1)+' · '+f[1],before,after,plan.metadata[f[0]],Boolean(merge.errorsFor(data,'C',i+1).length),!merge.equal(before,after),function(v){plan.metadata[f[0]]=v;});});meta.appendChild(mt.table);host.appendChild(meta);
     plan.records.forEach(function(record){
       var unit=data.equipment[record.index],current=snapshot.equipment.find(function(e){return e.id===record.target;}),section=document.createElement('details');section.className='sheet-equipment-choice';section.dataset.sourceIndex=record.index;
-      section.appendChild(node('summary','Row '+record.row+' · '+unit.name+' · '+(record.target==='skip'?'Skipped':record.target==='new'?'Add equipment':'Update '+current.name)));
-      var label=node('label','Import into '),select=document.createElement('select');select.className='sheet-target';select.setAttribute('aria-label','Import target for row '+record.row);
-      [['skip','Skip this equipment'],['new','Add as new equipment']].concat(snapshot.equipment.map(function(e){return [e.id,'Update: '+e.name+' ('+e.id+')'];})).forEach(function(option){select.add(new Option(option[1],option[0]));});select.value=record.target;
+      section.appendChild(node('summary',"Row "+record.row+' · '+unit.name+' · '+(record.target==='skip'?'Skipped':record.target==='new'?"Add equipment":"Update "+current.name)));
+      var label=node('label',"Import into "),select=document.createElement('select');select.className='sheet-target';select.setAttribute('aria-label',"Import target for row "+record.row);
+      [['skip',"Skip this equipment"],['new',"Add as new equipment"]].concat(snapshot.equipment.map(function(e){return [e.id,"Update: "+e.name+' ('+e.id+')'];})).forEach(function(option){select.add(new Option(option[1],option[0]));});select.value=record.target;
       select.onchange=function(){record.target=select.value;merge.defaults(data,record,snapshot.equipment);render();var next=host.querySelector('[data-source-index="'+record.index+'"]');next.open=true;next.querySelector('select').focus();};label.appendChild(select);section.appendChild(label);section.appendChild(node('p',record.reason));
       var table=header();merge.fields.forEach(function(f){var before=current?f.read(current):null,after=merge.incomingValue(data,record,f),errors=merge.errorsFor(data,f.col,record.row);choice(table.body,f.col+record.row+' · '+f.label,before,after,record.target!=='skip'&&record.selected[f.id],record.target==='skip'||errors.length>0,!merge.equal(before,after),function(v){record.selected[f.id]=v;},f);});
       var scroll=document.createElement('div');scroll.className='table-scroll';scroll.appendChild(table.table);section.appendChild(scroll);host.appendChild(section);
     });
-    [['Source errors — affected fields are unavailable',data.errors||[]],['Source warnings',data.warnings||[]]].forEach(function(group){if(!group[1].length)return;var d=document.createElement('details');d.appendChild(node('summary',group[0]+' ('+group[1].length+')'));var list=document.createElement('ul');group[1].forEach(function(item){list.appendChild(node('li',item.cell+': '+item.message));});d.appendChild(list);host.appendChild(d);});
-    var detail=document.createElement('details');detail.appendChild(node('summary','Mapping and model assumptions'));var list=document.createElement('ul');data.notes.forEach(function(text){list.appendChild(node('li',text));});detail.appendChild(list);host.appendChild(detail);
+    [["Source errors — affected fields are unavailable",data.errors||[]],["Source warnings",data.warnings||[]]].forEach(function(group){if(!group[1].length)return;var d=document.createElement('details');d.appendChild(node('summary',group[0]+' ('+group[1].length+')'));var list=document.createElement('ul');group[1].forEach(function(item){list.appendChild(node('li',item.cell+': '+item.message));});d.appendChild(list);host.appendChild(d);});
+    var detail=document.createElement('details');detail.appendChild(node('summary',"Mapping and model assumptions"));var list=document.createElement('ul');data.notes.forEach(function(text){list.appendChild(node('li',text));});detail.appendChild(list);host.appendChild(detail);
     var review=document.createElement('details');review.id='sheet-import-model-review';host.appendChild(review);
     refresh();
   }
@@ -3804,10 +3804,10 @@ window.STSheetImport=function(state,actions){
     el('sheet-import-ack').onchange=refresh;
     el('sheet-import-form').onsubmit=function(e){
       e.preventDefault();if(!validContext())return close();clear();snapshot=actions.capture();if(!snapshot)return;busy(true);el('sheet-import-error').textContent='';var ticket=++sequence;
-      function finish(response){if(ticket!==sequence||!validContext())return;busy(false);if(!response||!response.ok){var error=response?.error||{message:'No response received from Apps Script.'};var details=(error.details||[]).map(function(d){return typeof d==='string'?d:JSON.stringify(d);});el('sheet-import-error').textContent=[error.message,...details,!response?.importVersion?'Client sheet-import-20260917-2: server version unavailable. Check that Code.gs and Index.html belong to the same deployment.':''].filter(Boolean).join('\n');return;}preview=response.data;plan=merge.create(preview,snapshot.equipment,snapshot.sourceImport);render();}
-      google.script.run.withFailureHandler(function(error){finish({ok:false,error:{message:'Apps Script request failed: '+String(error?.message||error||'Unknown transport error').slice(0,500)}});}).withSuccessHandler(finish).previewSheetImport({caseId:context.caseId,spreadsheet:el('sheet-import-url').value,sheetName:el('sheet-import-tab').value});
+      function finish(response){if(ticket!==sequence||!validContext())return;busy(false);if(!response||!response.ok){var error=response?.error||{message:"No response received from Apps Script."};var details=(error.details||[]).map(function(d){return typeof d==='string'?d:JSON.stringify(d);});el('sheet-import-error').textContent=[error.message,...details,!response?.importVersion?"Client sheet-import-20260917-2: server version unavailable. Check that Code.gs and Index.html belong to the same deployment.":''].filter(Boolean).join('\n');return;}preview=response.data;plan=merge.create(preview,snapshot.equipment,snapshot.sourceImport);render();}
+      google.script.run.withFailureHandler(function(error){finish({ok:false,error:{message:"Apps Script request failed: "+String(error?.message||error||"Unknown transport error").slice(0,500)}});}).withSuccessHandler(finish).previewSheetImport({caseId:context.caseId,spreadsheet:el('sheet-import-url').value,sheetName:el('sheet-import-tab').value});
     };
-    el('sheet-import-apply').onclick=function(){if(!validContext()||!preview||!plan||!el('sheet-import-ack').checked)return;var result=merge.build(preview,plan,snapshot.equipment,snapshot.sourceImport);if(result.errors.length||!result.hasChanges)return;var current=actions.capture();if(!current||!merge.equal(current,snapshot)){el('sheet-import-error').textContent='The simulation changed after preview. Preview again before applying.';return;}if(actions.apply(result))close();};
+    el('sheet-import-apply').onclick=function(){if(!validContext()||!preview||!plan||!el('sheet-import-ack').checked)return;var result=merge.build(preview,plan,snapshot.equipment,snapshot.sourceImport);if(result.errors.length||!result.hasChanges)return;var current=actions.capture();if(!current||!merge.equal(current,snapshot)){el('sheet-import-error').textContent="The simulation changed after preview. Preview again before applying.";return;}if(actions.apply(result))close();};
   }
   return {init:init,close:close};
 };
@@ -3902,13 +3902,13 @@ window.STSheetImport=function(state,actions){
 
     function signIn() {
       document.getElementById('sign-in-button').disabled = true;
-      document.getElementById('auth-status').textContent = 'Verifying your Google access…';
+      document.getElementById('auth-status').textContent = "Verifying your Google access…";
       initialize();
     }
 
     function showCaseHome() {
-      if(state.saving){setStatus('Saving your changes…');return false;}
-      if (state.isDirty && !window.confirm('Discard unsaved changes and return to cases?')) return false;
+      if(state.saving){setStatus("Saving your changes…");return false;}
+      if (state.isDirty && !window.confirm("Discard unsaved changes and return to cases?")) return false;
       state.openSequence += 1;
       stopPlaybackTimer();
       sheetImport.close();
@@ -3931,12 +3931,12 @@ window.STSheetImport=function(state,actions){
       assistant.reset();
       document.getElementById('cases-list').textContent = '';
       toggle('application', false); toggle('auth-panel', true);
-      document.getElementById('auth-status').textContent = 'Signed out of Line Studio. Your Google account remains signed in.';
+      document.getElementById('auth-status').textContent = "Signed out of Line Studio. Your Google account remains signed in.";
       document.getElementById('sign-in-button').focus();
     }
 
     function initialize() {
-      setStatus('Loading console…');
+      setStatus("Loading console…");
       callServer('getBootstrap', [], renderBootstrap);
     }
 
@@ -3961,7 +3961,7 @@ window.STSheetImport=function(state,actions){
       toggle('cases-panel', hasWorkspace && !state.activeCase);
       toggle('engine-panel', false);
       renderCases(response.data.cases);
-      setStatus(state.activeCase ? '' : (hasWorkspace ? '' : 'Open Settings to connect a Drive folder before creating a case.'));
+      setStatus(state.activeCase ? '' : (hasWorkspace ? '' : "Open Settings to connect a Drive folder before creating a case."));
       shell.sync();
     }
 
@@ -3974,9 +3974,9 @@ window.STSheetImport=function(state,actions){
         gemini: {model:document.getElementById('gemini-model').value,apiKey:document.getElementById('gemini-api-key').value,clearKey:document.getElementById('gemini-clear-key').checked}
       }], function(response) {
         STSettings.setSaving(false);
-        if (!response.ok) return STSettings.error(response.error.message || 'Settings could not be saved.');
+        if (!response.ok) return STSettings.error(response.error.message || "Settings could not be saved.");
         STSettings.saved();
-        shell.toast('Settings saved');
+        shell.toast("Settings saved");
         initialize();
       });
     }
@@ -4013,7 +4013,7 @@ function createPublicDemoCase() {
     }
 
     function requestCaseDeletion(caseId, caseName, button) {
-      if (!window.confirm('Move Case "' + caseName + '" to the Drive trash?')) return;
+      if (!window.confirm("Move Case \"" + caseName + "\" to the Drive trash?")) return;
       if (button) button.disabled = true;
       callServer('deleteCase', [caseId], function(response) {
         if (button) button.disabled = false;
@@ -4031,12 +4031,12 @@ function createPublicDemoCase() {
           toggle('run-panel', false);
         }
         initialize();
-        setStatus('Case moved to Drive trash.');
+        setStatus("Case moved to Drive trash.");
       });
     }
 
 function openCase(caseId) {
-      if (state.isDirty && !window.confirm('Discard unsaved changes and open this case?')) return;
+      if (state.isDirty && !window.confirm("Discard unsaved changes and open this case?")) return;
       var sequence = ++state.openSequence;
       callServer('getCase', [caseId], function(response) {
         if(sequence !== state.openSequence) return;
@@ -4054,7 +4054,7 @@ function openCase(caseId) {
         state.run.configuration = null;
         initializePersistentSimulations();
         renderEditor();
-        setStatus('Case loaded.');
+        setStatus("Case loaded.");
       });
     }
 
@@ -4085,7 +4085,7 @@ function openCase(caseId) {
         }
         renderWorkspaceTabs();
         activatePersistentSimulation(state.activeSimulationId);
-        setStatus('Active simulation: ' + activePersistentSimulation().name + '. This is a clone; the source remains unchanged.');
+        setStatus("Active simulation: " + activePersistentSimulation().name + ". This is a clone; the source remains unchanged.");
       });
     }
 
@@ -4117,7 +4117,7 @@ function openCase(caseId) {
         renderEditor();
         initialize();
         if (typeof afterSave === 'function') afterSave(response.data);
-        else setStatus('Case saved as revision ' + response.data.revision + '.');
+        else setStatus("Case saved as revision " + response.data.revision + '.');
       });
     }
 
@@ -4144,7 +4144,7 @@ function openCase(caseId) {
       state.activeCase.metadata=Object.assign({},state.activeCase.metadata,{dataClassification:'USER_PROVIDED'});
       state.isDirty=true;state.uiView='editor';
       renderEditor();shell.sync();
-      setStatus('Applied Sheet selection to '+simulation.name+': '+result.added+' added, '+result.updated+' updated. Save the case.'+(result.equipmentChanged?' Run again to refresh results.':''));
+      setStatus("Applied Sheet selection to "+simulation.name+': '+result.added+" added, "+result.updated+" updated. Save the case."+(result.equipmentChanged?" Run again to refresh results.":''));
       return true;
     }
 
@@ -4174,20 +4174,20 @@ function openCase(caseId) {
 
     function renderEditorMeta() {
       if (!state.activeCase) return;
-      var dirtyText = state.isDirty ? ' · unsaved changes' : '';
+      var dirtyText = state.isDirty ? " · unsaved changes" : '';
       var activeSimulation = activePersistentSimulation();
       var scenarioText = activeSimulation && activeSimulation.scenario && activeSimulation.scenario.title
-        ? ' · What-If: ' + activeSimulation.scenario.title
+        ? " · What-If: " + activeSimulation.scenario.title
         : '';
       shell.sync();
-      document.getElementById('editor-meta').textContent = 'ID: ' + state.activeCase.id + ' · Active: ' + (activeSimulation ? activeSimulation.name : '—') + scenarioText + ' · Revision ' + state.activeCase.revision + dirtyText;
+      document.getElementById('editor-meta').textContent = "ID: " + state.activeCase.id + " · Active: " + (activeSimulation ? activeSimulation.name : '—') + scenarioText + " · Revision " + state.activeCase.revision + dirtyText;
     }
 
     function renderCaseDataNote() {
       var target = document.getElementById('case-data-note');
       var metadata = state.activeCase && state.activeCase.metadata ? state.activeCase.metadata : {};
       var source=activePersistentSimulation()?.sourceImport;
-      var note = source?.source ? 'Imported from '+source.source.sheetName+' · '+source.source.readAt+'. MTBF drives random failure intervals; MTTR is a fixed repair duration. Review the stored import assumptions before running.' : typeof metadata.dataNote === 'string' ? metadata.dataNote : '';
+      var note = source?.source ? "Imported from "+source.source.sheetName+' · '+source.source.readAt+". MTBF drives random failure intervals; MTTR is a fixed repair duration. Review the stored import assumptions before running." : typeof metadata.dataNote === 'string' ? metadata.dataNote : '';
       target.textContent = note;
       toggle('case-data-note', Boolean(note));
     }
@@ -4199,7 +4199,7 @@ function openCase(caseId) {
         target.appendChild(createEquipmentCard(equipment, index));
       });
       if (!state.activeCase.equipment.length) {
-        target.innerHTML = '<p class="empty">This draft has no equipment. Add at least two units before simulation.</p>';
+        target.innerHTML = ("<p class=\"empty\">" + "This draft has no equipment. Add at least two units before simulation." + "</p>");
       }
       renderRawJson();
     }
@@ -4208,8 +4208,8 @@ function openCase(caseId) {
       var card = document.createElement('article');
       card.className = 'equipment-card';
       card.dataset.index = String(index);
-      card.innerHTML = '<div class="equipment-header"><strong></strong><div class="button-row"><button class="equipment-drag ghost icon-button" type="button" aria-label="Reorder equipment" title="Drag to reorder; use Arrow Up or Down on this handle"></button><button class="remove-equipment danger" type="button">Remove</button></div></div><div class="equipment-grid"><label>Equipment ID<input class="equipment-id"></label><label>Type<select class="equipment-type"><option value="BLOWER">Blower</option><option value="BLOWMOLDER">Blowmolder</option><option value="CONVEYOR">Conveyor</option><option value="PACEMAKER">Pacemaker</option><option value="PUCKER">Pucker</option><option value="FILLER">Filler</option><option value="DEPUCKER">De-pucker</option><option value="SLEEVER">Sleever</option><option value="CASE_PACKER">Case packer</option><option value="PALLETIZER">Palletizer</option><option value="CUSTOM">Other / custom</option></select></label><label>Name<input class="equipment-name"></label><label>Nominal rate / sec<input class="equipment-rate" type="number" min="0" step="any"></label><label>Initial mode<select class="equipment-mode"><option value="AUTO">Automatic</option><option value="MANUAL">Manual</option><option value="PAUSE">Paused</option><option value="STOP">Stopped</option></select></label></div><section class="format-zone-setup"><div class="format-zone-heading"><div><strong>FlowPilot conveyor design</strong><p>Required for every conveyor. Geometry is always active: the engine derives conveyor velocity, pitch, capacity, Prime, Back-up margin, recovery, and audit from these named inputs.</p></div></div><div class="format-zone-grid"><label>Installed length L_act (mm)<input class="format-zone-lact" type="number" min="0" step="any"></label><label>Prime reserve L_p (mm)<input class="format-zone-lp-prime" type="number" min="0" step="any"></label><label>Package length (mm)<input class="format-zone-package-length" type="number" min="0" step="any"></label><label>Upstream discharge pitch (mm)<input class="format-zone-discharge-pitch" type="number" min="0" step="any"></label><label>Conveyor speed factor (%)<input class="format-zone-speed-factor" type="number" min="0" step="any"></label><label>Installed Back-up position (mm)<input class="format-zone-backup" type="number" min="0" step="any"></label><label>Discharge runout (mm)<input class="format-zone-discharge-runout" type="number" min="0" step="any"></label><label>Reject runout (mm)<input class="format-zone-reject-runout" type="number" min="0" step="any"></label><label>Blocked time delay (s)<input class="format-zone-blocked-delay" type="number" min="0" step="any"></label><label>Clear time delay (s)<input class="format-zone-clear-delay" type="number" min="0" step="any"></label><label>Insurance factor (units)<input class="format-zone-insurance" type="number" min="0" step="any"></label><label>Upstream stop response (s)<input class="format-zone-stop-response" type="number" min="0" step="any"></label><label>Bottles discharged at stop<input class="format-zone-residual" type="number" min="0" step="any"></label><label>Downstream ramp-up (s)<input class="format-zone-downstream-ramp" type="number" min="0" step="any"></label></div><p class="format-zone-preview"></p></section><details class="equipment-json-details"><summary>Advanced JSON fields</summary><label class="characteristics-label">Characteristics JSON (optional)<textarea class="equipment-characteristics" spellcheck="false"></textarea></label><label class="characteristics-label">Noise profile JSON (optional)<textarea class="equipment-noise-profile" spellcheck="false"></textarea></label><label class="characteristics-label">Advanced process format JSON (optional)<textarea class="equipment-process-data" spellcheck="false"></textarea></label></details>';
-      card.querySelector('strong').textContent = 'Step ' + (index + 1) + ' · ' + (equipment.type || 'CUSTOM') + ' · ' + (equipment.name || equipment.id || 'Unnamed') + ' · ' + (Number(equipment.nominalRatePerSecond || 0) * 60) + ' BPM';
+      card.innerHTML = ("<div class=\"equipment-header\"><strong></strong><div class=\"button-row\"><button class=\"equipment-drag ghost icon-button\" type=\"button\" aria-label=\"" + "Reorder equipment" + "\" title=\"" + "Drag to reorder; use Arrow Up or Down on this handle" + "\"></button><button class=\"remove-equipment danger\" type=\"button\">" + "Remove" + "</button></div></div><div class=\"equipment-grid\"><label>" + "Equipment ID" + "<input class=\"equipment-id\"></label><label>" + "Type" + "<select class=\"equipment-type\"><option value=\"BLOWER\">" + "Blower" + "</option><option value=\"BLOWMOLDER\">" + "Blowmolder" + "</option><option value=\"CONVEYOR\">" + "Conveyor" + "</option><option value=\"PACEMAKER\">" + "Pacemaker" + "</option><option value=\"PUCKER\">" + "Pucker" + "</option><option value=\"FILLER\">" + "Filler" + "</option><option value=\"DEPUCKER\">" + "De-pucker" + "</option><option value=\"SLEEVER\">" + "Sleever" + "</option><option value=\"CASE_PACKER\">" + "Case packer" + "</option><option value=\"PALLETIZER\">" + "Palletizer" + "</option><option value=\"CUSTOM\">" + "Other / custom" + "</option></select></label><label>" + "Name" + "<input class=\"equipment-name\"></label><label>" + "Nominal rate / sec" + "<input class=\"equipment-rate\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Initial mode" + "<select class=\"equipment-mode\"><option value=\"AUTO\">" + "Automatic" + "</option><option value=\"MANUAL\">" + "Manual" + "</option><option value=\"PAUSE\">" + "Paused" + "</option><option value=\"STOP\">" + "Stopped" + "</option></select></label></div><section class=\"format-zone-setup\"><div class=\"format-zone-heading\"><div><strong>" + "FlowPilot conveyor design" + "</strong><p>" + "Required for every conveyor. Geometry is always active: the engine derives conveyor velocity, pitch, capacity, Prime, Back-up margin, recovery, and audit from these named inputs." + "</p></div></div><div class=\"format-zone-grid\"><label>" + "Installed length L_act (mm)" + "<input class=\"format-zone-lact\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Prime reserve L_p (mm)" + "<input class=\"format-zone-lp-prime\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Package length (mm)" + "<input class=\"format-zone-package-length\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Upstream discharge pitch (mm)" + "<input class=\"format-zone-discharge-pitch\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Conveyor speed factor (%)" + "<input class=\"format-zone-speed-factor\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Installed Back-up position (mm)" + "<input class=\"format-zone-backup\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Discharge runout (mm)" + "<input class=\"format-zone-discharge-runout\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Reject runout (mm)" + "<input class=\"format-zone-reject-runout\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Blocked time delay (s)" + "<input class=\"format-zone-blocked-delay\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Clear time delay (s)" + "<input class=\"format-zone-clear-delay\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Insurance factor (units)" + "<input class=\"format-zone-insurance\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Upstream stop response (s)" + "<input class=\"format-zone-stop-response\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Bottles discharged at stop" + "<input class=\"format-zone-residual\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Downstream ramp-up (s)" + "<input class=\"format-zone-downstream-ramp\" type=\"number\" min=\"0\" step=\"any\"></label></div><p class=\"format-zone-preview\"></p></section><details class=\"equipment-json-details\"><summary>" + "Advanced JSON fields" + "</summary><label class=\"characteristics-label\">" + "Characteristics JSON (optional)" + "<textarea class=\"equipment-characteristics\" spellcheck=\"false\"></textarea></label><label class=\"characteristics-label\">" + "Noise profile JSON (optional)" + "<textarea class=\"equipment-noise-profile\" spellcheck=\"false\"></textarea></label><label class=\"characteristics-label\">" + "Advanced process format JSON (optional)" + "<textarea class=\"equipment-process-data\" spellcheck=\"false\"></textarea></label></details>");
+      card.querySelector('strong').textContent = "Step " + (index + 1) + ' · ' + (equipment.type || 'CUSTOM') + ' · ' + (equipment.name || equipment.id || 'Unnamed') + ' · ' + (Number(equipment.nominalRatePerSecond || 0) * 60) + " BPM";
       card.querySelector('.equipment-id').value = equipment.id || '';
       card.querySelector('.equipment-type').value = equipment.type || 'CUSTOM';
       card.querySelector('.equipment-name').value = equipment.name || '';
@@ -4225,11 +4225,11 @@ function openCase(caseId) {
       renderFormatZonePreview(card);
 
       STEquipmentDrag.bind(card,index,moveEquipment);
-      var remove=card.querySelector('.remove-equipment');remove.innerHTML=STIcons.svg('trash');remove.classList.add('icon-button');remove.title='Delete equipment';remove.setAttribute('aria-label','Delete equipment');
+      var remove=card.querySelector('.remove-equipment');remove.innerHTML=STIcons.svg('trash');remove.classList.add('icon-button');remove.title="Delete equipment";remove.setAttribute('aria-label',"Delete equipment");
       card.querySelector('.remove-equipment').addEventListener('click', function() { removeEquipment(index); });
       var collapse = document.createElement('button');
-      collapse.type = 'button'; collapse.className = 'toggle-step secondary'; collapse.innerHTML = STIcons.svg('edit'); collapse.classList.add('icon-button');collapse.title='Edit equipment';collapse.setAttribute('aria-label','Edit equipment'); collapse.setAttribute('aria-expanded','false');
-      collapse.addEventListener('click', function() { card.classList.toggle('equipment-card-expanded'); collapse.title=card.classList.contains('equipment-card-expanded')?'Collapse details':'Edit equipment';collapse.setAttribute('aria-label',collapse.title); collapse.setAttribute('aria-expanded',String(card.classList.contains('equipment-card-expanded'))); });
+      collapse.type = 'button'; collapse.className = 'toggle-step secondary'; collapse.innerHTML = STIcons.svg('edit'); collapse.classList.add('icon-button');collapse.title="Edit equipment";collapse.setAttribute('aria-label',"Edit equipment"); collapse.setAttribute('aria-expanded','false');
+      collapse.addEventListener('click', function() { card.classList.toggle('equipment-card-expanded'); collapse.title=card.classList.contains('equipment-card-expanded')?"Collapse details":"Edit equipment";collapse.setAttribute('aria-label',collapse.title); collapse.setAttribute('aria-expanded',String(card.classList.contains('equipment-card-expanded'))); });
       card.querySelector('.equipment-header .button-row').prepend(collapse);
       card.querySelector('.equipment-type').addEventListener('change', function() {
         updateFormatZoneVisibility(card);
@@ -4246,27 +4246,27 @@ function openCase(caseId) {
 
     function applyConceptTooltips(card) {
       var concepts = [
-        ['.format-zone-lact', 'Total installed conveyor length, measured from the upstream discharge toward the downstream infeed.'],
-        ['.format-zone-lp-prime', 'Reserved downstream length between the Prime photocell and the downstream machine infeed.'],
-        ['.format-zone-package-length', 'Physical package length in the direction of travel. It determines the photoeye occupied time.'],
-        ['.format-zone-discharge-pitch', 'Centre-to-centre distance between packages leaving the upstream machine.'],
-        ['.format-zone-speed-factor', 'Belt-speed increase relative to upstream package discharge velocity. It changes package spacing and population.'],
-        ['.format-zone-backup', 'Installed Back-up photocell position, measured from the upstream discharge. A sustained blocked signal requests the upstream stop.'],
-        ['.format-zone-discharge-runout', 'Length that must be cleared after the upstream discharge before a stop fully takes effect.'],
-        ['.format-zone-reject-runout', 'Additional reject/runout length that must be cleared during an upstream stop.'],
-        ['.format-zone-blocked-delay', 'Continuous Back-up blocked time required before the simulator requests the upstream stop. Normal package pulses do not count.'],
-        ['.format-zone-clear-delay', 'Continuous Back-up clear time required before the simulator releases the upstream stop. Normal product gaps reset this timer.'],
-        ['.format-zone-insurance', 'Extra package margin reserved in the required overflow calculation. It is a design margin, not randomly created material.'],
-        ['.format-zone-stop-response', 'Delay from the upstream stop request until its discharge response is complete.'],
-        ['.format-zone-residual', 'Packages that can still leave the upstream machine after the stop request.'],
-        ['.format-zone-downstream-ramp', 'Time for the downstream machine to ramp after Prime authorizes its start.']
+        ['.format-zone-lact', "Total installed conveyor length, measured from the upstream discharge toward the downstream infeed."],
+        ['.format-zone-lp-prime', "Reserved downstream length between the Prime photocell and the downstream machine infeed."],
+        ['.format-zone-package-length', "Physical package length in the direction of travel. It determines the photoeye occupied time."],
+        ['.format-zone-discharge-pitch', "Centre-to-centre distance between packages leaving the upstream machine."],
+        ['.format-zone-speed-factor', "Belt-speed increase relative to upstream package discharge velocity. It changes package spacing and population."],
+        ['.format-zone-backup', "Installed Back-up photocell position, measured from the upstream discharge. A sustained blocked signal requests the upstream stop."],
+        ['.format-zone-discharge-runout', "Length that must be cleared after the upstream discharge before a stop fully takes effect."],
+        ['.format-zone-reject-runout', "Additional reject/runout length that must be cleared during an upstream stop."],
+        ['.format-zone-blocked-delay', "Continuous Back-up blocked time required before the simulator requests the upstream stop. Normal package pulses do not count."],
+        ['.format-zone-clear-delay', "Continuous Back-up clear time required before the simulator releases the upstream stop. Normal product gaps reset this timer."],
+        ['.format-zone-insurance', "Extra package margin reserved in the required overflow calculation. It is a design margin, not randomly created material."],
+        ['.format-zone-stop-response', "Delay from the upstream stop request until its discharge response is complete."],
+        ['.format-zone-residual', "Packages that can still leave the upstream machine after the stop request."],
+        ['.format-zone-downstream-ramp', "Time for the downstream machine to ramp after Prime authorizes its start."]
       ];
       concepts.forEach(function(entry) {
         var input = card.querySelector(entry[0]);
         if (input && input.closest('label')) input.closest('label').title = entry[1];
       });
-      setFormatFieldLabel(card, '.format-zone-blocked-delay', 'Back-up blocked delay (s)');
-      setFormatFieldLabel(card, '.format-zone-clear-delay', 'Back-up clear delay (s)');
+      setFormatFieldLabel(card, '.format-zone-blocked-delay', "Back-up blocked delay (s)");
+      setFormatFieldLabel(card, '.format-zone-clear-delay', "Back-up clear delay (s)");
     }
 
     function setFormatFieldLabel(card, selector, labelText) {
@@ -4323,7 +4323,7 @@ function updateFormatZoneVisibility(card) {
       var downstreamMachine = state.activeCase?.equipment?.[index + 1];
       var calculator = window.SimulatorEngine?.calculateConveyorEngineering;
       if (!calculator || !upstreamMachine || !downstreamMachine) {
-        target.textContent = 'FlowPilot preview becomes available when this conveyor sits between an upstream and downstream machine.';
+        target.textContent = "FlowPilot preview becomes available when this conveyor sits between an upstream and downstream machine.";
         return;
       }
       var calculation = calculator({
@@ -4348,15 +4348,15 @@ function updateFormatZoneVisibility(card) {
       });
       var derived = calculation.calculated;
       if (!(derived.conveyorCapacityUnits >= 1)) {
-        target.textContent = 'Required: L_act, L_p, package length, upstream discharge pitch, upstream BPM, and conveyor speed factor.';
+        target.textContent = "Required: L_act, L_p, package length, upstream discharge pitch, upstream BPM, and conveyor speed factor.";
         return;
       }
-      target.textContent = 'Calculated: ' + formatNumber(derived.conveyorSpeedMmPerSecond) + ' mm/s · ' +
-        formatNumber(derived.effectiveProductPitchMm) + ' mm pitch · ' + formatNumber(derived.conveyorCapacityUnits) +
-        ' units · Prime ' + formatNumber(derived.primeSensorPositionMm) + ' mm · required Back-up ≥ ' +
-        formatNumber(derived.recommendedBackupSensorPositionMm) + ' mm · L_rec ' +
-        formatNumber(derived.recoveryLengthMm) + ' mm · normal photoeye pulse ' +
-        formatSeconds(derived.packagePassSensorSeconds) + ' · normal clear gap ' +
+      target.textContent = "Calculated: " + formatNumber(derived.conveyorSpeedMmPerSecond) + " mm/s · " +
+        formatNumber(derived.effectiveProductPitchMm) + " mm pitch · " + formatNumber(derived.conveyorCapacityUnits) +
+        " units · Prime " + formatNumber(derived.primeSensorPositionMm) + " mm · required Back-up ≥ " +
+        formatNumber(derived.recommendedBackupSensorPositionMm) + " mm · L_rec " +
+        formatNumber(derived.recoveryLengthMm) + " mm · normal photoeye pulse " +
+        formatSeconds(derived.packagePassSensorSeconds) + " · normal clear gap " +
         formatSeconds(derived.sensorClearGapSeconds) + ' (' + calculation.audit.status + ').';
     }
 
@@ -4492,9 +4492,9 @@ function numericInputValue(input) {
         var card = cards[index];
         var characteristics = parseJsonObject(card.querySelector('.equipment-characteristics').value, 'Characteristics', index + 1);
         if (characteristics === null) return false;
-        var noiseProfile = parseJsonObject(card.querySelector('.equipment-noise-profile').value, 'Noise profile', index + 1);
+        var noiseProfile = parseJsonObject(card.querySelector('.equipment-noise-profile').value, "Noise profile", index + 1);
         if (noiseProfile === null) return false;
-        var processData = parseJsonObject(card.querySelector('.equipment-process-data').value, 'Process format data', index + 1);
+        var processData = parseJsonObject(card.querySelector('.equipment-process-data').value, "Process format data", index + 1);
         if (processData === null) return false;
         var type = card.querySelector('.equipment-type').value;
         if (type === 'CONVEYOR') {
@@ -4525,7 +4525,7 @@ function parseJsonObject(rawValue, label, step) {
         if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') throw new Error('not an object');
         return parsed;
       } catch (error) {
-        showError({ code: 'INVALID_EQUIPMENT_JSON', message: label + ' for equipment step ' + step + ' must contain a JSON object.' });
+        showError({ code: 'INVALID_EQUIPMENT_JSON', message: label + " for equipment step " + step + " must contain a JSON object." });
         return null;
       }
     }
@@ -4555,7 +4555,7 @@ function renderRawJson() {
       toggle('run-panel', canRender);
       if (!canRender) return;
       var ready = isRunReady();
-      document.getElementById('run-case-meta').textContent = state.activeCase.name + ' · revision ' + state.activeCase.revision + (state.isDirty ? ' · scenario edits not yet saved to Drive' : '');
+      document.getElementById('run-case-meta').textContent = state.activeCase.name + " · revision " + state.activeCase.revision + (state.isDirty ? " · scenario edits not yet saved to Drive" : '');
       toggle('run-not-ready', !ready);
       document.getElementById('run-simulation').disabled = !ready;
       renderControlEvents();
@@ -4579,17 +4579,17 @@ function renderRawJson() {
       simulations.forEach(function(tab) {
         var button = document.createElement('button'); button.type = 'button';
         var isActive = state.workspaceView !== 'comparison' && tab.id === state.activeSimulationId;
-        button.className = 'workspace-tab nav-item' + (isActive ? ' workspace-tab-active' : '');
+        button.className = 'workspace-tab nav-item' + (isActive ? " workspace-tab-active" : '');
         button.innerHTML=STIcons.svg('play');var label=document.createElement('span');label.className='nav-label';label.textContent=tab.name;button.appendChild(label);
         button.setAttribute('aria-label',tab.name);button.setAttribute('aria-current',isActive?'page':'false');
         button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-        button.title = (isActive ? 'Active simulation: ' : 'Open simulation: ') + tab.name;
+        button.title = (isActive ? "Active simulation: " : "Open simulation: ") + tab.name;
         button.addEventListener('click', function() { activatePersistentSimulation(tab.id); });
         target.appendChild(button);
       });
       var comparison = document.createElement('button'); comparison.type = 'button';
-      comparison.className = 'workspace-tab nav-item workspace-tab-comparison' + (state.workspaceView === 'comparison' ? ' workspace-tab-active' : '');
-      comparison.innerHTML=STIcons.svg('chart')+'<span class="nav-label">Compare</span>';comparison.setAttribute('aria-label','Compare simulations');comparison.setAttribute('aria-current',state.workspaceView==='comparison'?'page':'false'); comparison.title = 'Compare two saved simulations from this Case.';
+      comparison.className = 'workspace-tab nav-item workspace-tab-comparison' + (state.workspaceView === 'comparison' ? " workspace-tab-active" : '');
+      comparison.innerHTML=STIcons.svg('chart')+("<span class=\"nav-label\">" + "Compare" + "</span>");comparison.setAttribute('aria-label',"Compare simulations");comparison.setAttribute('aria-current',state.workspaceView==='comparison'?'page':'false'); comparison.title = "Compare two saved simulations from this Case.";
       comparison.setAttribute('aria-pressed', state.workspaceView === 'comparison' ? 'true' : 'false');
       comparison.addEventListener('click', showCaseComparison); target.appendChild(comparison);
 
@@ -4614,7 +4614,7 @@ function renderRawJson() {
 
     function initializePersistentSimulations() {
       if (!Array.isArray(state.activeCase.simulations) || !state.activeCase.simulations.length) {
-        state.activeCase.simulations = [{ id: 'simulation-a', name: 'Simulation A', equipment: cloneJson(state.activeCase.equipment || []), dynamicConfig: {}, results: null }];
+        state.activeCase.simulations = [{ id: 'simulation-a', name: "Simulation A", equipment: cloneJson(state.activeCase.equipment || []), dynamicConfig: {}, results: null }];
       }
       state.activeSimulationId = state.activeCase.simulations[0].id;
       activatePersistentSimulation(state.activeSimulationId, true);
@@ -4660,7 +4660,7 @@ function renderRawJson() {
       }
       renderSimulationAnalysis();
       shell.sync();
-      setStatus('Active simulation: ' + simulation.name + '.');
+      setStatus("Active simulation: " + simulation.name + '.');
     }
 
     function createStoredSimulationResult(result, run) {
@@ -4712,7 +4712,7 @@ function renderRawJson() {
         finding.className = 'analysis-finding analysis-' + String(primary.severity || 'ATTENTION').toLowerCase().replace(/_/g, '-');
         var status = document.createElement('span');
         status.className = 'analysis-status analysis-status-' + String(primary.severity || 'ATTENTION').toLowerCase().replace(/_/g, '-');
-        status.textContent = primary.severity === 'INPUT_REQUIRED' ? 'INPUT REQUIRED' : primary.severity;
+        status.textContent = primary.severity === 'INPUT_REQUIRED' ? "INPUT REQUIRED" : primary.severity;
         finding.appendChild(status);
         var findingTitle = document.createElement('h4');
         findingTitle.textContent = primary.finding;
@@ -4722,7 +4722,7 @@ function renderRawJson() {
         finding.appendChild(findingText);
         var evidence = document.createElement('p');
         evidence.className = 'analysis-evidence';
-        evidence.textContent = 'Evidence: ' + primary.evidence;
+        evidence.textContent = "Evidence: " + primary.evidence;
         finding.appendChild(evidence);
         grid.appendChild(finding);
 
@@ -4741,14 +4741,14 @@ function renderRawJson() {
         if (primary.canApply) {
           var button = document.createElement('button');
           button.type = 'button';
-          button.innerHTML = STIcons.svg('plus')+'Create recommended Simulation B';
-          button.title = 'Create a saved clone, apply only these inputs, then review and run the successor simulation.';
+          button.innerHTML = STIcons.svg('plus')+"Create recommended Simulation B";
+          button.title = "Create a saved clone, apply only these inputs, then review and run the successor simulation.";
           button.addEventListener('click', function() { createWhatIfScenario(primary.kind, button); });
           recommendation.appendChild(button);
         } else {
           var unavailable = document.createElement('p');
           unavailable.className = 'analysis-evidence';
-          unavailable.textContent = 'No automatic clone is created until the required physical inputs are complete.';
+          unavailable.textContent = "No automatic clone is created until the required physical inputs are complete.";
           recommendation.appendChild(unavailable);
         }
         grid.appendChild(recommendation);
@@ -4758,13 +4758,13 @@ function renderRawJson() {
         noAction.className = 'analysis-no-action';
         var stable = document.createElement('span');
         stable.className = 'analysis-status analysis-status-stable';
-        stable.textContent = 'NO PRIORITY CHANGE';
+        stable.textContent = "NO PRIORITY CHANGE";
         noAction.appendChild(stable);
         var noActionTitle = document.createElement('h4');
-        noActionTitle.textContent = 'No material design issue was detected in this run';
+        noActionTitle.textContent = "No material design issue was detected in this run";
         noAction.appendChild(noActionTitle);
         var noActionText = document.createElement('p');
-        noActionText.textContent = 'The available geometry audit and observed loss counters do not justify an automatic intervention. Use Clone Simulation only when you have a specific engineering hypothesis to test.';
+        noActionText.textContent = "The available geometry audit and observed loss counters do not justify an automatic intervention. Use Clone Simulation only when you have a specific engineering hypothesis to test.";
         noAction.appendChild(noActionText);
         fragment.appendChild(noAction);
       }
@@ -4772,7 +4772,7 @@ function renderRawJson() {
       var checks = document.createElement('details');
       checks.className = 'analysis-checks';
       var summary = document.createElement('summary');
-      summary.textContent = 'Evidence considered (' + analysis.checks.length + ')';
+      summary.textContent = "Evidence considered (" + analysis.checks.length + ')';
       checks.appendChild(summary);
       var list = document.createElement('ul');
       analysis.checks.forEach(function(item) {
@@ -4792,8 +4792,8 @@ function renderRawJson() {
       })[0] || null;
       var summary = result.summary || {};
       var checks = [];
-      if (isFiniteNumber(summary.lineOeePercent)) checks.push('Global OEE: ' + formatNumber(summary.lineOeePercent) + '% using ' + (summary.lineOeePacemakerName || 'the selected pacemaker') + '.');
-      checks.push('Line losses: starvation ' + formatSeconds(summary.totalStarvedSeconds || 0) + ' · waiting for Prime ' + formatSeconds(summary.totalWaitingForPrimeSeconds || 0) + ' · failures ' + formatSeconds(summary.totalFailureSeconds || 0) + '.');
+      if (isFiniteNumber(summary.lineOeePercent)) checks.push("Global OEE: " + formatNumber(summary.lineOeePercent) + "% using " + (summary.lineOeePacemakerName || 'the selected pacemaker') + '.');
+      checks.push("Line losses: starvation " + formatSeconds(summary.totalStarvedSeconds || 0) + " · waiting for Prime " + formatSeconds(summary.totalWaitingForPrimeSeconds || 0) + " · failures " + formatSeconds(summary.totalFailureSeconds || 0) + '.');
       proposals.filter(function(item) { return item.recommended || item.evidence; }).forEach(function(item) {
         if (item.evidence) checks.push(item.title + ': ' + item.evidence);
       });
@@ -4843,85 +4843,85 @@ function renderRawJson() {
 
       if (!target) {
         proposals.push({
-          kind: 'INPUT_REQUIRED', title: 'Complete physical conveyor data', capex: 'INPUT REQUIRED', canApply: false,
+          kind: 'INPUT_REQUIRED', title: "Complete physical conveyor data", capex: "INPUT REQUIRED", canApply: false,
           recommended: true, priority: 100, severity: 'INPUT_REQUIRED',
-          finding: 'No physical conveyor can be evaluated',
-          diagnosis: 'This simulation has no conveyor with FlowPilot geometry available for a physical recommendation.',
-          description: 'Add a machine → conveyor → machine section with geometry before creating an automatic successor simulation.',
-          evidence: 'No conveyor metrics were saved with this run.'
+          finding: "No physical conveyor can be evaluated",
+          diagnosis: "This simulation has no conveyor with FlowPilot geometry available for a physical recommendation.",
+          description: "Add a machine → conveyor → machine section with geometry before creating an automatic successor simulation.",
+          evidence: "No conveyor metrics were saved with this run."
         });
         return proposals;
       }
 
       if (!recommendationInputsReady) {
         proposals.push({
-          kind: 'INPUT_REQUIRED', title: 'Complete physical conveyor data', capex: 'INPUT REQUIRED', canApply: false,
+          kind: 'INPUT_REQUIRED', title: "Complete physical conveyor data", capex: "INPUT REQUIRED", canApply: false,
           recommended: true, priority: 100, severity: 'INPUT_REQUIRED', target: target,
-          finding: 'The physical audit is incomplete on ' + target.equipment.name,
-          diagnosis: 'A safe sensor, speed, or buffer change cannot be calculated until the missing geometric inputs are supplied.',
-          description: 'Complete the listed FlowPilot fields, save the simulation, and run it again before creating Simulation B.',
-          evidence: missingPhysicalRecommendationInputs(input).join(', ') + '. ' + (auditMessages.join(' ') || 'Audit status: ' + auditStatus + '.')
+          finding: "The physical audit is incomplete on " + target.equipment.name,
+          diagnosis: "A safe sensor, speed, or buffer change cannot be calculated until the missing geometric inputs are supplied.",
+          description: "Complete the listed FlowPilot fields, save the simulation, and run it again before creating Simulation B.",
+          evidence: missingPhysicalRecommendationInputs(input).join(', ') + '. ' + (auditMessages.join(' ') || "Audit status: " + auditStatus + '.')
         });
       }
 
       proposals.push({
-        kind: 'BUFFER_RECOVERY', title: 'Restore buffer recovery', capex: 'HIGH CAPEX', target: target,
+        kind: 'BUFFER_RECOVERY', title: "Restore buffer recovery", capex: "HIGH CAPEX", target: target,
         bufferPlan: bufferPlan, canApply: Boolean(bufferPlan), recommended: geometryNeedsRecovery,
         priority: installedLengthGoal?.status === 'FAIL' ? 96 : recoveryGoal?.status === 'WARNING' ? 92 : backupGoal?.status === 'WARNING' ? 88 : 0,
         severity: installedLengthGoal?.status === 'FAIL' ? 'CRITICAL' : 'ATTENTION',
-        finding: 'Physical recovery margin is insufficient on ' + target.equipment.name,
-        diagnosis: 'The conveyor audit indicates that a normal stop/restart may consume the available accumulation margin before the upstream flow is recovered.',
+        finding: "Physical recovery margin is insufficient on " + target.equipment.name,
+        diagnosis: "The conveyor audit indicates that a normal stop/restart may consume the available accumulation margin before the upstream flow is recovered.",
         description: bufferPlan
-          ? 'Set Back-up to the calculated required L_bu of ' + formatNumber(bufferPlan.backupSensorPositionMm) + ' mm and set L_act to the minimum modeled length of ' + formatNumber(bufferPlan.installedLengthMm) + ' mm (' + formatNumber(bufferPlan.addedLengthMm) + ' mm added).'
-          : 'The audit found a geometry issue, but the available inputs cannot derive a valid recovery length.',
-        evidence: 'Target: ' + target.equipment.name + ' · audit ' + auditStatus +
-          (isFiniteNumber(recoveryLength) ? ' · L_rec ' + formatNumber(recoveryLength) + ' mm' : '') +
-          (isFiniteNumber(requiredBackup) ? ' · required L_bu ' + formatNumber(requiredBackup) + ' mm' : '') +
-          (highWaitingOrStarvation ? ' · observed waiting/starvation is elevated' : '')
+          ? "Set Back-up to the calculated required L_bu of " + formatNumber(bufferPlan.backupSensorPositionMm) + " mm and set L_act to the minimum modeled length of " + formatNumber(bufferPlan.installedLengthMm) + " mm (" + formatNumber(bufferPlan.addedLengthMm) + " mm added)."
+          : "The audit found a geometry issue, but the available inputs cannot derive a valid recovery length.",
+        evidence: "Target: " + target.equipment.name + " · audit " + auditStatus +
+          (isFiniteNumber(recoveryLength) ? " · L_rec " + formatNumber(recoveryLength) + " mm" : '') +
+          (isFiniteNumber(requiredBackup) ? " · required L_bu " + formatNumber(requiredBackup) + " mm" : '') +
+          (highWaitingOrStarvation ? " · observed waiting/starvation is elevated" : '')
       });
 
       proposals.push({
-        kind: 'SENSOR_DEBOUNCE', title: 'Tune Back-up confirmation timers', capex: 'ZERO CAPEX', target: target,
+        kind: 'SENSOR_DEBOUNCE', title: "Tune Back-up confirmation timers", capex: "ZERO CAPEX", target: target,
         sensorDebouncePlan: sensorDebouncePlan, canApply: Boolean(sensorDebouncePlan && sensorDebouncePlan.changed),
         recommended: sensorDebounceNeedsTune && !geometryNeedsRecovery && recommendationInputsReady,
         priority: sensorDebounceNeedsTune ? 82 : 0, severity: 'ATTENTION',
-        finding: 'Normal photoeye pulses can be mistaken for a sustained Back-up signal',
-        diagnosis: 'At least one configured Back-up confirmation delay is not longer than the modeled occupied pulse or clear gap. The PLC may chatter or stop on normal package spacing.',
+        finding: "Normal photoeye pulses can be mistaken for a sustained Back-up signal",
+        diagnosis: "At least one configured Back-up confirmation delay is not longer than the modeled occupied pulse or clear gap. The PLC may chatter or stop on normal package spacing.",
         description: sensorDebouncePlan
-          ? 'Set blocked delay to ' + formatNumber(sensorDebouncePlan.blockedTimeDelaySeconds) + ' s and clear delay to ' + formatNumber(sensorDebouncePlan.clearTimeDelaySeconds) + ' s. These are simulated PLC confirmation settings; confirm them with controls engineering before plant use.'
-          : 'Package pulse and gap timing are required to derive a safe confirmation-delay candidate.',
-        evidence: 'Target: ' + target.equipment.name +
-          (isFiniteNumber(calculated.packagePassSensorSeconds) ? ' · normal occupied pulse ' + formatNumber(calculated.packagePassSensorSeconds) + ' s' : '') +
-          (isFiniteNumber(calculated.sensorClearGapSeconds) ? ' · normal clear gap ' + formatNumber(calculated.sensorClearGapSeconds) + ' s' : '') +
-          ' · installed delays ' + formatNumber(input.blockedTimeDelaySeconds || 0) + ' s / ' + formatNumber(input.clearTimeDelaySeconds || 0) + ' s'
+          ? "Set blocked delay to " + formatNumber(sensorDebouncePlan.blockedTimeDelaySeconds) + " s and clear delay to " + formatNumber(sensorDebouncePlan.clearTimeDelaySeconds) + " s. These are simulated PLC confirmation settings; confirm them with controls engineering before plant use."
+          : "Package pulse and gap timing are required to derive a safe confirmation-delay candidate.",
+        evidence: "Target: " + target.equipment.name +
+          (isFiniteNumber(calculated.packagePassSensorSeconds) ? " · normal occupied pulse " + formatNumber(calculated.packagePassSensorSeconds) + ' s' : '') +
+          (isFiniteNumber(calculated.sensorClearGapSeconds) ? " · normal clear gap " + formatNumber(calculated.sensorClearGapSeconds) + ' s' : '') +
+          " · installed delays " + formatNumber(input.blockedTimeDelaySeconds || 0) + ' s / ' + formatNumber(input.clearTimeDelaySeconds || 0) + ' s'
       });
 
       proposals.push({
-        kind: 'SPEED_BALANCE', title: 'Balance downstream infeed speed', capex: 'ZERO CAPEX', target: target,
+        kind: 'SPEED_BALANCE', title: "Balance downstream infeed speed", capex: "ZERO CAPEX", target: target,
         recommendedSpeedFactorPercent: isFiniteNumber(recommendedSpeedFactor) && recommendedSpeedFactor >= 0 ? Number(recommendedSpeedFactor.toFixed(2)) : null,
         canApply: Boolean(target && speedFactorDiffers), recommended: speedFactorDiffers && !geometryNeedsRecovery,
         priority: speedFactorDiffers ? 64 : 0, severity: 'ATTENTION',
-        finding: 'Infeed conveyor speed does not match the calculated downstream demand',
-        diagnosis: 'The current belt factor differs from the FlowPilot infeed calculation, which includes the modeled downstream speed, infeed pitch, and 5% infeed overspeed.',
+        finding: "Infeed conveyor speed does not match the calculated downstream demand",
+        diagnosis: "The current belt factor differs from the FlowPilot infeed calculation, which includes the modeled downstream speed, infeed pitch, and 5% infeed overspeed.",
         description: speedFactorDiffers
-          ? 'Change conveyor speed factor from ' + formatNumber(speedFactor) + '% to the calculated ' + formatNumber(recommendedSpeedFactor) + '%.'
-          : 'The current factor is already aligned with the calculated downstream infeed demand.',
-        evidence: 'Target: ' + target.equipment.name +
-          (isFiniteNumber(calculated.recommendedInfeedConveyorSpeedMmPerSecond) ? ' · recommended infeed speed ' + formatNumber(calculated.recommendedInfeedConveyorSpeedMmPerSecond) + ' mm/s' : '') +
-          (isFiniteNumber(calculated.sensorClearGapSeconds) ? ' · normal clear gap ' + formatNumber(calculated.sensorClearGapSeconds) + ' s' : '')
+          ? "Change conveyor speed factor from " + formatNumber(speedFactor) + "% to the calculated " + formatNumber(recommendedSpeedFactor) + '%.'
+          : "The current factor is already aligned with the calculated downstream infeed demand.",
+        evidence: "Target: " + target.equipment.name +
+          (isFiniteNumber(calculated.recommendedInfeedConveyorSpeedMmPerSecond) ? " · recommended infeed speed " + formatNumber(calculated.recommendedInfeedConveyorSpeedMmPerSecond) + " mm/s" : '') +
+          (isFiniteNumber(calculated.sensorClearGapSeconds) ? " · normal clear gap " + formatNumber(calculated.sensorClearGapSeconds) + ' s' : '')
       });
 
       proposals.push({
-        kind: 'RELIABILITY', title: 'Reliability sensitivity check', capex: 'LOW CAPEX / OPEX',
+        kind: 'RELIABILITY', title: "Reliability sensitivity check", capex: "LOW CAPEX / OPEX",
         canApply: reliabilityTargets.length > 0, recommended: reliabilityRecommended && !geometryNeedsRecovery,
         priority: reliabilityRecommended ? 52 : 0, severity: 'ATTENTION',
-        finding: 'Intrinsic equipment downtime is reducing the result',
-        diagnosis: 'Failures or low intrinsic availability were observed. This scenario is a transparent sensitivity check, not a claim that maintenance will achieve the result.',
+        finding: "Intrinsic equipment downtime is reducing the result",
+        diagnosis: "Failures or low intrinsic availability were observed. This scenario is a transparent sensitivity check, not a claim that maintenance will achieve the result.",
         description: reliabilityTargets.length
-          ? 'For ' + reliabilityTargets.length + ' critical machines, test the stated maintenance assumption: MTBF × 1.20 and MTTR × 0.85.'
-          : 'MTBF and MTTR are required on at least one non-conveyor machine.',
-        evidence: 'Failure ' + formatSeconds(summary.totalFailureSeconds || 0) +
-          ' · availability trigger ' + (lowAvailability ? 'present' : 'not present') + '.'
+          ? "For " + reliabilityTargets.length + " critical machines, test the stated maintenance assumption: MTBF × 1.20 and MTTR × 0.85."
+          : "MTBF and MTTR are required on at least one non-conveyor machine.",
+        evidence: "Failure " + formatSeconds(summary.totalFailureSeconds || 0) +
+          " · availability trigger " + (lowAvailability ? 'present' : 'not present') + '.'
       });
 
       return proposals;
@@ -4939,8 +4939,8 @@ function renderRawJson() {
 
     function missingPhysicalRecommendationInputs(input) {
       var labels = [
-        ['installedLengthMm', 'Installed length L_act'],
-        ['primeReserveMm', 'Prime reserve L_p'],
+        ['installedLengthMm', "Installed length L_act"],
+        ['primeReserveMm', "Prime reserve L_p"],
         ['packageLengthMm', 'package length'],
         ['upstreamDischargePitchMm', 'upstream discharge pitch'],
         ['upstreamNominalSpeedBpm', 'upstream nominal speed'],
@@ -5092,7 +5092,7 @@ function renderRawJson() {
           activatePersistentSimulation(clone.id, true);
           state.isDirty = true;
           saveActiveCase(function() {
-            setStatus('Created ' + clone.name + ' from ' + source.name + '. ' + proposal.title + ' is applied; review the changed inputs and run it when ready.');
+            setStatus("Created " + clone.name + " from " + source.name + '. ' + proposal.title + " is applied; review the changed inputs and run it when ready.");
           });
         });
       });
@@ -5196,14 +5196,14 @@ function renderRawJson() {
         target.appendChild(createControlEventRow(command, index));
       });
       if (!state.run.commands.length) {
-        target.innerHTML = '<p class="empty compact-empty">No scheduled control events.</p>';
+        target.innerHTML = ("<p class=\"empty compact-empty\">" + "No scheduled control events." + "</p>");
       }
     }
 
     function createControlEventRow(command, index) {
       var row = document.createElement('article');
       row.className = 'control-event';
-      row.innerHTML = '<label>At virtual second<input class="command-time" type="number" min="0" step="any"></label><label>Equipment<select class="command-equipment"></select></label><label>Action<select class="command-action"><option value="RUN">Run</option><option value="PAUSE">Pause</option><option value="STOP">Planned stop</option><option value="EMERGENCY_STOP">Emergency stop</option><option value="RESET">Reset emergency stop</option><option value="MANUAL">Manual</option><option value="AUTO">Automatic</option></select></label><button class="remove-command danger" type="button">Remove</button>';
+      row.innerHTML = ("<label>" + "At virtual second" + "<input class=\"command-time\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Equipment" + "<select class=\"command-equipment\"></select></label><label>" + "Action" + "<select class=\"command-action\"><option value=\"RUN\">" + "Run" + "</option><option value=\"PAUSE\">" + "Pause" + "</option><option value=\"STOP\">" + "Planned stop" + "</option><option value=\"EMERGENCY_STOP\">" + "Emergency stop" + "</option><option value=\"RESET\">" + "Reset emergency stop" + "</option><option value=\"MANUAL\">" + "Manual" + "</option><option value=\"AUTO\">" + "Automatic" + "</option></select></label><button class=\"remove-command danger\" type=\"button\">" + "Remove" + "</button>");
       var equipmentSelect = row.querySelector('.command-equipment');
       state.activeCase.equipment.forEach(function(equipment) {
         var option = document.createElement('option');
@@ -5240,8 +5240,8 @@ function renderRawJson() {
       renderWorkspaceTabs();
       renderSimulationAnalysis();
       setStatus(state.run.durationMode === 'INDEFINITE'
-        ? 'Simulation completed at its virtual safety ceiling. Playback is starting.'
-        : 'Simulation completed. Playback is starting.');
+        ? "Simulation completed at its virtual safety ceiling. Playback is starting."
+        : "Simulation completed. Playback is starting.");
       startPlayback();
     }
 
@@ -5250,7 +5250,7 @@ function renderRawJson() {
       var sampleEverySeconds = Number(document.getElementById('run-sample-interval').value);
       var seed = Number(document.getElementById('run-seed').value);
       if (!(durationSeconds > 0) || !(sampleEverySeconds > 0) || !Number.isInteger(seed)) {
-        showError({ code: 'INVALID_RUN_CONFIGURATION', message: 'Duration, sample interval, and integer seed are required.' });
+        showError({ code: 'INVALID_RUN_CONFIGURATION', message: "Duration, sample interval, and integer seed are required." });
         return null;
       }
       return {
@@ -5342,7 +5342,7 @@ function renderRawJson() {
       if (!state.run.result) return;
       state.run.sampleIndex = 0;
       renderPlaybackFrame();
-      setPlaybackStatus('Reset');
+      setPlaybackStatus("Reset");
     }
 
     function schedulePlaybackStep() {
@@ -5391,7 +5391,7 @@ function renderRawJson() {
       document.getElementById('metric-overflow').textContent = formatNumber(sum((sample.accumulationZones || []).map(function(zone) { return zone.overflowUnits || 0; })));
       document.getElementById('metric-backup-stop').textContent = formatMinutes(sum(sample.equipment.map(function(unit) { return unit.backupStopSeconds || 0; })));
       document.getElementById('metric-line-oee').textContent = formatLineOeeAtSample(sample);
-      setPlaybackStatus((state.run.playing ? 'Playing' : 'At') + ' ' + time + ' s · frame ' + state.run.sampleIndex + ' / ' + (state.run.result.samples.length - 1));
+      setPlaybackStatus((state.run.playing ? 'Playing' : 'At') + ' ' + time + " s · frame " + state.run.sampleIndex + ' / ' + (state.run.result.samples.length - 1));
       if (state.uiView === 'simulation') renderLiveEquipment(sample);
       drawSimulationChart();
       drawEquipmentSpeedChart();
@@ -5488,7 +5488,7 @@ function renderRawJson() {
         columns = document.createElement('div');
         columns.className = 'live-equipment-columns';
         columns.setAttribute('aria-hidden', 'true');
-        columns.innerHTML = '<span>Equipment</span><span>State &amp; rate</span><span>Units &amp; OEE</span><span>Time losses</span><span>Speed trend</span><span>Scenario controls</span>';
+        columns.innerHTML = ("<span>" + "Equipment" + "</span><span>" + "State &amp; rate" + "</span><span>" + "Units &amp; OEE" + "</span><span>" + "Time losses" + "</span><span>" + "Speed trend" + "</span><span>" + "Scenario controls" + "</span>");
         target.insertBefore(columns, target.firstChild);
       }
       return columns;
@@ -5499,11 +5499,11 @@ function renderRawJson() {
       card.className = 'live-equipment-card';
       card.setAttribute('data-equipment-id', equipmentId);
       card.setAttribute('role', 'listitem');
-      card.innerHTML = '<div class="live-equipment-card__row"><div class="live-equipment-identity live-equipment-cell" data-label="Equipment"><strong></strong><span class="live-command"></span></div><div class="live-equipment-operation live-equipment-cell" data-label="State &amp; rate"><span class="live-state"></span><b class="live-rate"></b><span class="live-nominal-rate"></span></div><div class="live-equipment-flow live-equipment-cell" data-label="Units &amp; OEE"><span class="live-flow-label"></span><b class="live-processed"></b><span class="live-oee-label" title="OEE = Availability × Performance × Quality. Quality is assumed 100% until the model includes rejected units.">OEE</span><b class="live-oee"></b></div><div class="live-equipment-stats live-equipment-cell" data-label="Time losses"><div><span>Starved</span><b class="live-starved"></b></div><div><span>Blocked</span><b class="live-blocked"></b></div><div><span>Waiting Prime</span><b class="live-waiting-prime"></b></div><div><span>Back-up stop</span><b class="live-backup-stop"></b></div><div><span>Failure</span><b class="live-failure"></b></div><div><span>Emergency</span><b class="live-emergency"></b></div></div><div class="live-speed-cell live-equipment-cell" data-label="Speed trend"><div class="equipment-speed-sparkline-heading"><span>Actual · last 60 s</span><b class="live-sparkline-nominal-rate"></b></div><canvas class="equipment-speed-sparkline" height="56" aria-label="Rolling actual-speed chart"></canvas></div><div class="live-equipment-controls live-equipment-cell" data-label="Scenario controls"><button class="secondary live-control-run" type="button">Run / resume</button><button class="live-control-pause" type="button">Pause</button><button class="live-control-stop" type="button">Planned stop</button><button class="live-control-emergency" type="button">Emergency stop</button><button class="secondary live-control-reset" type="button">Reset + run</button></div></div><div class="live-equipment-zone"></div>';
+      card.innerHTML = ("<div class=\"live-equipment-card__row\"><div class=\"live-equipment-identity live-equipment-cell\" data-label=\"" + "Equipment" + "\"><strong></strong><span class=\"live-command\"></span></div><div class=\"live-equipment-operation live-equipment-cell\" data-label=\"" + "State &amp; rate" + "\"><span class=\"live-state\"></span><b class=\"live-rate\"></b><span class=\"live-nominal-rate\"></span></div><div class=\"live-equipment-flow live-equipment-cell\" data-label=\"" + "Units &amp; OEE" + "\"><span class=\"live-flow-label\"></span><b class=\"live-processed\"></b><span class=\"live-oee-label\" title=\"" + "OEE = Availability × Performance × Quality. Quality is assumed 100% until the model includes rejected units." + "\">" + "OEE" + "</span><b class=\"live-oee\"></b></div><div class=\"live-equipment-stats live-equipment-cell\" data-label=\"" + "Time losses" + "\"><div><span>" + "Starved" + "</span><b class=\"live-starved\"></b></div><div><span>" + "Blocked" + "</span><b class=\"live-blocked\"></b></div><div><span>" + "Waiting Prime" + "</span><b class=\"live-waiting-prime\"></b></div><div><span>" + "Back-up stop" + "</span><b class=\"live-backup-stop\"></b></div><div><span>" + "Failure" + "</span><b class=\"live-failure\"></b></div><div><span>" + "Emergency" + "</span><b class=\"live-emergency\"></b></div></div><div class=\"live-speed-cell live-equipment-cell\" data-label=\"" + "Speed trend" + "\"><div class=\"equipment-speed-sparkline-heading\"><span>" + "Actual · last 60 s" + "</span><b class=\"live-sparkline-nominal-rate\"></b></div><canvas class=\"equipment-speed-sparkline\" height=\"56\" aria-label=\"" + "Rolling actual-speed chart" + "\"></canvas></div><div class=\"live-equipment-controls live-equipment-cell\" data-label=\"" + "Scenario controls" + "\"><button class=\"secondary live-control-run\" type=\"button\">" + "Run / resume" + "</button><button class=\"live-control-pause\" type=\"button\">" + "Pause" + "</button><button class=\"live-control-stop\" type=\"button\">" + "Planned stop" + "</button><button class=\"live-control-emergency\" type=\"button\">" + "Emergency stop" + "</button><button class=\"secondary live-control-reset\" type=\"button\">" + "Reset + run" + "</button></div></div><div class=\"live-equipment-zone\"></div>");
       var meta=document.createElement('span');meta.className='critical-label';card.querySelector('.live-equipment-identity').appendChild(meta);
       var reliability=document.createElement('span');reliability.className='case-description reliability-label';card.querySelector('.live-equipment-identity').appendChild(reliability);
-      var losses=document.createElement('button');losses.className='ghost loss-toggle';losses.type='button';losses.innerHTML=STIcons.svg('chart');losses.title='Time losses';losses.setAttribute('aria-label','Time losses');losses.setAttribute('aria-expanded','false');losses.onclick=function(){var open=card.dataset.losses!=='open';card.dataset.losses=open?'open':'closed';card.classList.toggle('show-losses',open);losses.setAttribute('aria-expanded',String(open));};card.querySelector('.live-equipment-controls').appendChild(losses);
-      [['run','play','Run / resume'],['pause','pause','Pause'],['stop','stop','Planned stop'],['emergency','warning','Emergency stop'],['reset','refresh','Reset + run']].forEach(function(pair){var button=card.querySelector('.live-control-'+pair[0]);button.innerHTML=STIcons.svg(pair[1]);button.setAttribute('aria-label',pair[2]);button.dataset.actionLabel=pair[2];button.title=pair[2];});
+      var losses=document.createElement('button');losses.className='ghost loss-toggle';losses.type='button';losses.innerHTML=STIcons.svg('chart');losses.title="Time losses";losses.setAttribute('aria-label',"Time losses");losses.setAttribute('aria-expanded','false');losses.onclick=function(){var open=card.dataset.losses!=='open';card.dataset.losses=open?'open':'closed';card.classList.toggle('show-losses',open);losses.setAttribute('aria-expanded',String(open));};card.querySelector('.live-equipment-controls').appendChild(losses);
+      [['run','play',"Run / resume"],['pause','pause',"Pause"],['stop','stop',"Planned stop"],['emergency','warning',"Emergency stop"],['reset','refresh',"Reset + run"]].forEach(function(pair){var button=card.querySelector('.live-control-'+pair[0]);button.innerHTML=STIcons.svg(pair[1]);button.setAttribute('aria-label',pair[2]);button.dataset.actionLabel=pair[2];button.title=pair[2];});
       bindLiveEquipmentControl(card.querySelector('.live-control-run'), equipmentId, 'RUN');
       bindLiveEquipmentControl(card.querySelector('.live-control-pause'), equipmentId, 'PAUSE');
       bindLiveEquipmentControl(card.querySelector('.live-control-stop'), equipmentId, 'STOP');
@@ -5514,12 +5514,12 @@ function renderRawJson() {
 
     function updateLiveEquipmentCard(card, unit, model, index, sample) {
       var availabilityState = unit.availabilityState || unit.mode || 'UNKNOWN';
-      card.className = 'live-equipment-card state-' + availabilityState.toLowerCase().replace(/_/g, '-') + (card.dataset.losses === 'open' ? ' show-losses' : '');
+      card.className = 'live-equipment-card state-' + availabilityState.toLowerCase().replace(/_/g, '-') + (card.dataset.losses === 'open' ? " show-losses" : '');
       card.querySelector('.live-equipment-identity strong').textContent = model.name || unit.id;
       card.querySelector('.live-state').textContent = availabilityState.replace(/_/g,' ');
-      card.querySelector('.critical-label').textContent = model.processData?.role === 'PACEMAKER' ? 'Critical · pacemaker' : model.processData?.role === 'CRITICAL_MACHINE' ? 'Critical equipment' : '';
-      card.querySelector('.reliability-label').textContent = model.noiseProfile?.reliability ? 'MTBF '+formatNumber(model.noiseProfile?.reliability.mtbfMinutes)+' min · MTTR '+formatNumber(model.noiseProfile?.reliability.mttrMinutes)+' min' : '';
-      card.querySelector('.live-command').textContent = 'Command: ' + unit.mode;
+      card.querySelector('.critical-label').textContent = model.processData?.role === 'PACEMAKER' ? "Critical · pacemaker" : model.processData?.role === 'CRITICAL_MACHINE' ? "Critical equipment" : '';
+      card.querySelector('.reliability-label').textContent = model.noiseProfile?.reliability ? "MTBF "+formatNumber(model.noiseProfile?.reliability.mtbfMinutes)+" min · MTTR "+formatNumber(model.noiseProfile?.reliability.mttrMinutes)+" min" : '';
+      card.querySelector('.live-command').textContent = "Command: " + unit.mode;
       card.querySelector('.live-flow-label').textContent = index === 0 ? 'Produced' : 'Processed';
       card.querySelector('.live-processed').textContent = formatNumber(unit.processedUnits === undefined ? unit.outputCount : unit.processedUnits);
       card.querySelector('.live-oee').textContent = sample.virtualSecond > 0 ? formatPercent(unit.oeePercent / 100) : '—';
@@ -5530,7 +5530,7 @@ function renderRawJson() {
       card.querySelector('.live-backup-stop').textContent = formatMinutes(unit.backupStopSeconds);
       card.querySelector('.live-failure').textContent = formatMinutes(unit.failureSeconds);
       card.querySelector('.live-emergency').textContent = formatMinutes(unit.emergencyStopSeconds);
-      card.querySelector('.live-nominal-rate').textContent = 'Nominal ' + formatRatePerMinute(model.nominalRatePerSecond) + (model.processData?.equipment?.maximumSpeedBpm ? ' · Max ' + formatNumber(model.processData.equipment.maximumSpeedBpm) + ' / min' : '');
+      card.querySelector('.live-nominal-rate').textContent = "Nominal " + formatRatePerMinute(model.nominalRatePerSecond) + (model.processData?.equipment?.maximumSpeedBpm ? " · Max " + formatNumber(model.processData.equipment.maximumSpeedBpm) + " / min" : '');
       card.querySelector('.live-sparkline-nominal-rate').textContent = formatRatePerMinute(model.nominalRatePerSecond);
       Array.prototype.forEach.call(card.querySelectorAll('.live-equipment-controls button:not(.loss-toggle)'), updateLiveEquipmentControl);
 
@@ -5544,7 +5544,7 @@ function renderRawJson() {
       var details = document.createElement('details');
       details.className = 'accumulation-zone-details';
       details.open = Boolean(state.liveZoneDetails[zone.ownerEquipmentId]);
-      details.innerHTML = '<summary><span class="accumulation-zone-summary-name"></span><span class="accumulation-zone-summary-reading"></span></summary>';
+      details.innerHTML = ("<summary><span class=\"accumulation-zone-summary-name\"></span><span class=\"accumulation-zone-summary-reading\"></span></summary>");
       details.appendChild(createAccumulationZonePanel(zone));
       details.addEventListener('toggle', function() {
         state.liveZoneDetails[zone.ownerEquipmentId] = details.open;
@@ -5567,8 +5567,8 @@ function renderRawJson() {
     }
 
     function updateAccumulationZoneDetailsContent(details, zone) {
-      details.querySelector('.accumulation-zone-summary-name').textContent = (zone.name || 'Accumulation zone') + ' · physical accumulation';
-      details.querySelector('.accumulation-zone-summary-reading').textContent = formatNumber(zone.inventoryUnits) + ' / ' + formatNumber(zone.capacityUnits) + ' units · Waiting ' + formatNumber(zone.waitingUnits) + ' · ' + formatNumber(zone.fillPercent) + '%';
+      details.querySelector('.accumulation-zone-summary-name').textContent = (zone.name || "Accumulation zone") + " · physical accumulation";
+      details.querySelector('.accumulation-zone-summary-reading').textContent = formatNumber(zone.inventoryUnits) + ' / ' + formatNumber(zone.capacityUnits) + " units · Waiting " + formatNumber(zone.waitingUnits) + ' · ' + formatNumber(zone.fillPercent) + '%';
       var panel = details.querySelector('.accumulation-zone');
       if (!panel) {
         panel = createAccumulationZonePanel(zone);
@@ -5580,14 +5580,14 @@ function renderRawJson() {
 
     function createAccumulationZonePanel(zone) {
       var panel = document.createElement('section');
-      panel.innerHTML = '<div class="accumulation-zone-heading"><strong></strong><span></span></div><div class="accumulation-zone-stats"><div><span>Inventory</span><b class="zone-inventory"></b></div><div><span>In transit</span><b class="zone-transit"></b></div><div><span>Prime</span><b class="zone-prime"></b></div><div><span>Back-up</span><b class="zone-backup"></b></div><div><span>Geometry</span><b class="zone-geometry"></b></div><div><span>Travel</span><b class="zone-travel"></b></div><div><span>Overflow</span><b class="zone-overflow"></b></div></div><section class="zone-engineering hidden"><div class="zone-engineering-heading"><strong>Conveyor design audit</strong><span class="zone-audit-status"></span></div><div class="zone-engineering-stats"><div><span>Required overflow L_bu</span><b class="zone-overflow-length"></b></div><div><span>Useful accumulation L_ba</span><b class="zone-accumulation-length"></b></div><div><span>Recovery L_rec</span><b class="zone-recovery-length"></b></div><div><span>Anti-starve</span><b class="zone-anti-starve"></b></div><div><span>Anti-block</span><b class="zone-anti-block"></b></div><div><span>Recommended speed</span><b class="zone-recommended-speed"></b></div></div><p class="zone-audit-goals"></p></section><p class="zone-caption"></p><p class="zone-assumptions"></p>';
+      panel.innerHTML = ("<div class=\"accumulation-zone-heading\"><strong></strong><span></span></div><div class=\"accumulation-zone-stats\"><div><span>" + "Inventory" + "</span><b class=\"zone-inventory\"></b></div><div><span>" + "In transit" + "</span><b class=\"zone-transit\"></b></div><div><span>" + "Prime" + "</span><b class=\"zone-prime\"></b></div><div><span>" + "Back-up" + "</span><b class=\"zone-backup\"></b></div><div><span>" + "Geometry" + "</span><b class=\"zone-geometry\"></b></div><div><span>" + "Travel" + "</span><b class=\"zone-travel\"></b></div><div><span>" + "Overflow" + "</span><b class=\"zone-overflow\"></b></div></div><section class=\"zone-engineering hidden\"><div class=\"zone-engineering-heading\"><strong>" + "Conveyor design audit" + "</strong><span class=\"zone-audit-status\"></span></div><div class=\"zone-engineering-stats\"><div><span>" + "Required overflow L_bu" + "</span><b class=\"zone-overflow-length\"></b></div><div><span>" + "Useful accumulation L_ba" + "</span><b class=\"zone-accumulation-length\"></b></div><div><span>" + "Recovery L_rec" + "</span><b class=\"zone-recovery-length\"></b></div><div><span>" + "Anti-starve" + "</span><b class=\"zone-anti-starve\"></b></div><div><span>" + "Anti-block" + "</span><b class=\"zone-anti-block\"></b></div><div><span>" + "Recommended speed" + "</span><b class=\"zone-recommended-speed\"></b></div></div><p class=\"zone-audit-goals\"></p></section><p class=\"zone-caption\"></p><p class=\"zone-assumptions\"></p>");
       var statistics = panel.querySelector('.accumulation-zone-stats');
-      appendZoneMetric(statistics, 'Waiting', 'zone-waiting', 'Product already at the downstream end of the conveyor and available to the next machine. Inventory equals In transit plus Waiting.');
-      appendZoneMetric(statistics, 'Sensor timing', 'zone-sensor-timing', 'Normal photoeye occupied time and clear gap derived from product length, pitch, and belt speed.');
+      appendZoneMetric(statistics, 'Waiting', 'zone-waiting', "Product already at the downstream end of the conveyor and available to the next machine. Inventory equals In transit plus Waiting.");
+      appendZoneMetric(statistics, "Sensor timing", 'zone-sensor-timing', "Normal photoeye occupied time and clear gap derived from product length, pitch, and belt speed.");
       var engineeringStatistics = panel.querySelector('.zone-engineering-stats');
-      appendZoneMetric(engineeringStatistics, 'Normal sensor pulse', 'zone-sensor-pulse', 'Time one package normally blocks a photoeye at the calculated belt speed.');
-      appendZoneMetric(engineeringStatistics, 'Normal clear gap', 'zone-sensor-gap', 'Time the normal gap between packages leaves a photoeye clear.');
-      appendZoneMetric(engineeringStatistics, 'Insurance margin', 'zone-insurance', 'Extra package margin included in the required overflow calculation; it is not material generated during the run.');
+      appendZoneMetric(engineeringStatistics, "Normal sensor pulse", 'zone-sensor-pulse', "Time one package normally blocks a photoeye at the calculated belt speed.");
+      appendZoneMetric(engineeringStatistics, "Normal clear gap", 'zone-sensor-gap', "Time the normal gap between packages leaves a photoeye clear.");
+      appendZoneMetric(engineeringStatistics, "Insurance margin", 'zone-insurance', "Extra package margin included in the required overflow calculation; it is not material generated during the run.");
       applyZoneConceptTooltips(panel);
       updateAccumulationZonePanel(panel, zone);
       return panel;
@@ -5607,19 +5607,19 @@ function renderRawJson() {
     }
 
     function applyZoneConceptTooltips(panel) {
-      setZoneMetricTooltip(panel, '.zone-inventory', 'All material on this physical conveyor: In transit plus Waiting.');
-      setZoneMetricTooltip(panel, '.zone-transit', 'Product moving between the upstream discharge and the downstream end of the conveyor.');
-      setZoneMetricTooltip(panel, '.zone-prime', 'Prime photocell signal. A product pass authorizes the downstream start; a blocked state means a queue has reached the sensor.');
-      setZoneMetricTooltip(panel, '.zone-backup', 'Back-up photocell signal. Only a continuously blocked signal starts the stop timer; normal product pulses do not request a stop.');
-      setZoneMetricTooltip(panel, '.zone-geometry', 'Installed usable length and effective product pitch used to calculate physical capacity.');
-      setZoneMetricTooltip(panel, '.zone-travel', 'Nominal time for material to travel through the physical conveyor.');
-      setZoneMetricTooltip(panel, '.zone-overflow', 'Material that could not enter a full physical zone.');
-      setZoneMetricTooltip(panel, '.zone-overflow-length', 'Required overflow length, including runout, residual discharge, blocked-delay output, and insurance margin.');
-      setZoneMetricTooltip(panel, '.zone-accumulation-length', 'Usable accumulation length after reserving Prime and required overflow space.');
-      setZoneMetricTooltip(panel, '.zone-recovery-length', 'Calculated recovery margin after Back-up clears. Positive values indicate a smoother modeled restart.');
-      setZoneMetricTooltip(panel, '.zone-anti-starve', 'Time the useful accumulation can continue feeding the downstream critical machine.');
-      setZoneMetricTooltip(panel, '.zone-anti-block', 'Time the useful accumulation can accept upstream output before the upstream machine must be stopped.');
-      setZoneMetricTooltip(panel, '.zone-recommended-speed', 'Minimum downstream infeed conveyor speed with the worksheet 5% overspeed margin.');
+      setZoneMetricTooltip(panel, '.zone-inventory', "All material on this physical conveyor: In transit plus Waiting.");
+      setZoneMetricTooltip(panel, '.zone-transit', "Product moving between the upstream discharge and the downstream end of the conveyor.");
+      setZoneMetricTooltip(panel, '.zone-prime', "Prime photocell signal. A product pass authorizes the downstream start; a blocked state means a queue has reached the sensor.");
+      setZoneMetricTooltip(panel, '.zone-backup', "Back-up photocell signal. Only a continuously blocked signal starts the stop timer; normal product pulses do not request a stop.");
+      setZoneMetricTooltip(panel, '.zone-geometry', "Installed usable length and effective product pitch used to calculate physical capacity.");
+      setZoneMetricTooltip(panel, '.zone-travel', "Nominal time for material to travel through the physical conveyor.");
+      setZoneMetricTooltip(panel, '.zone-overflow', "Material that could not enter a full physical zone.");
+      setZoneMetricTooltip(panel, '.zone-overflow-length', "Required overflow length, including runout, residual discharge, blocked-delay output, and insurance margin.");
+      setZoneMetricTooltip(panel, '.zone-accumulation-length', "Usable accumulation length after reserving Prime and required overflow space.");
+      setZoneMetricTooltip(panel, '.zone-recovery-length', "Calculated recovery margin after Back-up clears. Positive values indicate a smoother modeled restart.");
+      setZoneMetricTooltip(panel, '.zone-anti-starve', "Time the useful accumulation can continue feeding the downstream critical machine.");
+      setZoneMetricTooltip(panel, '.zone-anti-block', "Time the useful accumulation can accept upstream output before the upstream machine must be stopped.");
+      setZoneMetricTooltip(panel, '.zone-recommended-speed', "Minimum downstream infeed conveyor speed with the worksheet 5% overspeed margin.");
     }
 
     function setZoneMetricTooltip(panel, valueSelector, tooltip) {
@@ -5631,7 +5631,7 @@ function renderRawJson() {
     function updateAccumulationZonePanel(panel, zone) {
       panel.className = 'accumulation-zone state-' + String(zone.state || 'EMPTY').toLowerCase().replace(/_/g, '-');
       var geometry = zone.geometry || {};
-      panel.querySelector('strong').textContent = zone.name || 'Accumulation zone';
+      panel.querySelector('strong').textContent = zone.name || "Accumulation zone";
       panel.querySelector('.accumulation-zone-heading span').textContent = String(zone.state || 'EMPTY').replace(/_/g, ' ');
       panel.querySelector('.zone-inventory').textContent = formatNumber(zone.inventoryUnits) + ' / ' + formatNumber(zone.capacityUnits) + ' (' + formatNumber(zone.fillPercent) + '%)';
       panel.querySelector('.zone-transit').textContent = formatNumber(zone.inTransitUnits);
@@ -5639,39 +5639,39 @@ function renderRawJson() {
       panel.querySelector('.zone-prime').textContent = formatPrimeSensorReading(zone.prime);
       panel.querySelector('.zone-backup').textContent = formatBackupSensorReading(zone.backup);
       panel.querySelector('.zone-geometry').textContent = geometry.usableLengthMm && geometry.productPitchMm
-        ? formatNumber(geometry.usableLengthMm) + ' mm / ' + formatNumber(geometry.productPitchMm) + ' mm'
-        : 'Not available';
+        ? formatNumber(geometry.usableLengthMm) + " mm / " + formatNumber(geometry.productPitchMm) + " mm"
+        : "Not available";
       panel.querySelector('.zone-travel').textContent = geometry.travelSeconds > 0
         ? formatNumber(geometry.travelSeconds) + ' s'
         : '—';
       panel.querySelector('.zone-sensor-timing').textContent = formatSensorTiming(geometry);
       panel.querySelector('.zone-overflow').textContent = formatNumber(zone.overflowUnits);
-      panel.querySelector('.zone-caption').textContent = zoneOriginLabel(zone.modelOrigin) + ' · Capacity: floor(length / pitch) = ' +
-        formatNumber(zone.capacityUnits) + ' units · Controls upstream: ' + zone.upstreamControlEquipmentId +
-        ' · Starts downstream: ' + zone.downstreamControlEquipmentId;
+      panel.querySelector('.zone-caption').textContent = zoneOriginLabel(zone.modelOrigin) + " · Capacity: floor(length / pitch) = " +
+        formatNumber(zone.capacityUnits) + " units · Controls upstream: " + zone.upstreamControlEquipmentId +
+        " · Starts downstream: " + zone.downstreamControlEquipmentId;
       panel.querySelector('.zone-assumptions').textContent = summarizeGeometrySources(zone.geometrySources, zone.formatAssumptions);
       updateZoneEngineeringAudit(panel, zone);
     }
 
     function formatPrimeSensorReading(prime) {
-      if (!prime || !prime.configured) return 'Not configured';
-      if (prime.state === 'PULSING') return 'PULSING · product passing';
-      if (prime.state === 'BLOCKED') return 'BLOCKED · queue present';
-      return prime.latched ? 'CLEAR · start sent' : 'CLEAR · waiting';
+      if (!prime || !prime.configured) return "Not configured";
+      if (prime.state === 'PULSING') return "PULSING · product passing";
+      if (prime.state === 'BLOCKED') return "BLOCKED · queue present";
+      return prime.latched ? "CLEAR · start sent" : "CLEAR · waiting";
     }
 
     function formatBackupSensorReading(backup) {
-      if (!backup || !backup.configured) return 'Not configured';
-      if (backup.state === 'PULSING') return 'PULSING · normal flow';
+      if (!backup || !backup.configured) return "Not configured";
+      if (backup.state === 'PULSING') return "PULSING · normal flow";
       if (backup.state === 'BLOCKED') {
         return backup.controlActive
-          ? 'BLOCKED · control active'
-          : 'BLOCKED ' + formatSeconds(backup.blockedCandidateSeconds) + ' / ' + formatSeconds(backup.blockedTimeDelaySeconds);
+          ? "BLOCKED · control active"
+          : "BLOCKED " + formatSeconds(backup.blockedCandidateSeconds) + ' / ' + formatSeconds(backup.blockedTimeDelaySeconds);
       }
       if (backup.controlActive && backup.clearCandidateSeconds > 0) {
-        return 'CLEAR ' + formatSeconds(backup.clearCandidateSeconds) + ' / ' + formatSeconds(backup.clearTimeDelaySeconds);
+        return "CLEAR " + formatSeconds(backup.clearCandidateSeconds) + ' / ' + formatSeconds(backup.clearTimeDelaySeconds);
       }
-      return backup.controlActive ? 'CLEAR · awaiting delay' : 'CLEAR';
+      return backup.controlActive ? "CLEAR · awaiting delay" : 'CLEAR';
     }
 
     function formatSensorTiming(geometry) {
@@ -5683,8 +5683,8 @@ function renderRawJson() {
 
     function zoneOriginLabel(origin) {
       return origin === 'FLOWPILOT_ENGINEERING'
-        ? 'FlowPilot physical conveyor zone'
-        : origin === 'FORMAT_GEOMETRY' ? 'Direct physical conveyor zone' : 'Physical zone';
+        ? "FlowPilot physical conveyor zone"
+        : origin === 'FORMAT_GEOMETRY' ? "Direct physical conveyor zone" : "Physical zone";
     }
 
     function updateZoneEngineeringAudit(panel, zone) {
@@ -5698,15 +5698,15 @@ function renderRawJson() {
       var calculated = engineering.calculated;
       host.querySelector('.zone-audit-status').textContent = String(engineering.audit.status || 'NOT_EVALUATED').replace(/_/g, ' ');
       host.querySelector('.zone-audit-status').className = 'zone-audit-status audit-' + String(engineering.audit.status || 'NOT_EVALUATED').toLowerCase().replace(/_/g, '-');
-      host.querySelector('.zone-overflow-length').textContent = engineeringNumber(calculated.overflowLengthMm, ' mm');
-      host.querySelector('.zone-accumulation-length').textContent = engineeringNumber(calculated.usefulAccumulationLengthMm, ' mm');
-      host.querySelector('.zone-recovery-length').textContent = engineeringNumber(calculated.recoveryLengthMm, ' mm');
+      host.querySelector('.zone-overflow-length').textContent = engineeringNumber(calculated.overflowLengthMm, " mm");
+      host.querySelector('.zone-accumulation-length').textContent = engineeringNumber(calculated.usefulAccumulationLengthMm, " mm");
+      host.querySelector('.zone-recovery-length').textContent = engineeringNumber(calculated.recoveryLengthMm, " mm");
       host.querySelector('.zone-anti-starve').textContent = engineeringNumber(calculated.antiStarveSeconds, ' s');
       host.querySelector('.zone-anti-block').textContent = engineeringNumber(calculated.antiBlockSeconds, ' s');
-      host.querySelector('.zone-recommended-speed').textContent = engineeringNumber(calculated.recommendedInfeedConveyorSpeedMmPerSecond, ' mm/s');
+      host.querySelector('.zone-recommended-speed').textContent = engineeringNumber(calculated.recommendedInfeedConveyorSpeedMmPerSecond, " mm/s");
       host.querySelector('.zone-sensor-pulse').textContent = engineeringNumber(calculated.packagePassSensorSeconds, ' s');
       host.querySelector('.zone-sensor-gap').textContent = engineeringNumber(calculated.sensorClearGapSeconds, ' s');
-      host.querySelector('.zone-insurance').textContent = engineeringNumber(engineering.input.insuranceFactorUnits, ' units');
+      host.querySelector('.zone-insurance').textContent = engineeringNumber(engineering.input.insuranceFactorUnits, " units");
       host.querySelector('.zone-audit-goals').textContent = engineering.audit.goals.map(function(goal) {
         return goal.id.replace(/_/g, ' ') + ': ' + goal.status.replace(/_/g, ' ') + ' — ' + goal.message;
       }).join(' · ');
@@ -5718,8 +5718,8 @@ function renderRawJson() {
 
 function summarizeGeometrySources(sources, assumptions) {
       var details = [];
-      if (sources && sources.productPitchMm) details.push('Pitch: ' + sources.productPitchMm);
-      if (sources && sources.conveyorSpeedMmPerSecond) details.push('Speed: ' + sources.conveyorSpeedMmPerSecond);
+      if (sources && sources.productPitchMm) details.push("Pitch: " + sources.productPitchMm);
+      if (sources && sources.conveyorSpeedMmPerSecond) details.push("Speed: " + sources.conveyorSpeedMmPerSecond);
       if (!details.length && Array.isArray(assumptions) && assumptions.length) details.push(assumptions[0]);
       return details.join(' · ');
     }
@@ -5735,15 +5735,15 @@ function summarizeGeometrySources(sources, assumptions) {
       var isAtRunEnd = !sample || sample.virtualSecond >= state.run.result.durationSeconds;
       button.disabled = isAtRunEnd;
       button.title = (button.dataset.actionLabel || '') + ' — ' + (isAtRunEnd
-        ? 'Reset playback to an earlier virtual time before applying a scenario control.'
-        : 'Apply at the displayed virtual second and recalculate this simulation scenario.');
+        ? "Reset playback to an earlier virtual time before applying a scenario control."
+        : "Apply at the displayed virtual second and recalculate this simulation scenario.");
     }
 
     function applyLiveScenarioControl(equipmentId, action) {
       if (!state.run.result) return;
       var sample = state.run.result.samples[state.run.sampleIndex];
       if (!sample || sample.virtualSecond >= state.run.result.durationSeconds) {
-        return setStatus('Reset playback to an earlier virtual time before applying a scenario control.');
+        return setStatus("Reset playback to an earlier virtual time before applying a scenario control.");
       }
 
       var wasPlaying = state.run.playing;
@@ -5761,7 +5761,7 @@ function summarizeGeometrySources(sources, assumptions) {
       if (!run || !calculateSimulation(run, sample.virtualSecond)) return;
       var equipment = state.activeCase.equipment.find(function(item) { return item.id === equipmentId; });
       var label = equipment ? equipment.name : equipmentId;
-      setStatus((action === 'RESET_AND_RUN' ? 'Reset and run' : action.replace(/_/g, ' ').toLowerCase()) + ' scheduled for ' + label + ' at virtual ' + sample.virtualSecond + ' s. The deterministic path was recalculated.');
+      setStatus((action === 'RESET_AND_RUN' ? "Reset and run" : action.replace(/_/g, ' ').toLowerCase()) + " scheduled for " + label + " at virtual " + sample.virtualSecond + " s. The deterministic path was recalculated.");
       if (wasPlaying) startPlayback();
     }
 
@@ -5783,7 +5783,7 @@ function summarizeGeometrySources(sources, assumptions) {
     }
 
     function formatRatePerMinute(ratePerSecond) {
-      return formatNumber(Number(ratePerSecond || 0) * 60) + ' /min';
+      return formatNumber(Number(ratePerSecond || 0) * 60) + " /min";
     }
 
     function formatPercent(value) {
@@ -5791,7 +5791,7 @@ function summarizeGeometrySources(sources, assumptions) {
     }
 
     function formatMinutes(seconds) {
-      return formatNumber(Number(seconds || 0) / 60) + ' min';
+      return formatNumber(Number(seconds || 0) / 60) + " min";
     }
 
     function callServer(name, args, onSuccess) {
@@ -5809,7 +5809,7 @@ function summarizeGeometrySources(sources, assumptions) {
           state.saving=false;
           document.querySelectorAll('[data-busy="true"]').forEach(function(button){button.disabled=false;delete button.dataset.busy;});
           shell.sync();
-          showError({ code: 'NETWORK_ERROR', message: 'The server request could not be completed. Please try again.' });
+          showError({ code: 'NETWORK_ERROR', message: "The server request could not be completed. Please try again." });
         })
         .withSuccessHandler(function(response) { done(); if(epoch === state.requestEpoch) onSuccess(response); });
       runner[name].apply(runner, args);
@@ -5818,7 +5818,7 @@ function summarizeGeometrySources(sources, assumptions) {
     function toggle(id, visible) { document.getElementById(id).classList.toggle('hidden', !visible); }
     function setStatus(message) { var target = document.getElementById('status'); target.className = 'status'; target.textContent = message; }
     function showError(error) {
-      var message = (error.code || 'ERROR') + ': ' + (error.message || 'The request failed.');
+      var message = (error.code || 'ERROR') + ': ' + (error.message || "The request failed.");
       var target = document.getElementById('status'); target.className = 'status error'; target.textContent = message;
       document.getElementById('auth-status').textContent = message;
       document.getElementById('sign-in-button').disabled = false;

@@ -31,8 +31,8 @@ test('manual Apps Script bundle contains all server modules and resolved HTML in
   assert.equal(scripts.length, 14);
   for (const script of scripts) new Function(script);
   new Function(code);
-  assert.match(code, /MANUAL APPS SCRIPT DEPLOYMENT FILE/);
-  assert.match(index, /MANUAL APPS SCRIPT DEPLOYMENT FILE/);
+  assert.match(code, /GENERATED SERVER BUNDLE/);
+  assert.match(index, /GENERATED CLIENT BUNDLE/);
 });
 
 test('manual bundle keeps time-faithful playback and direct equipment scenario controls', () => {

@@ -5,7 +5,7 @@ function doGet() {
 }
 
 function include_(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+  return resolveTextResources_(HtmlService.createHtmlOutputFromFile(filename).getContent());
 }
 
 function getBootstrap() {
