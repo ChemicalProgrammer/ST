@@ -6,8 +6,8 @@ parte de la documentación versionada. No requiere NotebookLM ni Gemini Chat.
 
 ## Preparación
 
-1. Crea una carpeta nueva y ábrela en VS Code.
-2. Copia docs/ y prompts/ de este repositorio manteniendo sus rutas.
+1. Copia la carpeta completa Visual Code a una ubicación nueva para trabajar.
+2. Abre esa copia en VS Code: docs/ y prompts/ deben quedar en la raíz del workspace.
 3. Si está autorizado, incluye schemas/ y examples/ sintéticos; deja el proyecto
    original separado y de solo lectura como referencia opcional.
 4. Confirma inicio de sesión, capacidad de leer/editar workspace y autorización
