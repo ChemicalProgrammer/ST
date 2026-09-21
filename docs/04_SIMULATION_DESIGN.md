@@ -1,3 +1,9 @@
+> Nota de vigencia: este documento conserva una etapa anterior del proyecto y puede
+> incluir capacidades propuestas o limitaciones ya superadas. Para reconstrucción
+> con Gemini Code Assist, comenzar por [docs/README.md](README.md) y los cuatro
+> documentos de especificación vigentes que enlaza. Contrastar comportamiento con
+> código y pruebas de la versión de referencia antes de implementar.
+
 # Simulation design
 
 ## Recommended model
