@@ -3,7 +3,7 @@
 ## Alcance y autoridad
 
 Referencia funcional auditada: ChemicalProgrammer/ST, commit 8d49bf304c6f747a5a5a7c3e5e8373290ea94110.
-Esta especificación define el objetivo, no certifica lo implementado. Lee [arquitectura manual](ARQUITECTURA.md) y [contratos](CONTRATOS.md). Las pruebas se entregan y ejecutan por etapa según los prompts de este paquete.
+Esta especificación define el objetivo, no certifica lo implementado. Lee [arquitectura y contratos](ARQUITECTURA_Y_CONTRATOS.md). Las pruebas se entregan y ejecutan por etapa según [VALIDACION.md](VALIDACION.md).
 
 Reconstruir en una carpeta nueva; no modificar el proyecto de referencia ni su
 despliegue. Trabajar por capacidades completas con sus pruebas, no por archivos aislados.
@@ -72,3 +72,79 @@ No incorporar módulos de roadmaps antiguos sin una decisión explícita.
 El What-If de referencia incluye sensibilidad de mantenimiento (MTBF × 1.20,
 MTTR × 0.85). Preservarla identificada como hipótesis de mantenimiento, nunca como
 consecuencia automática de optimizar conveyors. Eliminarla requeriría aprobar ese cambio.
+
+## Language requirement — mandatory
+
+The generated application and its code must be entirely in English. This includes
+navigation, labels, dialogs, tooltips, accessible names, loading/empty/error states,
+charts, reports, exports, demo content, app-authored assistant instructions and its
+default responses, filenames, identifiers, comments, docstrings, test descriptions
+and application technical documentation. Use English text resource keys and values;
+centralize all app-authored strings in TextResources.gs. Do not scatter English
+literals through UI modules. Technical enums, schemas and public contracts remain
+stable; do not rename them casually.
+
+Preserve user-entered names, imported spreadsheet values and original external
+service diagnostics verbatim; these are data, not application translations.
+Wrap service diagnostics with an English application message. Do not translate
+secrets, IDs or payload values. The development conversation and this attachment
+guide may remain in Spanish. This is a decided requirement, not a question to ask
+again before generating the application.
+
+## Forma de trabajo con Gemini Pro
+
+Protocolo de entrega por capacidades:
+
+CONTEXTO
+Lee especificaciones adjuntas, ESTADO_PROYECTO y código actual. Enumera los archivos
+que efectivamente recibiste. No supongas que recuerdas otras conversaciones.
+Si necesitas un consumidor/dependencia faltante, pide su versión antes de cambiar APIs.
+
+ENTREGA
+Antes del código declara objetivo del lote, archivos nuevos/reemplazados, versión y
+dependencias. Implementa una capacidad con todos sus consumidores y pruebas.
+Entrega archivos completos, cada uno en un bloque de código con nombre exacto fuera
+del bloque. Sin elipsis, TODO, “el resto igual” ni placeholders que aparenten funcionar.
+Texto UI en diccionario, CSS en tokens y módulos; evitar Client monolítico.
+Si el lote es demasiado grande, entrega uno o varios archivos COMPLETOS por mensaje
+y lista pendientes. No cortes un archivo entre mensajes ni declararlo terminado.
+Si un archivo no cabe, propón dividirlo por responsabilidades antes de generarlo.
+Un archivo descargable es opcional si tu interfaz permite crearlo; no inventes enlaces.
+La alternativa siempre es código completo copiable.
+Incluye las actualizaciones completas del diccionario/DOM necesarias para el lote.
+No reescribas archivos no afectados.
+
+VERIFICACIÓN
+Revisa firmas, nombres, unidades, IDs DOM, enums, includes, claves de texto y tokens
+contra productores y consumidores. Adjunta pruebas ejecutables sin terminal:
+runner navegador para motor/DOM y runner Apps Script con mocks para servidor.
+No digas “tests pasaron” si solo hiciste análisis estático. Debes distinguir:
+REVISADO ESTÁTICAMENTE, PENDIENTE DE EJECUTAR, EJECUTADO CON REPORTE DEL USUARIO.
+Finaliza el lote con pasos exactos de instalación, pruebas y resultados esperados.
+Espera mi reporte antes de pasar a otra etapa. No inventes resultados de ejecución.
+
+CONTINUIDAD
+Entrega texto actualizado de ESTADO_PROYECTO.md con inventario/versiones,
+contratos modificados, entregados/pendientes, resultados aportados y próxima tarea.
+No incluyas secretos ni datos reales.
+Si un cambio altera una API, reúne las versiones vigentes de todos los consumidores
+y actualízalos en el mismo lote. No asumir compatibilidad por nombres parecidos.
+No tocar proyecto original ni desplegar. Usa datos sintéticos.
+
+## Orden de construcción
+
+Cada lote debe ser utilizable y comprobable; no generar toda la aplicación en una
+respuesta ni trabajar archivo por archivo sin sus consumidores.
+
+1. Acordar inventario, contratos pendientes, fixtures, recursos y runners. Entregar una base mínima que cargue y muestre pruebas reales.
+2. Adaptar motor y validar determinismo, física y confiabilidad con los cinco archivos de referencia.
+3. Implementar identidad, casos, Drive, revisión y persistencia con dobles de servicios.
+4. Construir shell, Cases, Settings, recursos de inglés, temas y editor.
+5. Conectar simulación, controles, reproducción y resultados reales del motor.
+6. Agregar importación con preview y mezcla selectiva dentro de la simulación activa.
+7. Implementar Compare y What-If como vistas distintas.
+8. Agregar asistente Gemini con integración servidor, contexto guardado y manejo de errores.
+9. Auditar integración completa y ejecutar recorrido manual de VALIDACION.md.
+
+La suscripción al chat no demuestra acceso a Gemini API. Sin API, el resto de la
+aplicación debe funcionar y el asistente debe mostrar una explicación real.

@@ -1,7 +1,3 @@
-> Referencia técnica del proyecto original. Para esta reconstrucción, las instrucciones
-> de build, bundles, Node y despliegue de esta referencia NO se aplican: usar
-> [ARQUITECTURA.md](ARQUITECTURA.md). Conservar reglas físicas y de datos.
-
 # Fixed Google Sheets equipment import
 
 In **Line setup → Import Sheet**, enter a Google Sheets URL or ID and optionally an exact worksheet name. A worksheet name overrides the URL's `gid`; without either, the first worksheet is read. The preview compares the Sheet against the **selected simulation, including its unsaved editor values**. Choose equipment targets and fields, then select **Apply selected changes** and save the case. No new simulation is created.
@@ -22,13 +18,13 @@ The importer reads only C1:C7 and A10:W through the last populated row. It never
 |---|---|---|
 | C1 | Site | Import metadata |
 | C2 | Packaging line | Import metadata |
-| C3 | Format Name | Import metadata and new simulation name |
+| C3 | Format Name | Import metadata; never rename the existing simulation automatically |
 | C4 | Container size (oz) | Import metadata; no unit conversion |
 | C5 | Pack pattern (bottles per case) | Import metadata; no bottle/case conversion |
 | C6 | Date of analysis | Date serialized as YYYY-MM-DD in the spreadsheet timezone; text retained |
 | C7 | By | Import metadata |
 | A10 onward | Type | Equipment type; whitespace/hyphen/underscore and letter case normalized |
-| B | Name | Equipment name; IDs generated from original row numbers |
+| B | Name | Equipment name; New IDs must be collision-safe; original row numbers belong in provenance, not identity matching |
 | C | Critical Y/N | Critical marker; not an automatic pacemaker designation |
 | D / E | MTBF / MTTR (min) | `noiseProfile.reliability` and original equipment parameters |
 | F | Machine max speed (bpm) | `maximumSpeedBpm`; initializes nominal speed as F / 60 |
@@ -46,7 +42,7 @@ The importer reads only C1:C7 and A10:W through the last populated row. It never
 | V | Insurance factor (packages) | Overflow margin |
 | W | Overspeed vs infeed screw (%) | Preserved; current recommendation still uses its existing 5% assumption |
 
-Mappings and allowed type aliases are centralized in `apps-script/SheetImportService.gs`. The client preview/controller is `SheetImport.html`; pure matching/field-merge logic is `SheetImportMerge.html`; modal styling is `SheetImportStyles.html`. Each simulation stores `sourceImport` with source identifiers, time read, effective selected metadata, normalized preview values for every source row, warnings and assumptions. `bindings` tracks source names and equipment IDs; `lastApplied` records the selected cells and their before/after values. Raw `rows` describes what was read, not a claim that every value was applied. This field survives save/reload and cloning. Source values remain an import snapshot when users later edit equipment.
+Mappings and allowed type aliases are centralized in `SheetImportService.gs`. The client preview/controller is `SheetImport.html`; pure matching/field-merge logic is `SheetImportMerge.html`; modal styling is `SheetImportStyles.html`. Each simulation stores `sourceImport` with source identifiers, time read, effective selected metadata, normalized preview values for every source row, warnings and assumptions. `bindings` tracks source names and equipment IDs; `lastApplied` records the selected cells and their before/after values. Raw `rows` describes what was read, not a claim that every value was applied. This field survives save/reload and cloning. Source values remain an import snapshot when users later edit equipment.
 
 ## Missing values and validation
 
@@ -69,19 +65,57 @@ I/J have deliberately not been reinterpreted as discharge/reject runout: those m
 
 P combines ramp-up and Prime delay. The existing engine consumes a ramp duration and separately models physical Prime readiness; it cannot separate components of the supplied total. This limitation is shown before import. The critical-machine flag is retained without changing the existing pacemaker/OEE reference selection.
 
-## Deployment and verification
 
-Replace generated **Code.gs and Index.html** together, then update the Apps Script deployment. SpreadsheetApp introduces a Sheets authorization requirement; reauthorize the executing account if prompted. No separate Sheets service or Gemini key is needed for import. Apps Script reference: [SpreadsheetApp.openById](https://developers.google.com/apps-script/reference/spreadsheet/spreadsheet-app#openbyidid), [Range.getValues and getNumberFormats](https://developers.google.com/apps-script/reference/spreadsheet/range).
+## Contrato fijo Sheets
 
-Tests use synthetic rows only. They cover all 23 columns, metadata, NA, percent formatting, errors by cell, date serialization, ownership before read, provenance persistence, actual engine reliability events and the UI's preview/cancel/selective-update/save workflow, unchanged equipment preservation, empty simulations, name ambiguity, NA clearing, repeated imports after renames/row moves, metadata-only changes and results invalidation. No confidential plant sheet was accessed. Live Sheets authorization and final rendering must be verified in the deployed Web App.
+Metadatos C1:C7: site, packagingLine, formatName, containerSizeOz, bottlesPerCase,
+dateOfAnalysis, by. Equipos desde fila 10, máximo 1,000 filas.
+
+| Columna | Campo | Unidad |
+|---|---|---|
+| A/B/C | type / name / critical Y/N | texto |
+| D/E/F | mtbfMinutes / mttrMinutes / maximumSpeedBpm | min / min / BPM |
+| G/H | lactMm / lpPrimeMm | mm |
+| I/J | actualDischargeMm / actualCodingMm | mm, conservar sin reinterpretar |
+| K/L | packageLengthMm / dischargePitchMm | mm |
+| M/N | startupTimeSeconds / bottlesDischargedAtStop | s / unidades |
+| O/P | infeedPitchMm / rampUpTimeSeconds | mm / s |
+| Q | conveyorSpeedFactorVsDischargeVelocityPercent | incremento % |
+| R | codingConveyorSpeedFactorVsPreviousConveyorPercent | % conservado |
+| S | conveyorSpeedFactorVsPreviousConveyorPercent | % conservado |
+| T/U | blockedTimeDelaySeconds / clearTimeDelaySeconds | s |
+| V | insuranceFactorUnits | unidades |
+| W | overspeedVsInfeedScrewPercent | % conservado |
+
+Nombre de pestaña explícito > gid de URL > primera pestaña.
+NA/N/A/vacío = ausente, no cero. Error de fórmula es error, no NA.
+MTBF/MTTR ambos positivos o ambos ausentes. Porcentaje Sheets 0.05 formateado como
+5% = 5 puntos porcentuales; Q=5 representa factor 1.05.
+I/J/R/S/W se conservan sin atribuirles cálculos no implementados. P combina ramp-up
+y retraso Prime; registrar esa limitación, no inventar su separación.
+
+Preview compara con valores actuales incluso sin guardar; selección por fila/campo:
+omitir, agregar, actualizar. Matching por nombre único/binding; ambigüedad requiere
+elección. Preservar ID, orden y campos no seleccionados del equipo existente.
+NA desmarcado por defecto; marcado explícitamente puede limpiar un campo válido.
+Impedir dos filas actualizando el mismo equipo. Cancelar/no-op no cambia nada.
+Cambio de equipo invalida solo resultados de la simulación activa; metadatos no.
+Rechazar respuestas tardías de otro caso/simulación. sourceImport preserva snapshot,
+bindings y lastApplied. No escribir en Sheet ni enviar importación a IA.
 
 
-## Import access diagnostics (sheet-import-20260917-2)
 
-Deploy the generated Code.gs and Index.html together. For manual deployment, do not also copy the modular .gs files: they duplicate global functions defined in Code.gs. An old duplicate definition or an old versioned deployment can keep returning the legacy message.
+## Authorization and diagnostics
 
-Import failures now include a server version and error code. The browser displays Google service details as plain text, including failures before a server response. If only the browser is updated, it reports that the server version is unavailable. Sheets is opened first; Drive metadata is only checked after failure to identify non-native files without making Drive metadata access a prerequisite for readable Sheets.
+Use the flat modules described in ARQUITECTURA_Y_CONTRATOS.md, never the original
+generated Code.gs/Index.html bundles. Declare the Sheets scope appropriate to the
+implemented SpreadsheetApp operations and obtain consent from the executing
+account. A manifest entry alone is not a granted permission. Distinguish deployed
+version, executing identity, authorization failure, missing file access and format
+validation. Import needs no Gemini API key or AI interpretation.
 
-The old message “Cannot open this Google Sheet. Check its URL and access for your signed-in Google account.” is absent from this release. Seeing it without the new version marker means an older function/deployment is responding. Search all Apps Script files for that literal and for duplicate previewSheetImport_ definitions, then verify the deployment URL. Editor execution uses current code; a versioned Web App requires a deployment update. Google documentation: https://developers.google.com/apps-script/concepts/deployments and https://developers.google.com/apps-script/concepts/scopes .
-
-Mock-based tests cannot verify the user’s live OAuth grant, file type or organization policy. Preserve the returned Google message to diagnose the actual service failure before changing scopes or account settings.
+Return an import version and stable English error code with a safe English
+application message. Preserve relevant original Google diagnostics as plain text
+without credentials or cell contents. Do not replace every failure with a generic
+URL/access error. Unit mocks cannot verify actual OAuth grants or deployment state.
+Verify the selected deployment version and reauthorization separately with the user.
