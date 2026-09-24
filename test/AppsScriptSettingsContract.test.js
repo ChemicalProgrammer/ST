@@ -27,7 +27,7 @@ test('stores only a workspace folder that the active user can open', () => {
   });
 
   assert.equal(settings.workspaceRootFolderId, 'workspace-1');
-  assert.equal(settings.preferredPlaybackRate, 1.5);
+  assert.equal(settings.preferredPlaybackRate, 2, 'legacy 1.5× preference migrates to the supported 2× option');
   assert.ok(runtime.userProperties.USER_SETTINGS_JSON);
 });
 
@@ -78,4 +78,3 @@ function createAppsScriptRuntime(options = {}) {
 function toPlainObject(value) {
   return JSON.parse(JSON.stringify(value));
 }
-

@@ -1,0 +1,42 @@
+<script>
+// Serial writes preserve edits made while a previous revision is in flight.
+window.STAutosave = function(options) {
+  var version = 0, saved = 0, sending = false, timer, failure = null, waiters = [];
+  function notify() { options.status(failure ? 'error' : sending ? 'saving' : version > saved ? 'pending' : 'saved', failure); }
+  function settle(error) { var pending = waiters.splice(0); pending.forEach(function(w) { error ? w.reject(error) : w.resolve(); }); }
+  function write() {
+    clearTimeout(timer);
+    if (sending) return;
+    if (version === saved) { settle(); notify(); return; }
+    var payload, ticket = version;
+    try { payload = options.capture(); if (!payload) throw new Error(__ST_TEXT__('autosave.invalid')); }
+    catch (error) { failure = error; notify(); settle(error); return; }
+    sending = true; failure = null; notify();
+    options.send(payload, function(response) {
+      sending = false;
+      if (!response.ok) {
+        failure = Object.assign(new Error(response.error.message), {code: response.error.code});
+        notify(); settle(failure); return;
+      }
+      saved = ticket;
+      // Accept server metadata only; the editor may already contain newer edits.
+      options.accept(response.data);
+      if (version > saved) write(); else { notify(); settle(); }
+    });
+  }
+  function change(immediate) {
+    version++; clearTimeout(timer);
+    // A conflict requires an explicit reload, never a blind overwrite.
+    if (failure && failure.code === 'CASE_CONFLICT') { notify(); return; }
+    failure = null; notify(); timer = setTimeout(write, immediate ? 0 : 450);
+  }
+  function flush() {
+    return new Promise(function(resolve, reject) {
+      if (failure && failure.code === 'CASE_CONFLICT') { reject(failure); return; }
+      waiters.push({resolve:resolve,reject:reject}); write();
+    });
+  }
+  return {change:change,flush:flush,retry:flush,pending:function(){return sending || version > saved;},
+    reset:function(){clearTimeout(timer);version=0;saved=0;failure=null;notify();}};
+};
+</script>

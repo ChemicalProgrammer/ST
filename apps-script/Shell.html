@@ -15,9 +15,12 @@ window.STShell = function(state,actions) {
     document.querySelectorAll('.sidebar [data-view]').forEach(function(button){button.disabled=!active;button.setAttribute('aria-current',button.dataset.view===view?'page':'false');button.title=active?button.getAttribute('aria-label'):__ST_TEXT__('shell.open_a_case_first');});
     document.getElementById('breadcrumb-case').textContent=active?state.activeCase.name:__ST_TEXT__('shell.workspace');
     document.getElementById('breadcrumb-view').textContent={cases:__ST_TEXT__('shell.cases'),editor:__ST_TEXT__('shell.line_setup'),simulation:__ST_TEXT__('shell.simulation'),results:__ST_TEXT__('shell.results'),whatif:__ST_TEXT__('shell.what_if'),comparison:__ST_TEXT__('client.compare_simulations')}[view];
-    var save=document.getElementById('save-workspace-case');save.classList.toggle('hidden',!active);save.disabled=!state.isDirty || state.saving;save.innerHTML=STIcons.svg('save')+(state.isDirty?__ST_TEXT__('shell.save_changes'):'Saved');
+    document.getElementById('autosave-indicator').classList.toggle('hidden',!active);
+    document.getElementById('case-danger-zone').classList.toggle('hidden',!active);
+    document.getElementById('workspace-folder-id').disabled=active;
+    document.getElementById('workspace-folder-note').classList.toggle('hidden',!active);
     document.getElementById('show-new-case').disabled=!connected; document.getElementById('create-public-demo-case').disabled=!connected;
-    document.getElementById('whatif-empty').classList.toggle('hidden',Boolean(state.run.result));
+    document.getElementById('whatif-empty').classList.add('hidden');
     if(view==='results') STResults.render(state.run.result,state.activeCase);
     STIcons.decorate(document);
   }
@@ -29,7 +32,6 @@ window.STShell = function(state,actions) {
     function collapse(){document.getElementById('application').classList.toggle('sidebar-collapsed',collapsed);var el=document.getElementById('collapse-sidebar');el.setAttribute('aria-expanded',String(!collapsed));el.setAttribute('aria-label',collapsed?__ST_TEXT__('shell.expand_sidebar'):__ST_TEXT__('shell.collapse_sidebar'));el.title=el.getAttribute('aria-label');}
     collapse();document.getElementById('collapse-sidebar').onclick=function(){collapsed=!collapsed;STPreferences.write('sidebar',collapsed?'collapsed':'expanded');collapse();setTimeout(actions.redraw,180);};
     document.querySelectorAll('[data-view]').forEach(function(button){button.addEventListener('click',function(){actions.navigate(button.dataset.view);});});
-    document.getElementById('save-workspace-case').onclick=function(){actions.save();};
     document.getElementById('cancel-new-case').onclick=function(){document.getElementById('new-case-form').classList.add('hidden');document.getElementById('show-new-case').focus();};
     ['case-filter','case-sort'].forEach(function(id){document.getElementById(id).onchange=actions.cases;});
     var dialog=document.getElementById('command-dialog'),input=document.getElementById('command-search'),list=document.getElementById('command-list');

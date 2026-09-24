@@ -1,0 +1,21 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
+function setup(){
+ let record,writes=0,held=false,releases=0;
+ const ctx={Utilities:{getUuid:()=> 'unique-scenario'},createSimulatorError_:(code,message)=>Object.assign(new Error(message),{code}),withCaseWriteLock_:fn=>{assert(!held);held=true;try{return fn();}finally{held=false;releases++;}},getOwnedCaseFile_:(id,user)=>{assert.equal(user.email,'owner@test');assert(held,'ownership and revision must be checked inside the lock');return {caseData:JSON.parse(JSON.stringify(record)),file:{setContent:value=>{assert(held);writes++;record=JSON.parse(value);}}};},ensureCaseSimulations_:c=>c,generateSimulationId_:()=> 'scenario'};
+ vm.createContext(ctx);for(const file of ['PublicDemoCaseFactory.gs','ScenarioEngine.gs','ScenarioService.gs'])vm.runInContext(fs.readFileSync('apps-script/'+file,'utf8'),ctx);
+ const source={id:'a',name:'Baseline',equipment:JSON.parse(JSON.stringify(ctx.createPublicDemoCaseRequest_().equipment)),dynamicConfig:{durationSeconds:60,tickSeconds:.25,sampleEverySeconds:1,seed:23,commands:[]},results:{summary:{throughput:41},replay:{samples:[1,2]}}};record={id:'case-a',revision:1,simulations:[source]};
+ const proposal=ctx.STScenarioEngine_.plan(source).projects.find(p=>p.canApply);proposal.title='Infeed study';
+ const request={caseId:'case-a',simulationId:'a',expectedRevision:1,sourceSignature:ctx.STScenarioEngine_.signature(source),proposal,origin:'GEMINI'};
+ return {ctx,request,record:()=>record,writes:()=>writes,releases:()=>releases};
+}
+test('scenario cloning and overrides are one owned, revision-checked write with baseline and seed preserved',()=>{
+ const h=setup(),baseline=JSON.stringify(h.record().simulations[0]);
+ const response=h.ctx.createScenario_(h.request,{email:'owner@test'});assert.equal(h.writes(),1);assert.equal(h.releases(),1);assert.equal(response.case.simulations.length,2);
+ assert.equal(JSON.stringify(response.case.simulations[0]),baseline);assert.equal(response.case.simulations[1].dynamicConfig.seed,23);assert.equal(response.case.simulations[1].results,null);assert.equal(response.case.simulations[1].scenario.origin,'GEMINI');
+ assert.throws(()=>h.ctx.createScenario_(h.request,{email:'owner@test'}),e=>e.code==='CASE_CONFLICT');assert.equal(h.writes(),1);
+});
+test('stale or invalid proposals create no partially saved clone and always release the lock',()=>{
+ const h=setup();assert.throws(()=>h.ctx.createScenario_({...h.request,sourceSignature:'stale'},{email:'owner@test'}),e=>e.code==='SCENARIO_STALE');
+ const invalid={...h.request,proposal:{...h.request.proposal,changes:[{equipmentId:'unknown',path:'processData.geometry.lactMm',before:null,after:100}]}};
+ assert.throws(()=>h.ctx.createScenario_(invalid,{email:'owner@test'}));assert.equal(h.writes(),0);assert.equal(h.record().simulations.length,1);assert.equal(h.releases(),2);
+});

@@ -100,3 +100,7 @@ function previewSheetImport(request) {
   if (!response.ok) response.error.message = '[' + response.importVersion + ' / ' + response.error.code + '] ' + response.error.message;
   return response;
 }
+
+function createScenario(request) {
+  return executeServerAction_(function(user) { return createScenario_(request,user); });
+}

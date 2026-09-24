@@ -7,6 +7,7 @@ window.STPreferences = (function() {
     try { if (value === null) localStorage.removeItem(key + name); else localStorage.setItem(key + name, value); return true; }
     catch (_) { return false; }
   }
+  if (read('remember') === 'yes') document.documentElement.classList.add('restoring-session');
   var media = window.matchMedia('(prefers-color-scheme: dark)');
   var theme = read('theme') || 'light';
   var colors=['violet','blue','teal','green','amber','rose','red','coral','orange','copper','gold','olive','lime','forest','mint','aqua','cyan','sky','cobalt','indigo','purple','plum','magenta','pink','slate'];

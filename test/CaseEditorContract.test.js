@@ -151,6 +151,7 @@ function createCaseRuntime() {
     Date,
     Array,
     MimeType: { PLAIN_TEXT: 'text/plain' }
+    ,LockService: {getUserLock:()=>({tryLock:()=>true,releaseLock:()=>{}})}
   });
 
   ['ApiResponse.gs', 'CaseService.gs'].forEach((file) => {
@@ -181,4 +182,3 @@ function iterator(values) {
 function toPlainObject(value) {
   return JSON.parse(JSON.stringify(value));
 }
-

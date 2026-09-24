@@ -1,0 +1,52 @@
+<script>
+window.STDialog = (function() {
+  var queue = [], active = false;
+  function open(options) {
+    return new Promise(function(resolve) { queue.push({options:options,resolve:resolve}); next(); });
+  }
+  function next() {
+    if (active || !queue.length) return;
+    active = true;
+    var task = queue.shift(), options = task.options, focus = document.activeElement;
+    var dialog = document.createElement('dialog'); dialog.className = 'message-dialog';
+    dialog.setAttribute('aria-labelledby','message-dialog-title');
+    dialog.setAttribute('aria-describedby','message-dialog-message');
+    var heading = document.createElement('header'); heading.className = 'dialog-heading';
+    var title = document.createElement('h2'); title.id = 'message-dialog-title'; title.textContent = options.title || __ST_TEXT__('dialog.notice'); heading.appendChild(title);
+    var body = document.createElement('div'); body.className = 'dialog-body';
+    var message = document.createElement('p'); message.id = 'message-dialog-message'; message.textContent = options.message || ''; body.appendChild(message);
+    var input;
+    if (options.input) {
+      var label = document.createElement('label'); label.textContent = options.input.label || title.textContent;
+      input = document.createElement('input'); input.value = options.input.value || ''; input.maxLength = options.input.maxLength || 120;
+      input.required = options.input.required !== false; label.appendChild(input); body.appendChild(label);
+    }
+    var footer = document.createElement('footer'); footer.className = 'dialog-actions';
+    var buttons = options.buttons || [{id:'ok',label:__ST_TEXT__('dialog.ok')}];
+    function finish(id) {
+      if (id !== 'cancel' && input && (!input.checkValidity() || !input.value.trim())) { input.reportValidity(); input.focus(); return; }
+      dialog.close(); dialog.remove(); active = false;
+      if (focus && focus.isConnected) focus.focus();
+      task.resolve({action:id,value:input ? input.value.trim() : null}); next();
+    }
+    buttons.forEach(function(spec) {
+      var button = document.createElement('button'); button.type='button'; button.textContent=spec.label;
+      button.className = spec.destructive ? 'danger' : spec.id === 'cancel' ? 'ghost' : '';
+      button.onclick=function(){finish(spec.id);}; footer.appendChild(button);
+    });
+    dialog.append(heading,body,footer); document.body.appendChild(dialog);
+    dialog.addEventListener('cancel',function(event){event.preventDefault();finish('cancel');});
+    dialog.addEventListener('keydown',function(event){
+      if (event.key === 'Enter' && event.target === input) {event.preventDefault();finish(buttons.find(function(b){return b.id !== 'cancel';}).id);}
+      if (event.key !== 'Tab') return;
+      var targets=Array.from(dialog.querySelectorAll('button,input')).filter(function(e){return !e.disabled;}), first=targets[0],last=targets[targets.length-1];
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+      else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+    });
+    dialog.showModal();
+    if(input){input.focus();input.select();}else{(options.destructive ? footer.querySelector('.ghost') : footer.lastElementChild)?.focus();}
+  }
+  function confirm(title,message,destructive){return open({title:title,message:message,destructive:destructive,buttons:[{id:'cancel',label:__ST_TEXT__('view.cancel')},{id:'ok',label:destructive?__ST_TEXT__('dialog.delete'):__ST_TEXT__('dialog.ok'),destructive:destructive}]}).then(function(r){return r.action==='ok';});}
+  return {open:open,confirm:confirm,alert:function(title,message){return open({title:title,message:message});}};
+})();
+</script>

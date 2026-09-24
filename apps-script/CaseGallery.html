@@ -19,13 +19,12 @@ window.STCaseGallery = (function() {
     }
     items.slice(page*pageSize,(page+1)*pageSize).forEach(function(item){
       var row=document.createElement('article');row.className='case-row';
-      row.innerHTML=("<div class=\"case-identity\"><span class=\"case-glyph\">")+STIcons.svg('folder')+("</span><div><button class=\"case-name open-case\" type=\"button\"></button><span class=\"case-description\"></span></div></div><div class=\"case-actions\"><span class=\"badge\"></span><time class=\"case-date\"></time><button class=\"ghost icon-button delete-case\" type=\"button\">")+STIcons.svg('trash')+'</button></div>';
+      row.innerHTML='<div class="case-identity"><span class="case-glyph">'+STIcons.svg('folder')+'</span><div><button class="case-name open-case" type="button"></button><span class="case-description"></span></div></div><div class="case-actions"><span class="badge"></span><time class="case-date"></time></div>';
       row.querySelector('.case-name').textContent=item.name;
       row.querySelector('.case-description').textContent=item.equipmentCount+__ST_TEXT__('casegallery.equipment_units')+(item.dataClassification==='PUBLIC_DEMONSTRATION_ONLY'?__ST_TEXT__('casegallery.public_demo'):'');
       var badge=row.querySelector('.badge');badge.classList.toggle('ready',Boolean(item.isSimulationReady));badge.innerHTML=STIcons.svg(item.isSimulationReady?'check':'edit')+(item.isSimulationReady?__ST_TEXT__('casegallery.ready'):__ST_TEXT__('casegallery.draft'));
       var date=new Date(item.updatedAt);row.querySelector('time').textContent=Number.isNaN(date.getTime())?'':date.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
       row.querySelector('.open-case').onclick=function(){openCase(item.id);};
-      var del=row.querySelector('.delete-case');del.title=__ST_TEXT__('casegallery.delete')+item.name;del.setAttribute('aria-label',del.title);del.onclick=function(){requestCaseDeletion(item.id,item.name,del);};
       target.appendChild(row);
     });
     if(items.length>pageSize) {

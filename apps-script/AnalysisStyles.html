@@ -46,4 +46,9 @@
   .equipment-json-details .characteristics-label { margin-top: var(--size-10); }
   .sr-only { height: var(--size-1); margin: -1px; overflow: hidden; position: absolute; width: var(--size-1); }
 
+.scenario-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--size-280)),1fr)); gap:var(--space-4); }
+.scenario-grid .analysis-recommendation { min-width:0; border-left:var(--state-border-width) solid var(--accent); }
+.scenario-changes { font-size:var(--font-caption); padding-left:var(--space-4); overflow-wrap:anywhere; }
+.analysis-recommendation .badge { margin-left:var(--space-2); white-space:normal; }
+.gemini-messages .analysis-recommendation { margin:var(--space-3) 0; }
 </style>

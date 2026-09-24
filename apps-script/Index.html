@@ -89,6 +89,7 @@
   --duration-loading: 900ms;
   --font-root: 16px;
   --size-28: 28px;
+  --size-280: 280px;
   --size-220: 220px;
   --size-2: 2px;
   --size-420: 420px;
@@ -534,6 +535,11 @@ select { appearance:none; padding-right:var(--space-8); background-image:url("da
   .equipment-json-details .characteristics-label { margin-top: var(--size-10); }
   .sr-only { height: var(--size-1); margin: -1px; overflow: hidden; position: absolute; width: var(--size-1); }
 
+.scenario-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--size-280)),1fr)); gap:var(--space-4); }
+.scenario-grid .analysis-recommendation { min-width:0; border-left:var(--state-border-width) solid var(--accent); }
+.scenario-changes { font-size:var(--font-caption); padding-left:var(--space-4); overflow-wrap:anywhere; }
+.analysis-recommendation .badge { margin-left:var(--space-2); white-space:normal; }
+.gemini-messages .analysis-recommendation { margin:var(--space-3) 0; }
 </style>
     <style>
 .app-shell { width: 100%; min-height: 100vh; padding: 0; }
@@ -605,6 +611,14 @@ select { appearance:none; padding-right:var(--space-8); background-image:url("da
 #breadcrumb-case { font-size:var(--font-page); font-weight:var(--weight-semibold); color:var(--ink); letter-spacing:var(--tracking-tight); }
 #breadcrumb-view { font-size:var(--font-secondary); color:var(--muted); }
 #status:empty { display:none; }
+.sidebar-collapsed .sidebar,.sidebar-collapsed .sidebar-simulations { scrollbar-width:none; }
+.sidebar-collapsed .sidebar::-webkit-scrollbar,.sidebar-collapsed .sidebar-simulations::-webkit-scrollbar { display:none; }
+#session-restore { display:none; }
+.restoring-session #auth-panel { display:none; }
+.restoring-session #session-restore { display:grid; }
+#autosave-indicator { display:flex; align-items:center; gap:var(--space-2); color:var(--muted); font-size:var(--font-caption); }
+#autosave-status[data-state=error] { color:var(--danger); }
+@media(max-width:760px){.sidebar,.sidebar-simulations{scrollbar-width:none;}.sidebar::-webkit-scrollbar,.sidebar-simulations::-webkit-scrollbar{display:none;}}
 </style>
     <style>
 .cases-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-4); }
@@ -750,6 +764,7 @@ window.STPreferences = (function() {
     try { if (value === null) localStorage.removeItem(key + name); else localStorage.setItem(key + name, value); return true; }
     catch (_) { return false; }
   }
+  if (read('remember') === 'yes') document.documentElement.classList.add('restoring-session');
   var media = window.matchMedia('(prefers-color-scheme: dark)');
   var theme = read('theme') || 'light';
   var colors=['violet','blue','teal','green','amber','rose','red','coral','orange','copper','gold','olive','lime','forest','mint','aqua','cyan','sky','cobalt','indigo','purple','plum','magenta','pink','slate'];
@@ -779,6 +794,7 @@ window.STPreferences = (function() {
 </script>
   </head>
   <body>
+    <div id="session-restore" class="auth-shell" role="status">Connecting to your workspace…</div>
     <section id="auth-panel" class="auth-shell" aria-labelledby="auth-title">
       <div class="auth-card">
         <div class="brand"><span class="brand-mark" aria-hidden="true">ST</span><span>Line Studio</span></div>
@@ -818,7 +834,7 @@ window.STPreferences = (function() {
         <span id="user-email" class="user-chip"></span>
         <div id="cases-top-actions" class="button-row"><button id="cases-settings" class="ghost" data-icon="settings">Settings</button><button id="cases-sign-out" class="ghost" data-icon="logout">Sign out</button></div>
         <button id="toggle-gemini" class="secondary hidden" data-icon="chat" aria-controls="gemini-panel" aria-expanded="false">Gemini</button>
-        <button id="save-workspace-case" class="secondary hidden" data-icon="save">Save changes</button>
+        <span id="autosave-indicator" class="hidden" role="status"><span id="autosave-status"></span><button id="retry-autosave" class="ghost icon-button hidden" data-icon="refresh" aria-label="Retry" title="Retry"></button></span>
       </header>
       <div class="workspace-content">
       <div id="request-progress" class="request-progress hidden" role="status" aria-label="Loading"><span></span></div>
@@ -859,10 +875,7 @@ window.STPreferences = (function() {
             <p id="editor-meta"></p>
           </div>
           <div class="button-row">
-            <button id="reload-case" data-icon="refresh" class="secondary" type="button">Reload</button>
-            <button id="clone-case" data-icon="copy" class="secondary" type="button">Clone Simulation</button>
-            <button id="delete-case" data-icon="trash" class="danger" type="button">Delete Case</button>
-            <button id="save-case" data-icon="save" type="button">Save Case</button>
+            <button id="rename-simulation" type="button" class="secondary" data-icon="edit">Rename simulation</button><button id="clone-case" data-icon="copy" class="secondary" type="button">Clone Simulation</button><button id="delete-simulation" type="button" class="ghost icon-button" data-icon="trash" aria-label="Delete simulation" title="Delete simulation"></button>
           </div>
         </div>
 
@@ -902,14 +915,14 @@ window.STPreferences = (function() {
           </div>
         </div>
 
-        <div id="run-not-ready" class="notice hidden">Save a valid physical line before running: machine → conveyor → machine, with geometry on every conveyor.</div>
+        <div id="run-not-ready" class="notice hidden">Configure a valid physical line before running: machine → conveyor → machine, with geometry on every conveyor. Changes save automatically.</div>
         <details id="run-config" class="run-config" open><summary>Run configuration &amp; scheduled events</summary>
           <div class="field-grid run-fields">
             <label>Duration mode<select id="duration-mode"><option value="FIXED">Fixed virtual duration</option><option value="INDEFINITE">Indefinite (safety ceiling)</option></select></label>
             <label>Virtual duration / safety ceiling (s)<input id="run-duration" type="number" min="1" step="1" value="300"></label>
             <label>Display sample interval (s)<input id="run-sample-interval" type="number" min="1" step="1" value="5"></label>
             <label>Random seed<input id="run-seed" type="number" min="0" step="1" value="20260909"></label>
-            <label>Playback speed (virtual / real)<select id="run-playback-rate"><option value="0.5">0.5×</option><option value="1">1×</option><option value="1.5">1.5×</option><option value="5">5×</option><option value="10">10×</option></select></label>
+            <label>Playback speed (virtual / real)<select id="run-playback-rate"><option value="0.5">0.5×</option><option value="1">1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option><option value="20">20×</option><option value="50">50×</option></select></label>
           </div>
 
           <details class="notice model-boundary"><summary>Model assumptions &amp; timing</summary><p>
@@ -970,14 +983,14 @@ window.STPreferences = (function() {
           </details></div>
       </section>
       <section id="whatif-panel" class="card hidden" aria-labelledby="whatif-title">
-        <div class="section-heading"><div><p class="eyebrow">SCENARIO LAB</p><h2 id="whatif-title">What-If</h2><p>Review the recommendation for the selected simulation and create a proposed scenario.</p></div></div>
+        <div class="section-heading"><div><p class="eyebrow">SCENARIO LAB</p><h2 id="whatif-title">What-If</h2><p>Evaluate the selected simulation and create supported scenarios by investment category.</p></div></div>
         <div id="whatif-empty" class="empty"><h3>Start with a baseline run</h3><p>Run the active simulation to generate an evidence-based recommendation.</p><button data-view="simulation" data-icon="play">Go to simulation</button></div>
           <section id="simulation-analysis" class="simulation-analysis hidden" aria-labelledby="simulation-analysis-title">
             <div class="simulation-analysis-heading">
               <div>
                 <p class="eyebrow">SIMULATION ANALYSIS</p>
-                <h3 id="simulation-analysis-title">What this run indicates</h3>
-                <p>The recommendation combines this run&#39;s losses with the physical conveyor audit. It creates one saved successor simulation; it does not run a design of experiments or claim an untested optimum.</p>
+                <h3 id="simulation-analysis-title">What the available evidence indicates</h3>
+                <p>Review zero, medium and high CAPEX options. Evidence labels distinguish static design inputs from dynamic run results. Each action creates a separate simulation.</p>
               </div>
             </div>
             <div id="simulation-analysis-content" class="simulation-analysis-content"></div>
@@ -997,7 +1010,7 @@ window.STPreferences = (function() {
         <div id="gemini-resize" role="separator" aria-orientation="vertical" aria-label="Resize Gemini panel" tabindex="0" title="Drag to resize; use Left and Right arrows"></div><header class="gemini-heading"><div><h2 id="gemini-title">Gemini</h2><span id="gemini-context" class="chart-note"></span></div><button id="close-gemini" class="ghost icon-button" data-icon="chevron" aria-label="Collapse Gemini panel" title="Collapse Gemini panel"></button></header>
         <p id="gemini-notice" class="gemini-notice">Ask about the saved case, equipment and simulation results.</p>
         <div id="gemini-messages" class="gemini-messages" role="log" aria-label="Case conversation" aria-live="polite"></div>
-        <form id="gemini-form" class="gemini-composer"><label class="sr-only" for="gemini-question">Question for Gemini</label><textarea id="gemini-question" rows="3" maxlength="6000" placeholder="Ask about this case…" required></textarea><div class="gemini-actions"><button id="clear-gemini" type="button" class="ghost icon-button" data-icon="trash" aria-label="Clear case conversation" title="Clear case conversation"></button><button id="send-gemini" type="submit" data-icon="send">Send</button></div><p id="gemini-error" class="chart-note" role="alert"></p><p class="chart-note">Sending shares this saved case with Google Gemini. Conversations clear when you close the case, refresh or sign out.</p></form>
+        <form id="gemini-form" class="gemini-composer"><label class="sr-only" for="gemini-question">Question for Gemini</label><textarea id="gemini-question" rows="3" maxlength="6000" placeholder="Ask about this case…" required></textarea><div class="gemini-actions"><button id="clear-gemini" type="button" class="ghost icon-button" data-icon="trash" aria-label="Clear case conversation" title="Clear case conversation"></button><button id="send-gemini" type="submit" data-icon="send">Send</button></div><p id="gemini-error" class="chart-note" role="alert"></p><p class="chart-note">Sending shares a compact analysis with Google Gemini. Conversations reset when changing simulation or case.</p></form>
       </aside>
     </main>
     <dialog id="settings-dialog" aria-labelledby="settings-title">
@@ -1005,17 +1018,18 @@ window.STPreferences = (function() {
       <div class="dialog-body">
         <section class="settings-section"><h3>Appearance</h3><p>Applied immediately on this browser.</p><div class="settings-row"><label for="settings-theme">Theme</label><select id="settings-theme" data-theme-picker aria-label="Appearance"><option value="light">Light</option><option value="dark">Dark</option><option value="auto">System / Automatic</option></select></div><div class="settings-row"><span>Accent color</span><div id="accent-palette" class="accent-palette" role="group" aria-label="Accent color"></div></div></section>
         <section id="workspace-panel" class="settings-section"><h3>Storage &amp; simulation defaults</h3><p>Choose a Drive folder you can access. Cases and results are saved in this workspace.</p>
-        <form id="workspace-form"><label for="workspace-folder-id">Drive folder ID</label><input id="workspace-folder-id" autocomplete="off" required>
-        <label for="playback-rate">Default playback speed</label><select id="playback-rate"><option value="0.5">0.5×</option><option value="1">1×</option><option value="1.5">1.5×</option><option value="5">5×</option><option value="10">10×</option></select>
+        <form id="workspace-form"><label for="workspace-folder-id">Drive folder ID</label><input id="workspace-folder-id" autocomplete="off" required><p id="workspace-folder-note" class="chart-note hidden">Close the current case before changing its storage folder.</p>
+        <label for="playback-rate">Default playback speed</label><select id="playback-rate"><option value="0.5">0.5×</option><option value="1">1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option><option value="20">20×</option><option value="50">50×</option></select>
         <fieldset class="gemini-settings"><legend>Gemini</legend><p class="chart-note">Your API key is stored in your Apps Script user properties and used only by the server.</p><label for="gemini-model">Model ID</label><input id="gemini-model" value="gemini-2.5-flash" maxlength="100" pattern="gemini-[a-zA-Z0-9.\-]+" required><label for="gemini-api-key">API key</label><input id="gemini-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep your saved key"><span id="gemini-key-status" class="chart-note"></span><label class="remember"><input id="gemini-clear-key" type="checkbox">Remove saved API key</label></fieldset>
         <p id="settings-error" role="alert"></p></form></section>
+        <section id="case-danger-zone" class="settings-section hidden"><h3>Delete case</h3><p>Move the open case and all its simulations to the Drive trash.</p><button id="delete-case" type="button" class="danger" data-icon="trash">Delete case</button></section>
       </div>
-      <div class="dialog-actions"><span id="settings-unsaved" role="status"></span><button id="settings-cancel" type="button" class="ghost">Cancel</button><button id="settings-save" type="submit" form="workspace-form" data-icon="save">Save settings</button></div>
+      <div class="dialog-actions"><span id="settings-unsaved" role="status"></span><button id="settings-retry" type="button" class="ghost hidden">Retry</button><button id="settings-cancel" type="button" class="ghost">Done</button></div>
     </dialog>
     <dialog id="sheet-import-dialog" aria-labelledby="sheet-import-title">
       <header class="dialog-heading"><h2 id="sheet-import-title">Import equipment from Google Sheets</h2><button id="sheet-import-close" class="ghost icon-button" data-icon="x" aria-label="Close import" title="Close import"></button></header>
       <div class="dialog-body">
-        <p>Read C1:C7 and equipment rows A10:W. NA and N/A mean not applicable. Import updates the selected simulation. Compare current and Sheet values, choose equipment and fields, then save the case.</p>
+        <p>Read C1:C7 and equipment rows A10:W. NA and N/A mean not applicable. Compare current and Sheet values, choose equipment and fields, then apply the selected changes. The active simulation saves automatically.</p>
         <form id="sheet-import-form"><label>Google Sheets URL or ID<input id="sheet-import-url" required autocomplete="off" placeholder="https://docs.google.com/spreadsheets/d/…"></label><label>Worksheet name (optional)<input id="sheet-import-tab" autocomplete="off" placeholder="Uses the URL tab, or the first worksheet"></label><button id="sheet-import-read" data-icon="refresh" type="submit">Preview import</button></form>
         <p id="sheet-import-error" role="alert"></p><div id="sheet-import-preview" aria-live="polite"></div>
       </div>
@@ -1049,7 +1063,6 @@ function normalizeSeed(seed) {
 
   return seed >>> 0;
 }
-
 
 
 /**
@@ -1349,7 +1362,6 @@ function subtractIfFinite(first, ...rest) {
 
 
 
-
 function resolveAccumulationZoneDefinition(allEquipment, ownerIndex) {
   const equipment = Array.isArray(allEquipment) ? allEquipment : [];
   const owner = equipment[ownerIndex];
@@ -1636,7 +1648,6 @@ function isFiniteNumber(value) {
 
 
 
-
 function validateSimulationInput(input) {
   const details = [];
   validateCase(input?.case, details);
@@ -1904,7 +1915,6 @@ function invalid(path, reason) { return { path, reason }; }
 function positiveNumber(value) { return typeof value === 'number' && Number.isFinite(value) && value > 0; }
 function nonNegativeNumber(value) { return typeof value === 'number' && Number.isFinite(value) && value >= 0; }
 function nonEmptyString(value) { return typeof value === 'string' && value.length > 0; }
-
 
 
 
@@ -3081,11 +3091,136 @@ function round(value) {
 
 
 
+// Scenario policy is separate from the unchanged simulation mathematics.
+const SCENARIO_POLICY = Object.freeze({microstopLimitMinutes:4,availabilityThreshold:85,failureThresholdSeconds:30,mtbfFactor:1.20,mttrFactor:0.85,maxChanges:64});
+const SCENARIO_FIELDS = Object.freeze({
+  'processData.accumulation.conveyorSpeedFactorPercent':[0,1000,'%'],
+  'processData.accumulation.blockedTimeDelaySeconds':[0,3600,'s'],
+  'processData.accumulation.clearTimeDelaySeconds':[0,3600,'s'],
+  'processData.accumulation.backupSensorPositionMm':[0,1000000,'mm'],
+  'processData.geometry.lactMm':[1,1000000,'mm'],
+  'processData.geometry.lpPrimeMm':[0,1000000,'mm'],
+  'processData.accumulation.downstreamRampUpSeconds':[0,3600,'s'],
+  'processData.upstream.startupTimeSeconds':[0,3600,'s'],
+  'noiseProfile.reliability.mtbfMinutes':[0.001,10000000,'min'],
+  'noiseProfile.reliability.mttrMinutes':[0.001,10000000,'min']
+});
+function scenarioCopy(value){return JSON.parse(JSON.stringify(value));}
+function scenarioGet(e,path){return path.split('.').reduce((value,key)=>value?.[key],e);}
+function scenarioSet(e,path,value){const parts=path.split('.'),key=parts.pop();let node=e;parts.forEach(p=>{node[p]=node[p]||{};node=node[p];});node[key]=value;}
+function scenarioSignature(simulation){
+  const text=JSON.stringify([simulation.id,simulation.equipment,simulation.dynamicConfig]);
+  let hash=2166136261;for(let i=0;i<text.length;i++){hash^=text.charCodeAt(i);hash=Math.imul(hash,16777619);}
+  return (hash>>>0).toString(16)+':'+text.length;
+}
+function scenarioAudit(simulation){
+  return (simulation.equipment||[]).flatMap((e,index)=>{
+    if(e.type!=='CONVEYOR')return [];
+    const zone=resolveAccumulationZoneDefinition(simulation.equipment,index).definition;
+    return [{equipmentId:e.id,equipmentName:e.name,engineering:zone?.engineering||null,upstreamId:zone?.upstreamControlEquipmentId,downstreamId:zone?.downstreamControlEquipmentId}];
+  });
+}
+function applyScenarioChanges(simulation,changes){
+  if(!Array.isArray(changes)||!changes.length||changes.length>SCENARIO_POLICY.maxChanges)throw new Error('SCENARIO_INVALID_CHANGES');
+  const copy=scenarioCopy(simulation),seen=new Set();
+  changes.forEach(change=>{
+    const rule=Object.hasOwn(SCENARIO_FIELDS,change.path)?SCENARIO_FIELDS[change.path]:null;
+    const unit=copy.equipment.find(e=>e.id===change.equipmentId),key=change.equipmentId+':'+change.path;
+    if(!unit||!rule||seen.has(key)||typeof change.after!=='number'||!Number.isFinite(change.after)||change.after<rule[0]||change.after>rule[1])throw new Error('SCENARIO_INVALID_FIELD');
+    if(!Object.hasOwn(change,'before')||(scenarioGet(unit,change.path)??null)!==change.before)throw new Error('SCENARIO_STALE');
+    if(change.path.includes('reliability')&&(!(unit.noiseProfile?.reliability?.mtbfMinutes>0)||!(unit.noiseProfile?.reliability?.mttrMinutes>0)))throw new Error('SCENARIO_MISSING_RELIABILITY');
+    if((change.path.includes('accumulation')||change.path.includes('geometry'))&&unit.type!=='CONVEYOR')throw new Error('SCENARIO_INVALID_FIELD');
+    seen.add(key);scenarioSet(unit,change.path,change.after);
+  });
+  if(changes.every(c=>c.before===c.after))throw new Error('SCENARIO_NO_CHANGE');
+  const check=validateSimulationInput({case:{id:'scenario-preview',equipment:copy.equipment},run:Object.assign({durationSeconds:60,tickSeconds:.25,sampleEverySeconds:1,seed:1,commands:[]},copy.dynamicConfig)});
+  if(!check.ok)throw new Error('SCENARIO_INVALID_PHYSICS');
+  const before=scenarioAudit(simulation),after=scenarioAudit(copy);
+  after.forEach((item,index)=>{
+    (item.engineering?.audit?.goals||[]).forEach(goal=>{
+      const previous=before[index]?.engineering?.audit?.goals?.find(g=>g.id===goal.id);
+      if(previous?.status==='PASS'&&goal.status!=='PASS')throw new Error('SCENARIO_AUDIT_REGRESSION');
+    });
+  });
+  copy.results=null;return copy;
+}
+function scenarioChange(e,path,after){return {equipmentId:e.id,path,before:scenarioGet(e,path)??null,after,unit:SCENARIO_FIELDS[path][2]};}
+function scenarioGoal(engineering,id){return engineering?.audit?.goals?.find(g=>g.id===id)?.status;}
+function scenarioRecoveryPlan(engineering,requiredSeconds=0){
+  const input=engineering?.input;if(!input||!(input.installedLengthMm>0))return null;
+  function evaluate(length){
+    const first=calculateConveyorEngineering({...input,installedLengthMm:length}),backup=Math.ceil(first.calculated.recommendedBackupSensorPositionMm);
+    if(!Number.isFinite(backup))return null;
+    const check=calculateConveyorEngineering({...input,installedLengthMm:length,backupSensorPositionMm:backup});
+    const passes=['INSTALLED_LENGTH','SMOOTH_RECOVERY','BACKUP_POSITION'].every(id=>scenarioGoal(check,id)==='PASS');
+    return {length,backup,check,passes:passes&&(!requiredSeconds||check.calculated.antiStarveSeconds>=requiredSeconds)};
+  }
+  let low=Math.ceil(input.installedLengthMm),high=low,plan=evaluate(high),limit=Math.min(1000000,Math.max(high+50000,high*5));
+  while(plan&&!plan.passes&&high<limit){low=high;high=Math.min(limit,high+Math.max(100,Math.ceil(high*.2)));plan=evaluate(high);}
+  if(!plan?.passes)return null;
+  while(high-low>1){const mid=Math.floor((low+high)/2),trial=evaluate(mid);if(trial?.passes){high=mid;plan=trial;}else low=mid;}
+  return evaluate(high);
+}
+function planScenarios(simulation){
+  const audit=scenarioAudit(simulation),result=simulation.results?.summary?simulation.results:null;
+  const candidates=[],checks=[];
+  function add(kind,tier,equipment,changes,evidence,priority,basis){
+    changes=changes.filter(c=>c.before!==c.after);if(!changes.length)return;
+    let disabledReason=null;try{applyScenarioChanges(simulation,changes);}catch(error){disabledReason=error.message;}
+    candidates.push({id:kind+':'+equipment.id,kind,tier,titleKey:'scenario.'+kind.toLowerCase(),equipmentId:equipment.id,equipmentName:equipment.name,changes,evidence,priority,basis,canApply:!disabledReason,disabledReason,sourceSimulationId:simulation.id,sourceSignature:scenarioSignature(simulation)});
+  }
+  audit.forEach(item=>{
+    const e=simulation.equipment.find(x=>x.id===item.equipmentId),engineering=item.engineering;
+    if(!engineering){checks.push({equipmentId:e.id,rule:'GEOMETRY',status:'NOT_EVALUATED'});return;}
+    const input=engineering.input,c=engineering.calculated;
+    checks.push(...engineering.audit.goals.map(g=>({equipmentId:e.id,rule:g.id,status:g.status})));
+    const speed=c.recommendedConveyorSpeedFactorPercent;
+    if(Number.isFinite(speed)&&speed>=0&&Math.abs(speed-input.conveyorSpeedFactorPercent)>=.25){
+      add('SPEED_BALANCE','ZERO',e,[scenarioChange(e,'processData.accumulation.conveyorSpeedFactorPercent',Number(speed.toFixed(2)))],{recommendedSpeedMmPerSecond:c.recommendedInfeedConveyorSpeedMmPerSecond},64,'STATIC');
+    }
+    if(scenarioGoal(engineering,'SENSOR_DEBOUNCE')==='WARNING'&&Number.isFinite(c.packagePassSensorSeconds)&&Number.isFinite(c.sensorClearGapSeconds)){
+      const greater=v=>Math.ceil((v+.01)*100)/100;
+      add('SENSOR_DEBOUNCE','ZERO',e,[scenarioChange(e,'processData.accumulation.blockedTimeDelaySeconds',Math.max(input.blockedTimeDelaySeconds,greater(c.packagePassSensorSeconds))),scenarioChange(e,'processData.accumulation.clearTimeDelaySeconds',Math.max(input.clearTimeDelaySeconds,greater(c.sensorClearGapSeconds)))],{pulseSeconds:c.packagePassSensorSeconds,gapSeconds:c.sensorClearGapSeconds},82,'STATIC');
+    }
+    const upstream=simulation.equipment.find(x=>x.id===item.upstreamId),mttr=upstream?.noiseProfile?.reliability?.mttrMinutes;
+    const microstop=mttr>0&&mttr<=SCENARIO_POLICY.microstopLimitMinutes;
+    const coverage=microstop&&Number.isFinite(c.antiStarveSeconds)?c.antiStarveSeconds/(mttr*60):null;
+    checks.push({equipmentId:e.id,rule:'ACCUMULATION_1_TO_2_MTTR',status:coverage===null?'NOT_EVALUATED':coverage>=1&&coverage<=2?'PASS':'REVIEW',coverage,referenceEquipmentId:upstream?.id});
+    const recoveryFailed=['INSTALLED_LENGTH','SMOOTH_RECOVERY','BACKUP_POSITION'].some(id=>['FAIL','WARNING'].includes(scenarioGoal(engineering,id)));
+    if(recoveryFailed||(coverage!==null&&coverage<1)){
+      const plan=scenarioRecoveryPlan(engineering,microstop?mttr*60:0);
+      if(plan){
+        const losses=result?.accumulationZoneMetrics&&Object.values(result.accumulationZoneMetrics).find(x=>x.ownerEquipmentId===e.id);
+        add('BUFFER_RECOVERY','HIGH',e,[scenarioChange(e,'processData.accumulation.backupSensorPositionMm',plan.backup),scenarioChange(e,'processData.geometry.lactMm',plan.length)],{recoveryLengthMm:c.recoveryLengthMm,requiredOverflowMm:c.overflowLengthMm,addedLengthMm:plan.length-input.installedLengthMm,coverage,overflowUnits:losses?.overflowUnits??null},96+(losses?.overflowUnits>0?5:0),losses?'HYBRID':'STATIC');
+      }
+    }
+    // The supplied design brief requires data not present in the current import contract.
+    checks.push({equipmentId:e.id,rule:'TURN_TRAP_AND_FILLED_DIAMETER',status:'NOT_EVALUATED'});
+  });
+  (simulation.equipment||[]).filter(e=>e.type!=='CONVEYOR').forEach(e=>{
+    const r=e.noiseProfile?.reliability;if(!(r?.mtbfMinutes>0&&r?.mttrMinutes>0))return;
+    const availability=100*r.mtbfMinutes/(r.mtbfMinutes+r.mttrMinutes),metrics=result?.equipmentMetrics?.[e.id];
+    const triggered=availability<SCENARIO_POLICY.availabilityThreshold||(metrics?.failureSeconds>SCENARIO_POLICY.failureThresholdSeconds)||(metrics?.availabilityPercent<SCENARIO_POLICY.availabilityThreshold);
+    if(triggered&&r.mttrMinutes<=SCENARIO_POLICY.microstopLimitMinutes){
+      add('RELIABILITY','MEDIUM',e,[scenarioChange(e,'noiseProfile.reliability.mtbfMinutes',Number((r.mtbfMinutes*SCENARIO_POLICY.mtbfFactor).toFixed(6))),scenarioChange(e,'noiseProfile.reliability.mttrMinutes',Number((r.mttrMinutes*SCENARIO_POLICY.mttrFactor).toFixed(6)))],{intrinsicAvailabilityPercent:availability,failureSeconds:metrics?.failureSeconds??null,mtbfFactor:SCENARIO_POLICY.mtbfFactor,mttrFactor:SCENARIO_POLICY.mttrFactor},52+(metrics?.failureSeconds||0)/Math.max(1,result?.durationSeconds||1),metrics?'HYBRID':'STATIC');
+    }
+    if(r.mttrMinutes>SCENARIO_POLICY.microstopLimitMinutes)checks.push({equipmentId:e.id,rule:'MAJOR_FAILURE_OUTSIDE_MICROSTOP_BUFFER_TARGET',status:'REVIEW'});
+  });
+  checks.push({rule:'PACEMAKER_DESIRED_STATE_AND_V_GRAPH',status:'NOT_EVALUATED'});
+  const projects=['ZERO','MEDIUM','HIGH'].map(tier=>{
+    const choices=candidates.filter(p=>p.tier===tier).sort((a,b)=>Number(b.canApply)-Number(a.canApply)||b.priority-a.priority);
+    return choices[0]||{tier,canApply:false,titleKey:'scenario.no_proposal',basis:'STATIC',changes:[],evidence:{},disabledReason:'SCENARIO_INSUFFICIENT_EVIDENCE'};
+  });
+  return {projects,checks,candidates,hasDynamicEvidence:!!result};
+}
+
+
 window.SimulatorEngine = {
   simulateLine: simulateLine,
   validateSimulationInput: validateSimulationInput,
   calculateConveyorEngineering: calculateConveyorEngineering
 };
+window.STScenarios = {plan:planScenarios,apply:applyScenarioChanges,signature:scenarioSignature,audit:scenarioAudit,fields:SCENARIO_FIELDS};
 })(window);
 </script>
     <script>
@@ -3118,43 +3253,169 @@ window.STIcons = (function() {
 })();
 </script>
     <script>
+window.STDialog = (function() {
+  var queue = [], active = false;
+  function open(options) {
+    return new Promise(function(resolve) { queue.push({options:options,resolve:resolve}); next(); });
+  }
+  function next() {
+    if (active || !queue.length) return;
+    active = true;
+    var task = queue.shift(), options = task.options, focus = document.activeElement;
+    var dialog = document.createElement('dialog'); dialog.className = 'message-dialog';
+    dialog.setAttribute('aria-labelledby','message-dialog-title');
+    dialog.setAttribute('aria-describedby','message-dialog-message');
+    var heading = document.createElement('header'); heading.className = 'dialog-heading';
+    var title = document.createElement('h2'); title.id = 'message-dialog-title'; title.textContent = options.title || "Notice"; heading.appendChild(title);
+    var body = document.createElement('div'); body.className = 'dialog-body';
+    var message = document.createElement('p'); message.id = 'message-dialog-message'; message.textContent = options.message || ''; body.appendChild(message);
+    var input;
+    if (options.input) {
+      var label = document.createElement('label'); label.textContent = options.input.label || title.textContent;
+      input = document.createElement('input'); input.value = options.input.value || ''; input.maxLength = options.input.maxLength || 120;
+      input.required = options.input.required !== false; label.appendChild(input); body.appendChild(label);
+    }
+    var footer = document.createElement('footer'); footer.className = 'dialog-actions';
+    var buttons = options.buttons || [{id:'ok',label:"OK"}];
+    function finish(id) {
+      if (id !== 'cancel' && input && (!input.checkValidity() || !input.value.trim())) { input.reportValidity(); input.focus(); return; }
+      dialog.close(); dialog.remove(); active = false;
+      if (focus && focus.isConnected) focus.focus();
+      task.resolve({action:id,value:input ? input.value.trim() : null}); next();
+    }
+    buttons.forEach(function(spec) {
+      var button = document.createElement('button'); button.type='button'; button.textContent=spec.label;
+      button.className = spec.destructive ? 'danger' : spec.id === 'cancel' ? 'ghost' : '';
+      button.onclick=function(){finish(spec.id);}; footer.appendChild(button);
+    });
+    dialog.append(heading,body,footer); document.body.appendChild(dialog);
+    dialog.addEventListener('cancel',function(event){event.preventDefault();finish('cancel');});
+    dialog.addEventListener('keydown',function(event){
+      if (event.key === 'Enter' && event.target === input) {event.preventDefault();finish(buttons.find(function(b){return b.id !== 'cancel';}).id);}
+      if (event.key !== 'Tab') return;
+      var targets=Array.from(dialog.querySelectorAll('button,input')).filter(function(e){return !e.disabled;}), first=targets[0],last=targets[targets.length-1];
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+      else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+    });
+    dialog.showModal();
+    if(input){input.focus();input.select();}else{(options.destructive ? footer.querySelector('.ghost') : footer.lastElementChild)?.focus();}
+  }
+  function confirm(title,message,destructive){return open({title:title,message:message,destructive:destructive,buttons:[{id:'cancel',label:"Cancel"},{id:'ok',label:destructive?"Delete":"OK",destructive:destructive}]}).then(function(r){return r.action==='ok';});}
+  return {open:open,confirm:confirm,alert:function(title,message){return open({title:title,message:message});}};
+})();
+</script>
+    <script>
+// Serial writes preserve edits made while a previous revision is in flight.
+window.STAutosave = function(options) {
+  var version = 0, saved = 0, sending = false, timer, failure = null, waiters = [];
+  function notify() { options.status(failure ? 'error' : sending ? 'saving' : version > saved ? 'pending' : 'saved', failure); }
+  function settle(error) { var pending = waiters.splice(0); pending.forEach(function(w) { error ? w.reject(error) : w.resolve(); }); }
+  function write() {
+    clearTimeout(timer);
+    if (sending) return;
+    if (version === saved) { settle(); notify(); return; }
+    var payload, ticket = version;
+    try { payload = options.capture(); if (!payload) throw new Error("Complete the required fields and correct invalid JSON before this change can be saved."); }
+    catch (error) { failure = error; notify(); settle(error); return; }
+    sending = true; failure = null; notify();
+    options.send(payload, function(response) {
+      sending = false;
+      if (!response.ok) {
+        failure = Object.assign(new Error(response.error.message), {code: response.error.code});
+        notify(); settle(failure); return;
+      }
+      saved = ticket;
+      // Accept server metadata only; the editor may already contain newer edits.
+      options.accept(response.data);
+      if (version > saved) write(); else { notify(); settle(); }
+    });
+  }
+  function change(immediate) {
+    version++; clearTimeout(timer);
+    // A conflict requires an explicit reload, never a blind overwrite.
+    if (failure && failure.code === 'CASE_CONFLICT') { notify(); return; }
+    failure = null; notify(); timer = setTimeout(write, immediate ? 0 : 450);
+  }
+  function flush() {
+    return new Promise(function(resolve, reject) {
+      if (failure && failure.code === 'CASE_CONFLICT') { reject(failure); return; }
+      waiters.push({resolve:resolve,reject:reject}); write();
+    });
+  }
+  return {change:change,flush:flush,retry:flush,pending:function(){return sending || version > saved;},
+    reset:function(){clearTimeout(timer);version=0;saved=0;failure=null;notify();}};
+};
+</script>
+    <script>
+window.STWhatIf = (function() {
+  function node(tag,text,className){var element=document.createElement(tag);element.textContent=text||'';if(className)element.className=className;return element;}
+  function label(key){return window.STScenarioText[key]||key;}
+  function card(project,create){
+    var item=node('article','','analysis-recommendation');
+    item.append(node('span',label(project.tier),'analysis-capex'),node('span',label(project.basis),'badge'),node('h4',project.title||label(project.titleKey)));
+    if(project.equipmentName)item.appendChild(node('p',project.equipmentName));
+    if(project.description)item.appendChild(node('p',project.description));
+    var changes=node('ul','','scenario-changes');
+    project.changes.forEach(function(change){changes.appendChild(node('li',change.equipmentId+' · '+change.path+': '+(change.before??'—')+' → '+change.after+' '+(change.unit||'')));});item.appendChild(changes);
+    if(project.evidence){var evidence=node('details','','analysis-checks');evidence.appendChild(node('summary',"Evidence"));var list=node('ul');Object.entries(project.evidence).forEach(function(pair){if(pair[1]!==null)list.appendChild(node('li',label(pair[0])+': '+(typeof pair[1]==='number'?Number(pair[1].toFixed(3)):pair[1])));});evidence.appendChild(list);item.appendChild(evidence);}
+    item.appendChild(node('p',project.kind==='RELIABILITY'?"Explicit maintenance hypothesis: MTBF +20%, MTTR −15%. This is a sensitivity test, not a guaranteed improvement or a consequence of conveyor tuning. Maintenance spending may be OPEX.":"Expected direction is a hypothesis. Numerical OEE, throughput and loss improvements require a new run and comparison.",'chart-note'));
+    if(project.canApply){var button=node('button',"Create scenario");button.type='button';button.insertAdjacentHTML('afterbegin',STIcons.svg('plus'));button.onclick=function(){create(project,button);};item.appendChild(button);}
+    else item.appendChild(node('p',label(project.disabledReason),'chart-note'));
+    return item;
+  }
+  function render(simulation,target,create){
+    var plan=STScenarios.plan(simulation);target.textContent='';var grid=node('div','','scenario-grid');
+    plan.projects.forEach(function(p){grid.appendChild(card(p,create));});target.appendChild(grid);
+    var checks=node('details','','analysis-checks');checks.appendChild(node('summary',"Design checks and missing inputs"));
+    checks.appendChild(node('p',"These checks implement the supplied design brief where inputs exist; they do not certify handbook compliance. CAPEX levels describe intervention scale, not a cost estimate or financial return. Buffer coverage uses the adjacent upstream machine's MTTR for microstops up to 4 minutes. Unmodeled turn losses, filled-container diameter and PLC desired-state behavior are not assumed.",'chart-note'));
+    var list=node('ul');plan.checks.forEach(function(check){list.appendChild(node('li',(check.equipmentId?check.equipmentId+' · ':'')+label(check.rule)+': '+label(check.status)+(check.coverage!=null?' ('+check.coverage.toFixed(2)+'× MTTR)':'')));});checks.appendChild(list);target.appendChild(checks);
+  }
+  return {render:render,card:card};
+})();
+window.STScenarioText = {
+  ZERO:"Zero CAPEX",MEDIUM:"Medium CAPEX / OPEX",HIGH:"High CAPEX",
+  STATIC:"Static inputs only",DYNAMIC:"Dynamic run evidence",HYBRID:"Static + dynamic evidence",
+  'scenario.speed_balance':"Match downstream infeed demand",'scenario.sensor_debounce':"Tune sensor confirmation delays",
+  'scenario.buffer_recovery':"Restore physical accumulation and recovery",'scenario.reliability':"Maintenance sensitivity scenario",'scenario.no_proposal':"No supported proposal",
+  SCENARIO_INSUFFICIENT_EVIDENCE:"Current evidence does not support an automatic change in this category.",SCENARIO_INVALID_PHYSICS:"Complete the physical line inputs before applying this scenario.",SCENARIO_AUDIT_REGRESSION:"This change would invalidate a design check. Resolve the related geometry constraints first.",
+  TURN_TRAP_AND_FILLED_DIAMETER:"90° turns and filled-container diameter",PACEMAKER_DESIRED_STATE_AND_V_GRAPH:"Pacemaker desired state and V-graph",
+  ACCUMULATION_1_TO_2_MTTR:"Accumulation coverage (1–2× MTTR)",MAJOR_FAILURE_OUTSIDE_MICROSTOP_BUFFER_TARGET:"Major failures outside the microstop buffer target",
+  NOT_EVALUATED:"Not evaluated: required inputs or model support are missing",REVIEW:"Engineering review",
+  pulseSeconds:"Normal sensor pulse (s)",gapSeconds:"Normal sensor clear gap (s)",recoveryLengthMm:"Recovery length (mm)",requiredOverflowMm:"Required overflow length (mm)",addedLengthMm:"Added length (mm)",
+  coverage:"Accumulation coverage (1–2× MTTR)",failureSeconds:"Observed failure time (s)",intrinsicAvailabilityPercent:"Intrinsic availability (%)",recommendedSpeedMmPerSecond:"Recommended infeed speed (mm/s)",
+  overflowUnits:"Observed overflow (units)",mtbfFactor:"MTBF multiplier",mttrFactor:"MTTR multiplier"
+};
+</script>
+    <script>
 window.STSettings = (function() {
-  var snapshot = '', lastFocus, saving = false;
-  function formValue() { return JSON.stringify([document.getElementById('workspace-folder-id').value,document.getElementById('playback-rate').value,document.getElementById('gemini-model').value,document.getElementById('gemini-api-key').value,document.getElementById('gemini-clear-key').checked]); }
-  function dirty() { return snapshot !== formValue(); }
-  function refresh() { document.getElementById('settings-unsaved').textContent = dirty() ? "Unsaved changes" : ''; }
-  function open() {
-    var dialog=document.getElementById('settings-dialog');
-    if(dialog.open) return;
-    snapshot=formValue(); lastFocus=document.activeElement; refresh();
-    document.getElementById('settings-error').textContent=''; dialog.showModal();
+  var save, timer, version=0, savedVersion=0, sending=false, lastFocus, failure=null, waiters=[];
+  function el(id){return document.getElementById(id);}
+  function request(){return {workspaceRootFolderId:el('workspace-folder-id').value,preferredPlaybackRate:Number(el('playback-rate').value),gemini:{model:el('gemini-model').value,apiKey:el('gemini-api-key').value,clearKey:el('gemini-clear-key').checked}};}
+  function refresh(){el('settings-unsaved').textContent=failure?"Not saved":sending?"Saving…":version>savedVersion?"Changes pending":"Saved";el('settings-retry').classList.toggle('hidden',!failure);}
+  function open(){var dialog=el('settings-dialog');if(dialog.open)return;lastFocus=document.activeElement;refresh();dialog.showModal();}
+  function settle(ok){waiters.splice(0).forEach(function(done){done(ok);});}
+  function write(){
+    clearTimeout(timer);if(sending)return;if(version===savedVersion){settle(true);return;}
+    if(!el('workspace-form').checkValidity()){failure=true;el('settings-error').textContent="Complete the required settings before they can be saved.";refresh();settle(false);return;}
+    var ticket=version,payload=request();sending=true;failure=null;refresh();
+    save(payload,function(response){
+      sending=false;
+      if(!response.ok){failure=true;el('settings-error').textContent=response.error.message;refresh();settle(false);return;}
+      savedVersion=ticket;el('settings-error').textContent='';
+      if(version===ticket){el('gemini-api-key').value='';el('gemini-clear-key').checked=false;}
+      if(version>savedVersion)write();else{refresh();settle(true);}
+    });
   }
-  function close() {
-    if(saving) return;
-    if(dirty() && !window.confirm("Discard unsaved settings?")) return;
-    var values=JSON.parse(snapshot); document.getElementById('workspace-folder-id').value=values[0]; document.getElementById('playback-rate').value=values[1];
-    document.getElementById('gemini-model').value=values[2]; document.getElementById('gemini-api-key').value=''; document.getElementById('gemini-clear-key').checked=values[4];
-    document.getElementById('settings-dialog').close(); if(lastFocus) lastFocus.focus();
+  function flush(){return new Promise(function(resolve){waiters.push(resolve);write();});}
+  async function close(){if(!await flush())return;el('settings-dialog').close();if(lastFocus?.isConnected)lastFocus.focus();}
+  function init(){
+    el('settings-close').onclick=close;el('settings-cancel').onclick=close;el('settings-retry').onclick=write;
+    el('settings-dialog').addEventListener('cancel',function(e){e.preventDefault();close();});
+    function change(){version++;failure=null;refresh();clearTimeout(timer);timer=setTimeout(write,600);}
+    el('workspace-form').addEventListener('input',change);el('workspace-form').addEventListener('change',change);
   }
-  function setSaving(value) {
-    saving=value;
-    document.getElementById('settings-close').disabled=value;
-    document.getElementById('settings-cancel').disabled=value;
-    document.getElementById('settings-save').disabled=value;
-    document.getElementById('settings-save').setAttribute('aria-busy',String(value));
-    document.getElementById('workspace-folder-id').disabled=value;
-    document.getElementById('playback-rate').disabled=value;
-    ['gemini-model','gemini-api-key','gemini-clear-key'].forEach(function(id){document.getElementById(id).disabled=value;});
-  }
-  function saved() { document.getElementById('gemini-api-key').value=''; document.getElementById('gemini-clear-key').checked=false; snapshot=formValue(); refresh(); setSaving(false); document.getElementById('settings-dialog').close(); if(lastFocus) lastFocus.focus(); }
-  function error(message) { setSaving(false); document.getElementById('settings-error').textContent=message; }
-  function init() {
-    document.getElementById('settings-close').onclick=close; document.getElementById('settings-cancel').onclick=close;
-    document.getElementById('settings-dialog').addEventListener('cancel',function(e){ e.preventDefault(); close(); });
-    document.getElementById('workspace-form').addEventListener('input',refresh);
-  }
-  function configureGemini(config){document.getElementById('gemini-model').value=config.model||'gemini-2.5-flash';document.getElementById('gemini-key-status').textContent=config.configured?"API key saved for your Google account.":"No API key configured.";}
-  return { configureGemini:configureGemini,init:init,open:open,close:close,saved:saved,error:error,setSaving:setSaving };
+  function configureGemini(config){el('gemini-model').value=config.model||'gemini-2.5-flash';el('gemini-key-status').textContent=config.configured?"API key saved for your Google account.":"No API key configured.";}
+  return {init:init,open:open,close:close,configureGemini:configureGemini,connect:function(fn){save=fn;},flush:flush,pending:function(){return sending||version>savedVersion;},error:function(message){failure=true;el('settings-error').textContent=message;refresh();}};
 })();
 </script>
     <script>
@@ -3178,13 +3439,12 @@ window.STCaseGallery = (function() {
     }
     items.slice(page*pageSize,(page+1)*pageSize).forEach(function(item){
       var row=document.createElement('article');row.className='case-row';
-      row.innerHTML=("<div class=\"case-identity\"><span class=\"case-glyph\">")+STIcons.svg('folder')+("</span><div><button class=\"case-name open-case\" type=\"button\"></button><span class=\"case-description\"></span></div></div><div class=\"case-actions\"><span class=\"badge\"></span><time class=\"case-date\"></time><button class=\"ghost icon-button delete-case\" type=\"button\">")+STIcons.svg('trash')+'</button></div>';
+      row.innerHTML='<div class="case-identity"><span class="case-glyph">'+STIcons.svg('folder')+'</span><div><button class="case-name open-case" type="button"></button><span class="case-description"></span></div></div><div class="case-actions"><span class="badge"></span><time class="case-date"></time></div>';
       row.querySelector('.case-name').textContent=item.name;
       row.querySelector('.case-description').textContent=item.equipmentCount+" equipment units"+(item.dataClassification==='PUBLIC_DEMONSTRATION_ONLY'?" · Public demo":'');
       var badge=row.querySelector('.badge');badge.classList.toggle('ready',Boolean(item.isSimulationReady));badge.innerHTML=STIcons.svg(item.isSimulationReady?'check':'edit')+(item.isSimulationReady?"Ready":"Draft");
       var date=new Date(item.updatedAt);row.querySelector('time').textContent=Number.isNaN(date.getTime())?'':date.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
       row.querySelector('.open-case').onclick=function(){openCase(item.id);};
-      var del=row.querySelector('.delete-case');del.title="Delete "+item.name;del.setAttribute('aria-label',del.title);del.onclick=function(){requestCaseDeletion(item.id,item.name,del);};
       target.appendChild(row);
     });
     if(items.length>pageSize) {
@@ -3246,9 +3506,12 @@ window.STShell = function(state,actions) {
     document.querySelectorAll('.sidebar [data-view]').forEach(function(button){button.disabled=!active;button.setAttribute('aria-current',button.dataset.view===view?'page':'false');button.title=active?button.getAttribute('aria-label'):"Open a case first";});
     document.getElementById('breadcrumb-case').textContent=active?state.activeCase.name:"Workspace";
     document.getElementById('breadcrumb-view').textContent={cases:"Cases",editor:"Line setup",simulation:"Simulation",results:"Results",whatif:"What-If",comparison:"Compare simulations"}[view];
-    var save=document.getElementById('save-workspace-case');save.classList.toggle('hidden',!active);save.disabled=!state.isDirty || state.saving;save.innerHTML=STIcons.svg('save')+(state.isDirty?"Save changes":'Saved');
+    document.getElementById('autosave-indicator').classList.toggle('hidden',!active);
+    document.getElementById('case-danger-zone').classList.toggle('hidden',!active);
+    document.getElementById('workspace-folder-id').disabled=active;
+    document.getElementById('workspace-folder-note').classList.toggle('hidden',!active);
     document.getElementById('show-new-case').disabled=!connected; document.getElementById('create-public-demo-case').disabled=!connected;
-    document.getElementById('whatif-empty').classList.toggle('hidden',Boolean(state.run.result));
+    document.getElementById('whatif-empty').classList.add('hidden');
     if(view==='results') STResults.render(state.run.result,state.activeCase);
     STIcons.decorate(document);
   }
@@ -3260,7 +3523,6 @@ window.STShell = function(state,actions) {
     function collapse(){document.getElementById('application').classList.toggle('sidebar-collapsed',collapsed);var el=document.getElementById('collapse-sidebar');el.setAttribute('aria-expanded',String(!collapsed));el.setAttribute('aria-label',collapsed?"Expand sidebar":"Collapse sidebar");el.title=el.getAttribute('aria-label');}
     collapse();document.getElementById('collapse-sidebar').onclick=function(){collapsed=!collapsed;STPreferences.write('sidebar',collapsed?'collapsed':'expanded');collapse();setTimeout(actions.redraw,180);};
     document.querySelectorAll('[data-view]').forEach(function(button){button.addEventListener('click',function(){actions.navigate(button.dataset.view);});});
-    document.getElementById('save-workspace-case').onclick=function(){actions.save();};
     document.getElementById('cancel-new-case').onclick=function(){document.getElementById('new-case-form').classList.add('hidden');document.getElementById('show-new-case').focus();};
     ['case-filter','case-sort'].forEach(function(id){document.getElementById(id).onchange=actions.cases;});
     var dialog=document.getElementById('command-dialog'),input=document.getElementById('command-search'),list=document.getElementById('command-list');
@@ -3543,9 +3805,9 @@ window.STComparison=function(state,isFiniteNumber){
       context.appendChild(heading);
       var detail = document.createElement('p');
       if (!bothSaved) {
-        detail.textContent = "Configuration can be compared now. Run and save both simulations before interpreting result deltas.";
+        detail.textContent = "Configuration can be compared now. Run both simulations before interpreting result deltas; results are saved automatically.";
       } else if (paired) {
-        detail.textContent = "Paired run: both used seed " + leftSeed + " and " + leftDuration + " virtual seconds. Result differences can be attributed to the saved configuration change within this modeled run.";
+        detail.textContent = "Paired run: both used seed " + leftSeed + " and " + leftDuration + " virtual seconds. Matching seed and duration improve comparability but do not guarantee identical failure events or isolate causality when equipment, commands or random-number consumption change.";
       } else {
         detail.textContent = "Comparison caution: saved seed or virtual duration differs (" + leftSeed + ' / ' + leftDuration + " s vs. " + rightSeed + ' / ' + rightDuration + " s). Configuration differences remain valid, but rerun both with the same seed and duration for a direct result comparison.";
       }
@@ -3600,24 +3862,24 @@ return {render:renderCaseComparison};
 };
 </script>
     <script>
-window.STAssistant = function(state) {
-  var opened=false,caseId=null,messages=[],pending=false,sequence=0;
+window.STAssistant = function(state,actions) {
+  var opened=false,caseId=null,simulationId=null,messages=[],pending=false,sequence=0;
   function el(id){return document.getElementById(id);}
   function render(){
     el('gemini-messages').textContent='';
-    messages.forEach(function(m){var p=document.createElement('p');p.className='gemini-message';p.dataset.role=m.role;var label=document.createElement('strong');label.textContent=m.role==='user'?'You':"Gemini";p.appendChild(label);p.appendChild(document.createTextNode(m.text));el('gemini-messages').appendChild(p);});
+    messages.forEach(function(m){var p=document.createElement('p');p.className='gemini-message';p.dataset.role=m.role;var label=document.createElement('strong');label.textContent=m.role==='user'?'You':"Gemini";p.appendChild(label);p.appendChild(document.createTextNode(m.text));el('gemini-messages').appendChild(p);(m.proposals||[]).forEach(function(proposal){el('gemini-messages').appendChild(STWhatIf.card(proposal,actions.applyScenario));});if(m.context){var note=document.createElement('p');note.className='chart-note';note.textContent="Compact context:"+' '+m.context.includedEquipment+'/'+m.context.totalEquipment+" equipment included. Replay samples, event logs and raw Sheet rows excluded."+(m.historyOmitted?" Older messages omitted: "+m.historyOmitted:'');el('gemini-messages').appendChild(note);}});
     el('gemini-messages').scrollTop=el('gemini-messages').scrollHeight;
   }
   function reset(){sequence++;messages=[];pending=false;caseId=null;opened=false;render();el('gemini-question').value='';el('gemini-error').textContent='';sync();}
   function sync(){
     var active=state.activeCase;
-    if(caseId!==(active?.id||null)){sequence++;caseId=active?.id||null;messages=[];pending=false;render();el('gemini-question').value='';el('gemini-error').textContent='';}
+    if(caseId!==(active?.id||null)||simulationId!==state.activeSimulationId){sequence++;caseId=active?.id||null;simulationId=state.activeSimulationId;messages=[];pending=false;render();el('gemini-question').value='';el('gemini-error').textContent='';}
     var visible=Boolean(active&&opened);
     el('application').classList.toggle('assistant-open',visible);el('gemini-panel').classList.toggle('hidden',!visible);el('toggle-gemini').setAttribute('aria-expanded',String(visible));
-    el('gemini-context').textContent=active?active.name+" · saved case":'';
+    el('gemini-context').textContent=active?active.name+' · '+((active.simulations||[]).find(function(s){return s.id===simulationId;})?.name||''):'';
     var configured=Boolean(state.bootstrap?.gemini?.configured);
-    el('gemini-notice').textContent=pending?"Gemini is analyzing the case…":!configured?"Add your Gemini API key in Settings to ask questions.":state.isDirty?"Save your changes before asking about this case.":"Context includes this saved case and all saved simulation results.";
-    el('send-gemini').disabled=pending||!configured||state.isDirty||!active;el('send-gemini').setAttribute('aria-busy',String(pending));
+    el('gemini-notice').textContent=pending?"Gemini is analyzing the case…":!configured?"Add your Gemini API key in Settings to ask questions.":state.isDirty?"Pending edits will be saved before sending your question.":"Context uses the selected simulation, aggregate results and physical design checks.";
+    el('send-gemini').disabled=pending||!configured||!active;el('send-gemini').setAttribute('aria-busy',String(pending));
     el('clear-gemini').disabled=pending;
   }
   function init(){
@@ -3632,12 +3894,16 @@ window.STAssistant = function(state) {
     el('close-gemini').onclick=function(){opened=false;sync();el('toggle-gemini').focus();window.dispatchEvent(new Event('resize'));};
     el('gemini-panel').addEventListener('keydown',function(e){if(e.key==='Escape'){e.stopPropagation();el('close-gemini').click();}});
     el('clear-gemini').onclick=function(){messages=[];render();el('gemini-error').textContent='';};
-    el('gemini-form').onsubmit=function(e){
+    el('gemini-form').onsubmit=async function(e){
       e.preventDefault();sync();if(el('send-gemini').disabled)return;
       var question=el('gemini-question').value.trim();if(!question)return;
-      var request={caseId:caseId,simulationId:state.activeSimulationId,question:question,history:messages.slice(-24)},ticket=++sequence;
+      var originalCase=caseId,originalSimulation=simulationId;
+      pending=true;sync();
+      try{await actions.flush();}catch(error){pending=false;sync();el('gemini-error').textContent=error.message;return;}
+      if(originalCase!==caseId||originalSimulation!==simulationId)return;
+      var request={caseId:caseId,simulationId:simulationId,question:question,history:messages.slice(-24).map(function(m){return {role:m.role,text:m.text};})},ticket=++sequence;
       pending=true;el('gemini-error').textContent='';messages.push({role:'user',text:question});el('gemini-question').value='';render();sync();
-      function finish(response){if(ticket!==sequence)return;pending=false;if(response.ok)messages.push({role:'model',text:response.data.text});else {messages.pop();el('gemini-question').value=question;el('gemini-error').textContent=response.error.message;}render();sync();}
+      function finish(response){if(ticket!==sequence)return;pending=false;if(response.ok)messages.push({role:'model',text:response.data.text,proposals:response.data.proposals||[],context:response.data.context,historyOmitted:response.data.historyOmitted});else {messages.pop();el('gemini-question').value=question;el('gemini-error').textContent=response.error.message;}render();sync();}
       google.script.run.withFailureHandler(function(){finish({ok:false,error:{message:"Gemini could not be reached. Try again."}});}).withSuccessHandler(finish).askGemini(request);
     };
   }
@@ -3844,12 +4110,14 @@ window.STSheetImport=function(state,actions){
     var charts = STCharts(state,formatNumber);
     var drawSimulationChart = charts.drawSimulationChart, drawEquipmentSpeedChart = charts.drawEquipmentSpeedChart, drawEquipmentSpeedSparkline = charts.drawEquipmentSpeedSparkline;
     var renderCaseComparison = STComparison(state,isFiniteNumber).render;
-    var assistant = STAssistant(state);
+    var assistant = STAssistant(state, {flush:flushCase, applyScenario:applyChatScenario});
     var sheetImport = STSheetImport(state,{apply:applySheetImport,capture:captureSheetImport});
     var shell = STShell(state,{assistant:assistant.sync,signout:lockWorkspace,navigate:navigateView,home:showCaseHome,save:saveActiveCase,cases:function(){renderCases(state.bootstrap?.cases||[]);},redraw:renderPlaybackFrame});
     function navigateView(view) {
       if (!state.activeCase) return;
+      if (!syncPersistentSimulation()) return;
       state.uiView = view;
+      if(view==='whatif')renderSimulationAnalysis();
       if (view === 'comparison') showCaseComparison();
       else { state.workspaceView = 'simulation'; renderWorkspaceTabs(); }
       shell.sync(); renderPlaybackFrame();
@@ -3879,40 +4147,73 @@ window.STSheetImport=function(state,actions){
         toggle('new-case-form', true); document.getElementById('new-case-name').focus();
       });
       document.getElementById('case-search').addEventListener('input', function() { renderCases(state.bootstrap ? state.bootstrap.cases : []); });
-      document.getElementById('workspace-form').addEventListener('submit', saveWorkspace);
+      document.getElementById('workspace-form').addEventListener('submit', function(event){event.preventDefault();});
+      STSettings.connect(saveWorkspace);
+      document.getElementById('retry-autosave').onclick = retryAutosave;
       document.getElementById('new-case-form').addEventListener('submit', createDraftCase);
       document.getElementById('create-public-demo-case').addEventListener('click', createPublicDemoCase);
-      document.getElementById('reload-case').addEventListener('click', reloadActiveCase);
       document.getElementById('clone-case').addEventListener('click', cloneActiveSimulation);
       document.getElementById('delete-case').addEventListener('click', deleteActiveCase);
-      document.getElementById('save-case').addEventListener('click', saveActiveCase);
+      document.getElementById('rename-simulation').onclick = renameSimulation;
+      document.getElementById('delete-simulation').onclick = deleteSimulation;
       document.getElementById('add-equipment').addEventListener('click', addEquipment);
       document.getElementById('case-editor-form').addEventListener('input', markCaseDirty);
       document.getElementById('equipment-list').addEventListener('input', markCaseDirty);
       document.getElementById('equipment-list').addEventListener('change', markCaseDirty);
+      document.getElementById('case-editor-form').addEventListener('change', markCaseDirty);
       document.getElementById('add-control-event').addEventListener('click', addControlEvent);
       document.getElementById('run-simulation').addEventListener('click', runSimulation);
       document.getElementById('play-simulation').addEventListener('click', startPlayback);
       document.getElementById('pause-simulation').addEventListener('click', pausePlayback);
       document.getElementById('reset-playback').addEventListener('click', resetPlayback);
+      ['run-duration','run-sample-interval','run-seed'].forEach(function(id){document.getElementById(id).addEventListener('input',markCaseDirty);});
       document.getElementById('duration-mode').addEventListener('change', function(event) {
         state.run.durationMode = event.target.value;
+        markCaseDirty();
       });
     }
 
+    var autosave = STAutosave({capture:captureForSave,send:function(payload,done){callServer('saveCase',[payload],done);},accept:function(saved){
+      if (!state.activeCase || state.activeCase.id !== saved.id) return;
+      state.activeCase.revision=saved.revision;state.activeCase.updatedAt=saved.updatedAt;
+      var item=(state.bootstrap?.cases||[]).find(function(x){return x.id===saved.id;});
+      if(item){item.name=saved.name;item.updatedAt=saved.updatedAt;item.equipmentCount=saved.equipment.length;item.isSimulationReady=saved.equipment.length>=2;}
+    },status:function(status,error){
+      state.saving=status==='saving';state.isDirty=status!=='saved';
+      var label=document.getElementById('autosave-status');if(!label)return;
+      label.textContent={saved:"Saved",pending:"Changes pending",saving:"Saving…",error:"Not saved"}[status];
+      label.title=error?error.message:'';label.dataset.state=status;
+      document.getElementById('retry-autosave').classList.toggle('hidden',status!=='error');
+      if(shell)shell.sync();
+    }});
+    window.addEventListener('beforeunload',function(event){if(autosave.pending()||STSettings.pending()){event.preventDefault();event.returnValue='';}});
+    window.addEventListener('online',function(){if(autosave.pending())autosave.retry().catch(function(){});});
+    function flushCase(){if(state.activeCase&&!syncPersistentSimulation())return Promise.reject(new Error("Complete the required fields and correct invalid JSON before this change can be saved."));return autosave.flush();}
+    async function retryAutosave(){
+      try{await flushCase();}catch(error){
+        if(error.code==='CASE_CONFLICT'){
+          var answer=await STDialog.open({title:"A newer case version exists",message:"Your changes have not overwritten the newer version. Download your draft before loading the version from Drive, then review the differences.",buttons:[{id:'cancel',label:"Cancel"},{id:'reload',label:"Download draft and reload"}]});
+          if(answer.action==='reload'){
+            var draft=captureForSave();if(!draft)return;
+            var url=URL.createObjectURL(new Blob([JSON.stringify(draft,null,2)],{type:'application/json'}));var link=document.createElement('a');link.href=url;link.download='case-draft.json';link.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+            var id=state.activeCase.id;autosave.reset();state.isDirty=false;openCase(id);
+          }
+        }else showError({message:error.message});
+      }
+    }
     function signIn() {
       document.getElementById('sign-in-button').disabled = true;
       document.getElementById('auth-status').textContent = "Verifying your Google access…";
       initialize();
     }
 
-    function showCaseHome() {
-      if(state.saving){setStatus("Saving your changes…");return false;}
-      if (state.isDirty && !window.confirm("Discard unsaved changes and return to cases?")) return false;
+    async function showCaseHome() {
+      try { await flushCase(); } catch(error) { showError({message:error.message}); return false; }
       state.openSequence += 1;
       stopPlaybackTimer();
       sheetImport.close();
       state.activeCase = null;
+      autosave.reset();
       state.run.result = null;
       state.isDirty = false;
       ['editor-panel', 'run-panel', 'comparison-panel', 'workspace-tabs', 'engine-panel'].forEach(function(id) { toggle(id, false); });
@@ -3922,8 +4223,9 @@ window.STSheetImport=function(state,actions){
       return true;
     }
 
-    function lockWorkspace() {
-      if (!showCaseHome()) return;
+    async function lockWorkspace() {
+      if (!await showCaseHome()) return;
+      if (!await STSettings.flush()) return;
       state.requestEpoch += 1;
       STPreferences.write('remember', null);
       document.getElementById('remember-session').checked = false;
@@ -3945,6 +4247,7 @@ window.STSheetImport=function(state,actions){
       document.getElementById('sign-in-button').disabled = false;
       document.getElementById('auth-status').textContent = '';
       STPreferences.write('remember', document.getElementById('remember-session').checked ? 'yes' : null);
+      document.documentElement.classList.remove('restoring-session');
       toggle('auth-panel', false); toggle('application', true);
       state.bootstrap = response.data;
       STSettings.configureGemini(response.data.gemini || {});
@@ -3965,19 +4268,16 @@ window.STSheetImport=function(state,actions){
       shell.sync();
     }
 
-    function saveWorkspace(event) {
-      event.preventDefault();
-      STSettings.setSaving(true);
-      callServer('saveUserSettings', [{
-        workspaceRootFolderId: document.getElementById('workspace-folder-id').value,
-        preferredPlaybackRate: Number(document.getElementById('playback-rate').value),
-        gemini: {model:document.getElementById('gemini-model').value,apiKey:document.getElementById('gemini-api-key').value,clearKey:document.getElementById('gemini-clear-key').checked}
-      }], function(response) {
-        STSettings.setSaving(false);
-        if (!response.ok) return STSettings.error(response.error.message || "Settings could not be saved.");
-        STSettings.saved();
-        shell.toast("Settings saved");
-        initialize();
+    function saveWorkspace(request, done) {
+      callServer('saveUserSettings', [request], function(response) {
+        if(response.ok){
+          state.bootstrap.settings=response.data;
+          state.bootstrap.gemini={model:request.gemini.model,configured:request.gemini.clearKey?false:Boolean(request.gemini.apiKey||state.bootstrap.gemini?.configured)};
+          document.getElementById('gemini-key-status').textContent=state.bootstrap.gemini.configured?"API key saved for your Google account.":"No API key configured.";
+          shell.sync();
+          if(!state.activeCase)callServer('getBootstrap',[],function(r){if(r.ok&&state.bootstrap?.settings.workspaceRootFolderId===response.data.workspaceRootFolderId){state.bootstrap.cases=r.data.cases;renderCases(r.data.cases);shell.sync();}});
+        }
+        done(response);
       });
     }
 
@@ -4012,8 +4312,9 @@ function createPublicDemoCase() {
       requestCaseDeletion(state.activeCase.id, state.activeCase.name, document.getElementById('delete-case'));
     }
 
-    function requestCaseDeletion(caseId, caseName, button) {
-      if (!window.confirm("Move Case \"" + caseName + "\" to the Drive trash?")) return;
+    async function requestCaseDeletion(caseId, caseName, button) {
+      if (!await STDialog.confirm("Delete case","Move Case \"" + caseName + "\" to the Drive trash?",true)) return;
+      try{await flushCase();}catch(error){showError({message:error.message});return;}
       if (button) button.disabled = true;
       callServer('deleteCase', [caseId], function(response) {
         if (button) button.disabled = false;
@@ -4022,6 +4323,8 @@ function createPublicDemoCase() {
         if (deletedActiveCase) {
           stopPlaybackTimer();
           state.activeCase = null;
+          autosave.reset();
+          STSettings.close();
           state.isDirty = false;
           state.run.commands = [];
           state.run.result = null;
@@ -4035,14 +4338,15 @@ function createPublicDemoCase() {
       });
     }
 
-function openCase(caseId) {
-      if (state.isDirty && !window.confirm("Discard unsaved changes and open this case?")) return;
+async function openCase(caseId) {
+      try{await flushCase();}catch(error){showError({message:error.message});return;}
       var sequence = ++state.openSequence;
       callServer('getCase', [caseId], function(response) {
         if(sequence !== state.openSequence) return;
         if (!response.ok) return showError(response.error);
         stopPlaybackTimer();
         state.activeCase = response.data;
+        autosave.reset();
         toggle('cases-panel', false);
 
         state.isDirty = false;
@@ -4058,67 +4362,56 @@ function openCase(caseId) {
       });
     }
 
-    function reloadActiveCase() {
-      if (!state.activeCase) return;
-      openCase(state.activeCase.id);
+    function makeSimulationClone(source) {
+      var copy=cloneJson(source), count=state.activeCase.simulations.length;
+      copy.id='simulation-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9);
+      copy.name="Copy of "+source.name;
+      copy.results=null;copy.clonedFromSimulationId=source.id;copy.createdAt=new Date().toISOString();copy.updatedAt=copy.createdAt;
+      return copy;
     }
-
-    function cloneActiveSimulation() {
-      if (!state.activeCase) return;
-      saveActiveCase(function() {
-        cloneSavedActiveSimulation();
-      });
+    async function cloneActiveSimulation() {
+      if(!state.activeCase)return;
+      try{await flushCase();}catch(error){showError({message:error.message});return;}
+      var copy=makeSimulationClone(activePersistentSimulation());
+      state.activeCase.simulations.push(copy);
+      activatePersistentSimulation(copy.id,true);state.uiView='editor';shell.sync();autosave.change(true);
     }
-
-    function cloneSavedActiveSimulation(afterClone) {
-      if (!state.activeCase) return;
-      var button = document.getElementById('clone-case');
-      if (button) button.disabled = true;
-      callServer('cloneSimulation', [state.activeCase.id, state.activeSimulationId], function(response) {
-        if (button) button.disabled = false;
-        if (!response.ok) return showError(response.error);
-        state.activeCase = response.data;
-        state.activeSimulationId = response.data.simulations[response.data.simulations.length - 1].id;
-        if (typeof afterClone === 'function') {
-          afterClone(activePersistentSimulation());
-          return;
-        }
-        renderWorkspaceTabs();
-        activatePersistentSimulation(state.activeSimulationId);
-        setStatus("Active simulation: " + activePersistentSimulation().name + ". This is a clone; the source remains unchanged.");
-      });
+    async function renameSimulation() {
+      var source=activePersistentSimulation();if(!source)return;
+      var answer=await STDialog.open({title:"Rename simulation",input:{label:"Simulation name",value:source.name},buttons:[{id:'cancel',label:"Cancel"},{id:'ok',label:"OK"}]});
+      if(answer.action!=='ok'||activePersistentSimulation()?.id!==source.id||answer.value===source.name)return;
+      source.name=answer.value;source.updatedAt=new Date().toISOString();renderEditorMeta();renderWorkspaceTabs();autosave.change(true);
     }
-
-    function markCaseDirty() {
-      if (!state.activeCase) return;
-      state.isDirty = true;
-      renderEditorMeta();
-      renderRunWorkspace();
+    async function deleteSimulation() {
+      var source=activePersistentSimulation();if(!source)return;
+      if(state.activeCase.simulations.length<2){await STDialog.alert("Delete simulation","Keep at least one simulation in the case. You can delete the entire case in Settings.");return;}
+      if(!await STDialog.confirm("Delete simulation","Delete this simulation and its results? "+source.name,true))return;
+      try{await flushCase();}catch(error){showError({message:error.message});return;}
+      state.activeCase.simulations=state.activeCase.simulations.filter(function(s){return s.id!==source.id;});
+      activatePersistentSimulation(state.activeCase.simulations[0].id,true);state.uiView='editor';shell.sync();autosave.change(true);
     }
-
+    function invalidateActiveResult() {
+      var simulation=activePersistentSimulation();if(!simulation)return;
+      simulation.results=null;state.run.result=null;state.run.configuration=null;stopPlaybackTimer();
+      document.getElementById('simulation-json-preview').value='';
+      toggle('simulation-results',false);
+    }
+    function markCaseDirty(event) {
+      if (!state.activeCase) return;
+      if(!event||!['case-name','unit-of-flow'].includes(event.target?.id))invalidateActiveResult();
+      autosave.change();renderEditorMeta();
+    }
+    function captureForSave() {
+      var next=collectCaseEditor();if(!next)return null;
+      if(!next.name.trim()||next.equipment.some(function(e){return !e.id||!e.name||!(e.nominalRatePerSecond>0);}))throw new Error("Complete the required fields and correct invalid JSON before this change can be saved.");
+      var simulation=activePersistentSimulation(),run=readRunConfiguration();if(!run)return null;
+      if(simulation){simulation.equipment=cloneJson(next.equipment);simulation.dynamicConfig=cloneJson(run);simulation.updatedAt=new Date().toISOString();}
+      next.simulations=cloneJson(state.activeCase.simulations);
+      return cloneJson(next);
+    }
     function saveActiveCase(afterSave) {
-      var next = collectCaseEditor();
-      if (!next) return;
-      var simulation = activePersistentSimulation();
-      if (simulation) {
-        simulation.equipment = cloneJson(next.equipment || []);
-        simulation.dynamicConfig = cloneJson(readRunConfiguration() || simulation.dynamicConfig || {});
-        next.simulations = cloneJson(state.activeCase.simulations || []);
-      }
-      if(state.saving) return;
-      state.saving=true; shell.sync();
-      setBusy('save-case', true);
-      callServer('saveCase', [next], function(response) {
-        state.saving=false; shell.sync();
-        setBusy('save-case', false);
-        if (!response.ok) return showError(response.error);
-        state.activeCase = response.data;
-        state.isDirty = false;
-        renderEditor();
-        initialize();
-        if (typeof afterSave === 'function') afterSave(response.data);
-        else setStatus("Case saved as revision " + response.data.revision + '.');
-      });
+      autosave.change(true);
+      return flushCase().then(function(){if(typeof afterSave==='function')afterSave(state.activeCase);}).catch(function(error){showError({message:error.message});});
     }
 
     function captureSheetImport() {
@@ -4143,8 +4436,8 @@ function openCase(caseId) {
       }
       state.activeCase.metadata=Object.assign({},state.activeCase.metadata,{dataClassification:'USER_PROVIDED'});
       state.isDirty=true;state.uiView='editor';
-      renderEditor();shell.sync();
-      setStatus("Applied Sheet selection to "+simulation.name+': '+result.added+" added, "+result.updated+" updated. Save the case."+(result.equipmentChanged?" Run again to refresh results.":''));
+      renderEditor();shell.sync();autosave.change(true);
+      setStatus("Applied Sheet selection to "+simulation.name+': '+result.added+" added, "+result.updated+" updated. Saving automatically."+(result.equipmentChanged?" Run again to refresh results.":''));
       return true;
     }
 
@@ -4153,6 +4446,7 @@ function openCase(caseId) {
       state.activeCase.equipment.push(createBlankEquipment());
       state.isDirty = true;
       renderEquipment();
+      invalidateActiveResult();autosave.change(true);
       renderRunWorkspace();
     }
 
@@ -4210,6 +4504,7 @@ function openCase(caseId) {
       card.dataset.index = String(index);
       card.innerHTML = ("<div class=\"equipment-header\"><strong></strong><div class=\"button-row\"><button class=\"equipment-drag ghost icon-button\" type=\"button\" aria-label=\"" + "Reorder equipment" + "\" title=\"" + "Drag to reorder; use Arrow Up or Down on this handle" + "\"></button><button class=\"remove-equipment danger\" type=\"button\">" + "Remove" + "</button></div></div><div class=\"equipment-grid\"><label>" + "Equipment ID" + "<input class=\"equipment-id\"></label><label>" + "Type" + "<select class=\"equipment-type\"><option value=\"BLOWER\">" + "Blower" + "</option><option value=\"BLOWMOLDER\">" + "Blowmolder" + "</option><option value=\"CONVEYOR\">" + "Conveyor" + "</option><option value=\"PACEMAKER\">" + "Pacemaker" + "</option><option value=\"PUCKER\">" + "Pucker" + "</option><option value=\"FILLER\">" + "Filler" + "</option><option value=\"DEPUCKER\">" + "De-pucker" + "</option><option value=\"SLEEVER\">" + "Sleever" + "</option><option value=\"CASE_PACKER\">" + "Case packer" + "</option><option value=\"PALLETIZER\">" + "Palletizer" + "</option><option value=\"CUSTOM\">" + "Other / custom" + "</option></select></label><label>" + "Name" + "<input class=\"equipment-name\"></label><label>" + "Nominal rate / sec" + "<input class=\"equipment-rate\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Initial mode" + "<select class=\"equipment-mode\"><option value=\"AUTO\">" + "Automatic" + "</option><option value=\"MANUAL\">" + "Manual" + "</option><option value=\"PAUSE\">" + "Paused" + "</option><option value=\"STOP\">" + "Stopped" + "</option></select></label></div><section class=\"format-zone-setup\"><div class=\"format-zone-heading\"><div><strong>" + "FlowPilot conveyor design" + "</strong><p>" + "Required for every conveyor. Geometry is always active: the engine derives conveyor velocity, pitch, capacity, Prime, Back-up margin, recovery, and audit from these named inputs." + "</p></div></div><div class=\"format-zone-grid\"><label>" + "Installed length L_act (mm)" + "<input class=\"format-zone-lact\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Prime reserve L_p (mm)" + "<input class=\"format-zone-lp-prime\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Package length (mm)" + "<input class=\"format-zone-package-length\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Upstream discharge pitch (mm)" + "<input class=\"format-zone-discharge-pitch\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Conveyor speed factor (%)" + "<input class=\"format-zone-speed-factor\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Installed Back-up position (mm)" + "<input class=\"format-zone-backup\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Discharge runout (mm)" + "<input class=\"format-zone-discharge-runout\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Reject runout (mm)" + "<input class=\"format-zone-reject-runout\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Blocked time delay (s)" + "<input class=\"format-zone-blocked-delay\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Clear time delay (s)" + "<input class=\"format-zone-clear-delay\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Insurance factor (units)" + "<input class=\"format-zone-insurance\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Upstream stop response (s)" + "<input class=\"format-zone-stop-response\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Bottles discharged at stop" + "<input class=\"format-zone-residual\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + "Downstream ramp-up (s)" + "<input class=\"format-zone-downstream-ramp\" type=\"number\" min=\"0\" step=\"any\"></label></div><p class=\"format-zone-preview\"></p></section><details class=\"equipment-json-details\"><summary>" + "Advanced JSON fields" + "</summary><label class=\"characteristics-label\">" + "Characteristics JSON (optional)" + "<textarea class=\"equipment-characteristics\" spellcheck=\"false\"></textarea></label><label class=\"characteristics-label\">" + "Noise profile JSON (optional)" + "<textarea class=\"equipment-noise-profile\" spellcheck=\"false\"></textarea></label><label class=\"characteristics-label\">" + "Advanced process format JSON (optional)" + "<textarea class=\"equipment-process-data\" spellcheck=\"false\"></textarea></label></details>");
       card.querySelector('strong').textContent = "Step " + (index + 1) + ' · ' + (equipment.type || 'CUSTOM') + ' · ' + (equipment.name || equipment.id || 'Unnamed') + ' · ' + (Number(equipment.nominalRatePerSecond || 0) * 60) + " BPM";
+      var jsonNote=document.createElement('p');jsonNote.className='chart-note';jsonNote.textContent="Advanced engine configuration. These values are populated by the forms and Sheet import. Most users do not need to edit JSON. Invalid JSON is not saved; correct it to resume automatic saving. Conveyor geometry controls take precedence over the corresponding JSON fields.";card.querySelector('.equipment-json-details summary').after(jsonNote);
       card.querySelector('.equipment-id').value = equipment.id || '';
       card.querySelector('.equipment-type').value = equipment.type || 'CUSTOM';
       card.querySelector('.equipment-name').value = equipment.name || '';
@@ -4457,14 +4752,17 @@ function numericInputValue(input) {
       state.isDirty = true;
       renderEquipment();
       STEquipmentDrag.animate(positions,targetIndex);
+      invalidateActiveResult();autosave.change(true);
       renderRunWorkspace();
     }
 
-    function removeEquipment(index) {
+    async function removeEquipment(index) {
+      if (!await STDialog.confirm("Delete equipment","Remove this equipment from the current simulation? Its results will be cleared.",true))return;
       if (!syncEquipmentFromEditor()) return;
       state.activeCase.equipment.splice(index, 1);
       state.isDirty = true;
       renderEquipment();
+      invalidateActiveResult();autosave.change(true);
       renderRunWorkspace();
     }
 
@@ -4534,10 +4832,10 @@ function parseJsonObject(rawValue, label, step) {
 
 function createBlankEquipment() {
       return {
-        id: '',
+        id: 'equipment-'+Date.now().toString(36),
         type: 'CUSTOM',
-        name: '',
-        nominalRatePerSecond: undefined,
+        name: "New equipment",
+        nominalRatePerSecond: 1,
         initialMode: 'AUTO',
         characteristics: {},
         noiseProfile: {},
@@ -4626,19 +4924,24 @@ function renderRawJson() {
 
     function syncPersistentSimulation() {
       var simulation = activePersistentSimulation();
-      if (!simulation || !state.activeCase) return;
+      if (!simulation || !state.activeCase) return false;
+      var before=JSON.stringify([simulation.equipment,simulation.dynamicConfig]);
       var editor = collectCaseEditor();
+      if (!editor) return false;
       if (editor) {
         state.activeCase.name = editor.name;
         state.activeCase.unitOfFlow = editor.unitOfFlow;
       }
       simulation.equipment = cloneJson(state.activeCase.equipment || []);
-      simulation.dynamicConfig = cloneJson(readRunConfiguration() || simulation.dynamicConfig || {});
+      var config=readRunConfiguration();if(!config)return false;
+      simulation.dynamicConfig = cloneJson(config);
+      if(before!==JSON.stringify([simulation.equipment,simulation.dynamicConfig]))autosave.change();
+      return true;
     }
 
     function activatePersistentSimulation(simulationId, initial) {
       var hadUnsavedChanges = state.isDirty;
-      if (!initial) syncPersistentSimulation();
+      if (!initial && !syncPersistentSimulation()) return;
       var simulation = (state.activeCase.simulations || []).find(function(item) { return item.id === simulationId; });
       if (!simulation) return;
       stopPlaybackTimer();
@@ -4651,7 +4954,7 @@ function renderRawJson() {
       state.run.commands = cloneJson(simulation.dynamicConfig?.commands || []);
       applyScenarioRunInputs(simulation.dynamicConfig);
       state.run.result = simulation.results?.replay ? cloneJson(simulation.results.replay) : null;
-      state.isDirty = initial ? false : hadUnsavedChanges;
+      state.isDirty = autosave.pending() || hadUnsavedChanges;
       renderEditor();
       if (state.run.result) {
         document.getElementById('simulation-json-preview').value = JSON.stringify(state.run.result, null, 2);
@@ -4685,487 +4988,35 @@ function renderRawJson() {
     }
 
     function renderSimulationAnalysis() {
-      var section = document.getElementById('simulation-analysis');
-      var target = document.getElementById('simulation-analysis-content');
-      if (!section || !target) return;
-      var simulation = activePersistentSimulation();
-      if (!simulation || !state.run.result) {
-        target.textContent = '';
-        toggle('simulation-analysis', false);
-        return;
-      }
-
-      var analysis = buildSimulationAnalysis(simulation, state.run.result);
-      target.textContent = '';
-      target.appendChild(createSimulationAnalysisView(analysis));
-      toggle('simulation-analysis', true);
+      var simulation=activePersistentSimulation(),target=document.getElementById('simulation-analysis-content');
+      if(!simulation){target.textContent='';toggle('simulation-analysis',false);return;}
+      STWhatIf.render(simulation,target,createWhatIfScenario);toggle('simulation-analysis',true);
     }
-
-    function createSimulationAnalysisView(analysis) {
-      var fragment = document.createDocumentFragment();
-      var primary = analysis.primary;
-      if (primary) {
-        var grid = document.createElement('div');
-        grid.className = 'simulation-analysis-grid';
-
-        var finding = document.createElement('article');
-        finding.className = 'analysis-finding analysis-' + String(primary.severity || 'ATTENTION').toLowerCase().replace(/_/g, '-');
-        var status = document.createElement('span');
-        status.className = 'analysis-status analysis-status-' + String(primary.severity || 'ATTENTION').toLowerCase().replace(/_/g, '-');
-        status.textContent = primary.severity === 'INPUT_REQUIRED' ? "INPUT REQUIRED" : primary.severity;
-        finding.appendChild(status);
-        var findingTitle = document.createElement('h4');
-        findingTitle.textContent = primary.finding;
-        finding.appendChild(findingTitle);
-        var findingText = document.createElement('p');
-        findingText.textContent = primary.diagnosis;
-        finding.appendChild(findingText);
-        var evidence = document.createElement('p');
-        evidence.className = 'analysis-evidence';
-        evidence.textContent = "Evidence: " + primary.evidence;
-        finding.appendChild(evidence);
-        grid.appendChild(finding);
-
-        var recommendation = document.createElement('article');
-        recommendation.className = 'analysis-recommendation';
-        var capex = document.createElement('span');
-        capex.className = 'analysis-capex';
-        capex.textContent = primary.capex;
-        recommendation.appendChild(capex);
-        var recommendationTitle = document.createElement('h4');
-        recommendationTitle.textContent = primary.title;
-        recommendation.appendChild(recommendationTitle);
-        var description = document.createElement('p');
-        description.textContent = primary.description;
-        recommendation.appendChild(description);
-        if (primary.canApply) {
-          var button = document.createElement('button');
-          button.type = 'button';
-          button.innerHTML = STIcons.svg('plus')+"Create recommended Simulation B";
-          button.title = "Create a saved clone, apply only these inputs, then review and run the successor simulation.";
-          button.addEventListener('click', function() { createWhatIfScenario(primary.kind, button); });
-          recommendation.appendChild(button);
-        } else {
-          var unavailable = document.createElement('p');
-          unavailable.className = 'analysis-evidence';
-          unavailable.textContent = "No automatic clone is created until the required physical inputs are complete.";
-          recommendation.appendChild(unavailable);
-        }
-        grid.appendChild(recommendation);
-        fragment.appendChild(grid);
-      } else {
-        var noAction = document.createElement('article');
-        noAction.className = 'analysis-no-action';
-        var stable = document.createElement('span');
-        stable.className = 'analysis-status analysis-status-stable';
-        stable.textContent = "NO PRIORITY CHANGE";
-        noAction.appendChild(stable);
-        var noActionTitle = document.createElement('h4');
-        noActionTitle.textContent = "No material design issue was detected in this run";
-        noAction.appendChild(noActionTitle);
-        var noActionText = document.createElement('p');
-        noActionText.textContent = "The available geometry audit and observed loss counters do not justify an automatic intervention. Use Clone Simulation only when you have a specific engineering hypothesis to test.";
-        noAction.appendChild(noActionText);
-        fragment.appendChild(noAction);
-      }
-
-      var checks = document.createElement('details');
-      checks.className = 'analysis-checks';
-      var summary = document.createElement('summary');
-      summary.textContent = "Evidence considered (" + analysis.checks.length + ')';
-      checks.appendChild(summary);
-      var list = document.createElement('ul');
-      analysis.checks.forEach(function(item) {
-        var row = document.createElement('li');
-        row.textContent = item;
-        list.appendChild(row);
-      });
-      checks.appendChild(list);
-      fragment.appendChild(checks);
-      return fragment;
+    async function createWhatIfScenario(proposal,button) {
+      await createProposedScenario(proposal,'LOCAL',button);
     }
-
-    function buildSimulationAnalysis(simulation, result) {
-      var proposals = buildWhatIfProposals(simulation, result);
-      var primary = proposals.filter(function(item) { return item.recommended; }).sort(function(left, right) {
-        return Number(right.priority || 0) - Number(left.priority || 0);
-      })[0] || null;
-      var summary = result.summary || {};
-      var checks = [];
-      if (isFiniteNumber(summary.lineOeePercent)) checks.push("Global OEE: " + formatNumber(summary.lineOeePercent) + "% using " + (summary.lineOeePacemakerName || 'the selected pacemaker') + '.');
-      checks.push("Line losses: starvation " + formatSeconds(summary.totalStarvedSeconds || 0) + " · waiting for Prime " + formatSeconds(summary.totalWaitingForPrimeSeconds || 0) + " · failures " + formatSeconds(summary.totalFailureSeconds || 0) + '.');
-      proposals.filter(function(item) { return item.recommended || item.evidence; }).forEach(function(item) {
-        if (item.evidence) checks.push(item.title + ': ' + item.evidence);
-      });
-      return { primary: primary, checks: uniqueAnalysisChecks(checks) };
+    async function applyChatScenario(proposal,button) {
+      await createProposedScenario(proposal,'GEMINI',button);
     }
-
-    function uniqueAnalysisChecks(checks) {
-      return checks.filter(function(item, index) { return item && checks.indexOf(item) === index; });
-    }
-
-    function buildWhatIfProposals(simulation, result) {
-      var target = selectWhatIfConveyorTarget(simulation, result);
-      var summary = result.summary || {};
-      var targetEngineering = target && target.metrics ? target.metrics.engineering : null;
-      var audit = targetEngineering?.audit || null;
-      var auditStatus = audit?.status || 'NOT_EVALUATED';
-      var calculated = targetEngineering?.calculated || {};
-      var input = targetEngineering?.input || {};
-      var speedFactor = target ? readConveyorSpeedFactor(target.equipment) : null;
-      var recommendedSpeedFactor = calculated.recommendedConveyorSpeedFactorPercent;
-      var speedFactorDiffers = isFiniteNumber(speedFactor) && isFiniteNumber(recommendedSpeedFactor) &&
-        recommendedSpeedFactor >= 0 && Math.abs(speedFactor - recommendedSpeedFactor) >= 0.25;
-      var requiredBackup = calculated.recommendedBackupSensorPositionMm;
-      var installedBackup = input.backupSensorPositionMm;
-      var recoveryLength = calculated.recoveryLengthMm;
-      var installedLengthGoal = findAuditGoal(audit, 'INSTALLED_LENGTH');
-      var recoveryGoal = findAuditGoal(audit, 'SMOOTH_RECOVERY');
-      var backupGoal = findAuditGoal(audit, 'BACKUP_POSITION');
-      var sensorGoal = findAuditGoal(audit, 'SENSOR_DEBOUNCE');
-      var recommendationInputsReady = hasPhysicalRecommendationInputs(input);
-      var geometryNeedsRecovery = installedLengthGoal?.status === 'FAIL' || recoveryGoal?.status === 'WARNING' || backupGoal?.status === 'WARNING';
-      var bufferPlan = geometryNeedsRecovery ? calculateBufferRecoveryPlan(targetEngineering) : null;
-      var sensorDebounceNeedsTune = sensorGoal?.status === 'WARNING';
-      var sensorDebouncePlan = sensorDebounceNeedsTune ? calculateSensorDebouncePlan(input, calculated) : null;
-      var highWaitingOrStarvation = Number(summary.totalWaitingForPrimeSeconds || 0) > 30 || Number(summary.totalStarvedSeconds || 0) > 60;
-      var reliabilityTargets = simulation.equipment.filter(function(equipment) {
-        var profile = equipment.noiseProfile?.reliability;
-        return equipment.type !== 'CONVEYOR' && profile && isFiniteNumber(profile.mtbfMinutes) && profile.mtbfMinutes > 0 &&
-          isFiniteNumber(profile.mttrMinutes) && profile.mttrMinutes > 0;
-      });
-      var lowAvailability = Object.values(result.equipmentMetrics || {}).some(function(metrics) {
-        return isFiniteNumber(metrics.availabilityPercent) && metrics.availabilityPercent < 85;
-      });
-      var reliabilityRecommended = Number(summary.totalFailureSeconds || 0) > 30 || lowAvailability;
-      var auditMessages = auditGoalMessages(audit);
-      var proposals = [];
-
-      if (!target) {
-        proposals.push({
-          kind: 'INPUT_REQUIRED', title: "Complete physical conveyor data", capex: "INPUT REQUIRED", canApply: false,
-          recommended: true, priority: 100, severity: 'INPUT_REQUIRED',
-          finding: "No physical conveyor can be evaluated",
-          diagnosis: "This simulation has no conveyor with FlowPilot geometry available for a physical recommendation.",
-          description: "Add a machine → conveyor → machine section with geometry before creating an automatic successor simulation.",
-          evidence: "No conveyor metrics were saved with this run."
-        });
-        return proposals;
-      }
-
-      if (!recommendationInputsReady) {
-        proposals.push({
-          kind: 'INPUT_REQUIRED', title: "Complete physical conveyor data", capex: "INPUT REQUIRED", canApply: false,
-          recommended: true, priority: 100, severity: 'INPUT_REQUIRED', target: target,
-          finding: "The physical audit is incomplete on " + target.equipment.name,
-          diagnosis: "A safe sensor, speed, or buffer change cannot be calculated until the missing geometric inputs are supplied.",
-          description: "Complete the listed FlowPilot fields, save the simulation, and run it again before creating Simulation B.",
-          evidence: missingPhysicalRecommendationInputs(input).join(', ') + '. ' + (auditMessages.join(' ') || "Audit status: " + auditStatus + '.')
-        });
-      }
-
-      proposals.push({
-        kind: 'BUFFER_RECOVERY', title: "Restore buffer recovery", capex: "HIGH CAPEX", target: target,
-        bufferPlan: bufferPlan, canApply: Boolean(bufferPlan), recommended: geometryNeedsRecovery,
-        priority: installedLengthGoal?.status === 'FAIL' ? 96 : recoveryGoal?.status === 'WARNING' ? 92 : backupGoal?.status === 'WARNING' ? 88 : 0,
-        severity: installedLengthGoal?.status === 'FAIL' ? 'CRITICAL' : 'ATTENTION',
-        finding: "Physical recovery margin is insufficient on " + target.equipment.name,
-        diagnosis: "The conveyor audit indicates that a normal stop/restart may consume the available accumulation margin before the upstream flow is recovered.",
-        description: bufferPlan
-          ? "Set Back-up to the calculated required L_bu of " + formatNumber(bufferPlan.backupSensorPositionMm) + " mm and set L_act to the minimum modeled length of " + formatNumber(bufferPlan.installedLengthMm) + " mm (" + formatNumber(bufferPlan.addedLengthMm) + " mm added)."
-          : "The audit found a geometry issue, but the available inputs cannot derive a valid recovery length.",
-        evidence: "Target: " + target.equipment.name + " · audit " + auditStatus +
-          (isFiniteNumber(recoveryLength) ? " · L_rec " + formatNumber(recoveryLength) + " mm" : '') +
-          (isFiniteNumber(requiredBackup) ? " · required L_bu " + formatNumber(requiredBackup) + " mm" : '') +
-          (highWaitingOrStarvation ? " · observed waiting/starvation is elevated" : '')
-      });
-
-      proposals.push({
-        kind: 'SENSOR_DEBOUNCE', title: "Tune Back-up confirmation timers", capex: "ZERO CAPEX", target: target,
-        sensorDebouncePlan: sensorDebouncePlan, canApply: Boolean(sensorDebouncePlan && sensorDebouncePlan.changed),
-        recommended: sensorDebounceNeedsTune && !geometryNeedsRecovery && recommendationInputsReady,
-        priority: sensorDebounceNeedsTune ? 82 : 0, severity: 'ATTENTION',
-        finding: "Normal photoeye pulses can be mistaken for a sustained Back-up signal",
-        diagnosis: "At least one configured Back-up confirmation delay is not longer than the modeled occupied pulse or clear gap. The PLC may chatter or stop on normal package spacing.",
-        description: sensorDebouncePlan
-          ? "Set blocked delay to " + formatNumber(sensorDebouncePlan.blockedTimeDelaySeconds) + " s and clear delay to " + formatNumber(sensorDebouncePlan.clearTimeDelaySeconds) + " s. These are simulated PLC confirmation settings; confirm them with controls engineering before plant use."
-          : "Package pulse and gap timing are required to derive a safe confirmation-delay candidate.",
-        evidence: "Target: " + target.equipment.name +
-          (isFiniteNumber(calculated.packagePassSensorSeconds) ? " · normal occupied pulse " + formatNumber(calculated.packagePassSensorSeconds) + ' s' : '') +
-          (isFiniteNumber(calculated.sensorClearGapSeconds) ? " · normal clear gap " + formatNumber(calculated.sensorClearGapSeconds) + ' s' : '') +
-          " · installed delays " + formatNumber(input.blockedTimeDelaySeconds || 0) + ' s / ' + formatNumber(input.clearTimeDelaySeconds || 0) + ' s'
-      });
-
-      proposals.push({
-        kind: 'SPEED_BALANCE', title: "Balance downstream infeed speed", capex: "ZERO CAPEX", target: target,
-        recommendedSpeedFactorPercent: isFiniteNumber(recommendedSpeedFactor) && recommendedSpeedFactor >= 0 ? Number(recommendedSpeedFactor.toFixed(2)) : null,
-        canApply: Boolean(target && speedFactorDiffers), recommended: speedFactorDiffers && !geometryNeedsRecovery,
-        priority: speedFactorDiffers ? 64 : 0, severity: 'ATTENTION',
-        finding: "Infeed conveyor speed does not match the calculated downstream demand",
-        diagnosis: "The current belt factor differs from the FlowPilot infeed calculation, which includes the modeled downstream speed, infeed pitch, and 5% infeed overspeed.",
-        description: speedFactorDiffers
-          ? "Change conveyor speed factor from " + formatNumber(speedFactor) + "% to the calculated " + formatNumber(recommendedSpeedFactor) + '%.'
-          : "The current factor is already aligned with the calculated downstream infeed demand.",
-        evidence: "Target: " + target.equipment.name +
-          (isFiniteNumber(calculated.recommendedInfeedConveyorSpeedMmPerSecond) ? " · recommended infeed speed " + formatNumber(calculated.recommendedInfeedConveyorSpeedMmPerSecond) + " mm/s" : '') +
-          (isFiniteNumber(calculated.sensorClearGapSeconds) ? " · normal clear gap " + formatNumber(calculated.sensorClearGapSeconds) + ' s' : '')
-      });
-
-      proposals.push({
-        kind: 'RELIABILITY', title: "Reliability sensitivity check", capex: "LOW CAPEX / OPEX",
-        canApply: reliabilityTargets.length > 0, recommended: reliabilityRecommended && !geometryNeedsRecovery,
-        priority: reliabilityRecommended ? 52 : 0, severity: 'ATTENTION',
-        finding: "Intrinsic equipment downtime is reducing the result",
-        diagnosis: "Failures or low intrinsic availability were observed. This scenario is a transparent sensitivity check, not a claim that maintenance will achieve the result.",
-        description: reliabilityTargets.length
-          ? "For " + reliabilityTargets.length + " critical machines, test the stated maintenance assumption: MTBF × 1.20 and MTTR × 0.85."
-          : "MTBF and MTTR are required on at least one non-conveyor machine.",
-        evidence: "Failure " + formatSeconds(summary.totalFailureSeconds || 0) +
-          " · availability trigger " + (lowAvailability ? 'present' : 'not present') + '.'
-      });
-
-      return proposals;
-    }
-
-    function findAuditGoal(audit, id) {
-      return (audit?.goals || []).find(function(goal) { return goal.id === id; }) || null;
-    }
-
-    function auditGoalMessages(audit) {
-      return (audit?.goals || []).filter(function(goal) { return goal.status !== 'PASS'; }).map(function(goal) {
-        return goal.id + ': ' + goal.message;
-      });
-    }
-
-    function missingPhysicalRecommendationInputs(input) {
-      var labels = [
-        ['installedLengthMm', "Installed length L_act"],
-        ['primeReserveMm', "Prime reserve L_p"],
-        ['packageLengthMm', 'package length'],
-        ['upstreamDischargePitchMm', 'upstream discharge pitch'],
-        ['upstreamNominalSpeedBpm', 'upstream nominal speed'],
-        ['conveyorSpeedFactorPercent', 'conveyor speed factor'],
-        ['downstreamHighSpeedBpm', 'downstream high speed'],
-        ['downstreamInfeedPitchMm', 'downstream infeed pitch']
-      ];
-      return labels.filter(function(item) {
-        var value = input ? input[item[0]] : undefined;
-        return !isFiniteNumber(value) || value < 0 || (item[0] !== 'primeReserveMm' && item[0] !== 'conveyorSpeedFactorPercent' && value === 0);
-      }).map(function(item) { return item[1]; });
-    }
-
-    function hasPhysicalRecommendationInputs(input) {
-      return missingPhysicalRecommendationInputs(input).length === 0;
-    }
-
-    function calculateSensorDebouncePlan(input, calculated) {
-      var normalBlockedPulse = calculated?.packagePassSensorSeconds;
-      var normalClearGap = calculated?.sensorClearGapSeconds;
-      if (!isFiniteNumber(normalBlockedPulse) || !isFiniteNumber(normalClearGap)) return null;
-      function minimumGreaterThan(value) {
-        return Number((Math.ceil((value + 0.01) * 100) / 100).toFixed(2));
-      }
-      var currentBlocked = isFiniteNumber(input?.blockedTimeDelaySeconds) ? input.blockedTimeDelaySeconds : 0;
-      var currentClear = isFiniteNumber(input?.clearTimeDelaySeconds) ? input.clearTimeDelaySeconds : 0;
-      var blockedTimeDelaySeconds = Math.max(currentBlocked, minimumGreaterThan(normalBlockedPulse));
-      var clearTimeDelaySeconds = Math.max(currentClear, minimumGreaterThan(normalClearGap));
-      return {
-        blockedTimeDelaySeconds: blockedTimeDelaySeconds,
-        clearTimeDelaySeconds: clearTimeDelaySeconds,
-        changed: blockedTimeDelaySeconds !== currentBlocked || clearTimeDelaySeconds !== currentClear
-      };
-    }
-
-    function calculateBufferRecoveryPlan(engineering) {
-      var calculator = window.SimulatorEngine?.calculateConveyorEngineering;
-      var input = engineering?.input || {};
-      if (!calculator || !isFiniteNumber(input.installedLengthMm) || !isFiniteNumber(input.primeReserveMm)) return null;
-      var initialCalculation = calculator(input);
-      var requiredBackup = initialCalculation?.calculated?.recommendedBackupSensorPositionMm;
-      if (!isFiniteNumber(requiredBackup)) return null;
-
-      function evaluate(installedLengthMm) {
-        var withLength = calculator(Object.assign({}, input, { installedLengthMm: installedLengthMm }));
-        var backup = withLength?.calculated?.recommendedBackupSensorPositionMm;
-        if (!isFiniteNumber(backup)) return null;
-        var assessment = calculator(Object.assign({}, input, {
-          installedLengthMm: installedLengthMm,
-          backupSensorPositionMm: Math.ceil(backup)
-        }));
-        return { assessment: assessment, backupSensorPositionMm: Math.ceil(backup), installedLengthMm: Math.ceil(installedLengthMm) };
-      }
-
-      function hasRecoveryMargin(plan) {
-        if (!plan || !plan.assessment) return false;
-        var audit = plan.assessment.audit;
-        return findAuditGoal(audit, 'INSTALLED_LENGTH')?.status === 'PASS' &&
-          findAuditGoal(audit, 'SMOOTH_RECOVERY')?.status === 'PASS' &&
-          findAuditGoal(audit, 'BACKUP_POSITION')?.status === 'PASS';
-      }
-
-      var currentLength = Math.ceil(input.installedLengthMm);
-      var lower = Math.max(currentLength, Math.ceil(input.primeReserveMm + requiredBackup + 1));
-      var low = lower;
-      var high = lower;
-      var plan = evaluate(high);
-      var ceiling = Math.max(high + 50000, high * 5);
-      while (!hasRecoveryMargin(plan) && high < ceiling) {
-        low = high;
-        high += Math.max(100, Math.ceil(high * 0.2));
-        plan = evaluate(high);
-      }
-      if (!hasRecoveryMargin(plan)) return null;
-
-      while (high - low > 1) {
-        var midpoint = Math.floor((low + high) / 2);
-        var midpointPlan = evaluate(midpoint);
-        if (hasRecoveryMargin(midpointPlan)) {
-          high = midpoint;
-          plan = midpointPlan;
-        } else {
-          low = midpoint;
-        }
-      }
-      plan = evaluate(high);
-      return {
-        backupSensorPositionMm: plan.backupSensorPositionMm,
-        installedLengthMm: plan.installedLengthMm,
-        addedLengthMm: Math.max(0, plan.installedLengthMm - currentLength),
-        recoveryLengthMm: plan.assessment?.calculated?.recoveryLengthMm
-      };
-    }
-
-    function selectWhatIfConveyorTarget(simulation, result) {
-      var metricsByOwner = {};
-      Object.values(result.accumulationZoneMetrics || {}).forEach(function(metrics) {
-        if (metrics && metrics.ownerEquipmentId) metricsByOwner[metrics.ownerEquipmentId] = metrics;
-      });
-      var duration = Math.max(1, Number(result.durationSeconds || 0));
-      var candidates = (simulation.equipment || []).filter(function(equipment) {
-        return equipment.type === 'CONVEYOR' || equipment.processData?.role === 'CONVEYOR';
-      }).map(function(equipment) {
-        var metrics = metricsByOwner[equipment.id] || null;
-        var status = metrics?.engineering?.audit?.status || 'NOT_EVALUATED';
-        var auditScore = status === 'FAIL' ? 400 : status === 'WARNING' ? 300 : status === 'NOT_EVALUATED' ? 200 : 100;
-        var dynamicScore = metrics
-          ? Number(metrics.overflowUnits || 0) * 20 + Number(metrics.emptyInventorySeconds || 0) / duration * 10 + Number(metrics.backupSignalBlockedSeconds || 0) / duration * 5
-          : 0;
-        return { equipment: equipment, metrics: metrics, score: auditScore + dynamicScore };
-      });
-      candidates.sort(function(left, right) { return right.score - left.score; });
-      return candidates[0] || null;
-    }
-
-    function readConveyorSpeedFactor(equipment) {
-      var accumulation = equipment?.processData?.accumulation || {};
-      var speedSensors = equipment?.processData?.speedAndSensors || {};
-      var value = accumulation.conveyorSpeedFactorPercent;
-      if (!isFiniteNumber(value)) value = speedSensors.conveyorSpeedFactorVsDischargeVelocityPercent;
-      return isFiniteNumber(value) ? value : null;
-    }
-
-    function createWhatIfScenario(kind, button) {
-      var source = activePersistentSimulation();
-      if (!source || !state.run.result) return;
-      var proposal = buildWhatIfProposals(source, state.run.result).find(function(item) { return item.kind === kind; });
-      if (!proposal || !proposal.canApply) return;
-      if (button) button.disabled = true;
-
-      // Persist first so the server clones exactly the configuration and result
-      // the user is looking at, not an older Drive revision.
-      saveActiveCase(function() {
-        cloneSavedActiveSimulation(function(clone) {
-          var changes = applyWhatIfOverrides(clone, proposal);
-          clone.scenario = {
-            kind: proposal.kind,
-            title: proposal.title,
-            capex: proposal.capex,
-            sourceSimulationId: source.id,
-            sourceSimulationName: source.name,
-            createdAt: new Date().toISOString(),
-            finding: proposal.finding,
-            diagnosis: proposal.diagnosis,
-            evidence: proposal.evidence,
-            changes: changes
-          };
-          state.activeSimulationId = clone.id;
-          activatePersistentSimulation(clone.id, true);
-          state.isDirty = true;
-          saveActiveCase(function() {
-            setStatus("Created " + clone.name + " from " + source.name + '. ' + proposal.title + " is applied; review the changed inputs and run it when ready.");
-          });
-        });
-      });
-    }
-
-    function applyWhatIfOverrides(simulation, proposal) {
-      if (proposal.kind === 'SPEED_BALANCE') return applySpeedBalanceOverride(simulation, proposal);
-      if (proposal.kind === 'BUFFER_RECOVERY') return applyBufferRecoveryOverride(simulation, proposal);
-      if (proposal.kind === 'SENSOR_DEBOUNCE') return applySensorDebounceOverride(simulation, proposal);
-      if (proposal.kind === 'RELIABILITY') return applyReliabilityOverride(simulation);
-      return [];
-    }
-
-    function applySpeedBalanceOverride(simulation, proposal) {
-      var target = proposal.target;
-      var conveyor = simulation.equipment.find(function(equipment) { return equipment.id === target?.equipment?.id; });
-      var next = proposal.recommendedSpeedFactorPercent;
-      if (!conveyor || !isFiniteNumber(next)) return [];
-      conveyor.processData = conveyor.processData || {};
-      conveyor.processData.accumulation = conveyor.processData.accumulation || {};
-      var current = readConveyorSpeedFactor(conveyor);
-      conveyor.processData.accumulation.conveyorSpeedFactorPercent = next;
-      return [{ equipmentId: conveyor.id, path: 'processData.accumulation.conveyorSpeedFactorPercent', before: current, after: next, unit: '%' }];
-    }
-
-    function applyBufferRecoveryOverride(simulation, proposal) {
-      var target = proposal.target;
-      var conveyor = simulation.equipment.find(function(equipment) { return equipment.id === target?.equipment?.id; });
-      var plan = proposal.bufferPlan;
-      if (!conveyor || !plan || !isFiniteNumber(plan.backupSensorPositionMm) || !isFiniteNumber(plan.installedLengthMm)) return [];
-      conveyor.processData = conveyor.processData || {};
-      conveyor.processData.geometry = conveyor.processData.geometry || {};
-      conveyor.processData.accumulation = conveyor.processData.accumulation || {};
-      var beforeBackup = conveyor.processData.accumulation.backupSensorPositionMm;
-      var beforeLength = conveyor.processData.geometry.lactMm;
-      conveyor.processData.accumulation.backupSensorPositionMm = plan.backupSensorPositionMm;
-      conveyor.processData.geometry.lactMm = plan.installedLengthMm;
-      return [
-        { equipmentId: conveyor.id, path: 'processData.accumulation.backupSensorPositionMm', before: beforeBackup, after: plan.backupSensorPositionMm, unit: 'mm' },
-        { equipmentId: conveyor.id, path: 'processData.geometry.lactMm', before: beforeLength, after: plan.installedLengthMm, unit: 'mm' }
-      ].filter(function(change) { return change.before !== change.after; });
-    }
-
-    function applySensorDebounceOverride(simulation, proposal) {
-      var target = proposal.target;
-      var conveyor = simulation.equipment.find(function(equipment) { return equipment.id === target?.equipment?.id; });
-      var plan = proposal.sensorDebouncePlan;
-      if (!conveyor || !plan) return [];
-      conveyor.processData = conveyor.processData || {};
-      conveyor.processData.accumulation = conveyor.processData.accumulation || {};
-      var beforeBlocked = conveyor.processData.accumulation.blockedTimeDelaySeconds;
-      var beforeClear = conveyor.processData.accumulation.clearTimeDelaySeconds;
-      conveyor.processData.accumulation.blockedTimeDelaySeconds = plan.blockedTimeDelaySeconds;
-      conveyor.processData.accumulation.clearTimeDelaySeconds = plan.clearTimeDelaySeconds;
-      return [
-        { equipmentId: conveyor.id, path: 'processData.accumulation.blockedTimeDelaySeconds', before: beforeBlocked, after: plan.blockedTimeDelaySeconds, unit: 's' },
-        { equipmentId: conveyor.id, path: 'processData.accumulation.clearTimeDelaySeconds', before: beforeClear, after: plan.clearTimeDelaySeconds, unit: 's' }
-      ].filter(function(change) { return change.before !== change.after; });
-    }
-
-    function applyReliabilityOverride(simulation) {
-      var changes = [];
-      (simulation.equipment || []).forEach(function(equipment) {
-        var reliability = equipment.noiseProfile?.reliability;
-        if (equipment.type === 'CONVEYOR' || !reliability || !isFiniteNumber(reliability.mtbfMinutes) || !isFiniteNumber(reliability.mttrMinutes)) return;
-        var beforeMtbf = reliability.mtbfMinutes;
-        var beforeMttr = reliability.mttrMinutes;
-        reliability.mtbfMinutes = Number((beforeMtbf * 1.2).toFixed(6));
-        reliability.mttrMinutes = Number((beforeMttr * 0.85).toFixed(6));
-        changes.push({ equipmentId: equipment.id, path: 'noiseProfile.reliability.mtbfMinutes', before: beforeMtbf, after: reliability.mtbfMinutes, unit: 'min' });
-        changes.push({ equipmentId: equipment.id, path: 'noiseProfile.reliability.mttrMinutes', before: beforeMttr, after: reliability.mttrMinutes, unit: 'min' });
-      });
-      return changes;
+    async function createProposedScenario(proposal,origin,button) {
+      var caseId=state.activeCase?.id,simulationId=state.activeSimulationId;
+      if(button)button.disabled=true;
+      try{
+        await flushCase();
+        var source=activePersistentSimulation();
+        if(state.activeCase?.id!==caseId||source?.id!==simulationId||proposal.sourceSimulationId!==simulationId||proposal.sourceSignature!==STScenarios.signature(source))throw new Error("The source simulation changed. Generate a new proposal before applying it.");
+        var approved=await STDialog.confirm("Create scenario","Create a separate simulation with the listed changes? The baseline and random seed are preserved. Run the new scenario to measure its effect.");
+        if(!approved)return;
+        await flushCase();
+        if(state.activeCase?.id!==caseId||state.activeSimulationId!==simulationId)throw new Error("The source simulation changed. Generate a new proposal before applying it.");
+        var payload={caseId:caseId,simulationId:simulationId,expectedRevision:state.activeCase.revision,sourceSignature:proposal.sourceSignature,origin:origin,proposal:Object.assign({},proposal,{title:proposal.title||STScenarioText[proposal.titleKey]})};
+        document.getElementById('application').inert=true;
+        await new Promise(function(resolve,reject){callServer('createScenario',[payload],function(response){
+          if(!response.ok){reject(new Error(response.error.message));return;}
+          state.activeCase=response.data.case;autosave.reset();activatePersistentSimulation(response.data.simulationId,true);state.uiView='editor';shell.sync();resolve();
+        });});
+        setStatus("Scenario created and saved. Review the inputs and run it to evaluate the impact.");
+      }catch(error){showError({message:error.message});}finally{document.getElementById('application').inert=false;if(button?.isConnected)button.disabled=false;}
     }
 
     function applyScenarioRunInputs(run) {
@@ -5186,7 +5037,7 @@ function renderRawJson() {
         equipmentId: state.activeCase.equipment[0].id,
         action: 'PAUSE'
       });
-      renderControlEvents();
+      renderControlEvents();markCaseDirty();
     }
 
     function renderControlEvents() {
@@ -5221,6 +5072,8 @@ function renderRawJson() {
         state.run.commands.splice(index, 1);
         renderControlEvents();
       });
+      row.addEventListener('change',markCaseDirty);
+      row.querySelector('.remove-command').addEventListener('click',markCaseDirty);
       return row;
     }
 
@@ -5228,6 +5081,7 @@ function renderRawJson() {
       if (state.isDirty && !collectCaseEditor()) return;
       var run = readRunConfiguration();
       if (!run) return;
+      activePersistentSimulation().dynamicConfig=cloneJson(run);
       state.run.configuration = copyRunConfiguration(run);
       if (!calculateSimulation(run, 0)) return;
       var tab = activePersistentSimulation();
@@ -5759,6 +5613,7 @@ function summarizeGeometrySources(sources, assumptions) {
 
       var run = createStoredRunConfiguration();
       if (!run || !calculateSimulation(run, sample.virtualSecond)) return;
+      var tab=activePersistentSimulation();if(tab){tab.results=createStoredSimulationResult(state.run.result,run);saveActiveCase();}
       var equipment = state.activeCase.equipment.find(function(item) { return item.id === equipmentId; });
       var label = equipment ? equipment.name : equipmentId;
       setStatus((action === 'RESET_AND_RUN' ? "Reset and run" : action.replace(/_/g, ' ').toLowerCase()) + " scheduled for " + label + " at virtual " + sample.virtualSecond + " s. The deterministic path was recalculated.");
@@ -5809,7 +5664,7 @@ function summarizeGeometrySources(sources, assumptions) {
           state.saving=false;
           document.querySelectorAll('[data-busy="true"]').forEach(function(button){button.disabled=false;delete button.dataset.busy;});
           shell.sync();
-          showError({ code: 'NETWORK_ERROR', message: "The server request could not be completed. Please try again." });
+          onSuccess({ok:false,error:{ code: 'NETWORK_ERROR', message: "The server request could not be completed. Please try again." }});
         })
         .withSuccessHandler(function(response) { done(); if(epoch === state.requestEpoch) onSuccess(response); });
       runner[name].apply(runner, args);
@@ -5820,6 +5675,8 @@ function summarizeGeometrySources(sources, assumptions) {
     function showError(error) {
       var message = (error.code || 'ERROR') + ': ' + (error.message || "The request failed.");
       var target = document.getElementById('status'); target.className = 'status error'; target.textContent = message;
+      document.documentElement.classList.remove('restoring-session');
+      if(!state.bootstrap)toggle('auth-panel',true);
       document.getElementById('auth-status').textContent = message;
       document.getElementById('sign-in-button').disabled = false;
       if (document.getElementById('settings-dialog').open) STSettings.error(message);

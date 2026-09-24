@@ -1,5 +1,8 @@
 # Line Studio interface
 
+Current persistence and What-If behavior is documented in
+[Automatic persistence and scenario analysis](20_AUTOSAVE_AND_SCENARIOS.md).
+
 The interface separates Cases, Line setup, Simulation, Results and What-If. Settings
 is a native modal dialog, not a dashboard card. The mathematical engine in
 `src/simulation/` is unchanged.
@@ -41,15 +44,17 @@ in `Icons.html`; all use the same stroke, grid and currentColor.
 | Module | Responsibility |
 |---|---|
 | Styles | Base components and accessibility |
-| Shell / ShellStyles | Sidebar, navigation, command search, save action |
+| Shell / ShellStyles | Sidebar, navigation, command search, save status |
 | CaseGallery / CasesStyles | Search, readiness filter, sort, list/grid, 24-item pagination |
-| Settings / DialogStyles | Modal, focus return, Escape, dirty defaults, save/error handling |
+| Settings / DialogStyles | Modal, focus return, Escape, automatic settings persistence |
+| Autosave / Dialogs | Serialized edits, conflict handling and reusable confirmations/input |
+| WhatIf / ScenarioPlanner | Three CAPEX categories, evidence and validated scenario changes |
 | EditorStyles | Equipment/geometry editor |
 | SimulationStyles / DashboardStyles | Live rows, expandable time losses, technical panels |
 | Charts | Existing canvas rendering, themed series, full-run results and live sparklines |
 | Results | Final-run KPIs, equipment table, JSON export, presentation-only aggregates |
 | Comparison / AnalysisStyles | Baseline/proposed deltas, changed inputs, complete detail |
-| Client | Existing case, engine, persistence and recommendation orchestration |
+| Client | Case, engine and workspace orchestration |
 | UiPreferences | Browser appearance, automatic theme observation and remembered entry |
 
 Modules stay flat under `apps-script/` for Apps Script compatibility. The manual
@@ -60,14 +65,14 @@ bundle generator resolves them to two deployment files; do not edit generated
 
 - Login verifies the existing Google identity and allowlist through `getBootstrap`.
 - Remembered entry saves only the preference to try bootstrap automatically. It
-  cannot extend a Google session or bypass authentication. Lock clears it.
+  cannot extend a Google session or bypass authentication. Sign out clears it.
 - Cases is the landing view. If storage is not configured, a short status directs
   the user to Settings; creation is disabled until a workspace is configured.
 - Sidebar collapse is remembered. Compact navigation is used on small screens.
 - Ctrl/Command K opens command search; arrow keys, Enter and Escape are supported.
-- Settings appearance changes apply immediately. Storage and playback defaults
-  require Save; Cancel/Escape preserve the previously saved values, with a discard
-  prompt when necessary. Native dialog supplies modality and keyboard containment.
+- Settings appearance changes apply immediately. Other settings save automatically;
+  Done/Escape flush pending changes and keep the dialog open on failure. Native
+  dialog supplies modality and keyboard containment.
 - Simulation retains all scheduled and direct equipment controls. Time losses are
   expandable. Switching saved simulations stops playback and resets its frame.
 - Missing saved run settings use the existing input defaults, not empty fields.
@@ -81,7 +86,7 @@ micro-stop and emergency counters. Starving, blocking and downtime aggregates ar
 overlap. The existing engine's OEE assumes 100% quality until rejects are modeled.
 
 The highest-loss machine is described as an investigation lead, not a proven
-bottleneck. What-If retains the original recommendation algorithm. Numeric impact
+bottleneck. What-If uses the shared CAPEX planner described in the current analysis document. Numeric impact
 appears only when both scenarios have results. Baseline/proposed comparison shows
 absolute and relative deltas; OEE absolute delta is in percentage points, and a zero
 baseline has no relative percentage. Different seeds/durations keep the existing
@@ -111,7 +116,7 @@ Publishing GitHub changes does not update the running Apps Script deployment.
 
 Cases now has no sidebar. Once a case is open, the sidebar groups saved simulations and comparison, the selected simulation's views, and workspace actions. What-If contains recommendations only. Settings is the sole location for theme selection and 25 accent colors. Semantic state colors remain independent of the accent; their left stripes share `--state-border-width` (5px). Equipment controls use an accessible 2-column, 3-row icon grid beside the sparkline.
 
-The right Gemini panel sends questions about the **saved** case, including saved simulation results. Save edits/results before asking. Configure your own Gemini API key and model in Settings; default model is `gemini-2.5-flash`. The key lives in Apps Script UserProperties and is never returned by bootstrap or written to browser storage. A blank key preserves the existing key; the explicit removal checkbox deletes it. Chat messages are transient and clear when closing/changing the case or signing out. Requests are only sent by pressing Send; case data is sent to Google's Gemini API. Oversized context is rejected with a clear error instead of silently dropping case data.
+The right Gemini panel flushes pending edits before sending a compact analysis of the selected simulation. Replay and raw imports are excluded; coverage counts identify further omissions. Configure your own Gemini API key and model in Settings; default model is `gemini-2.5-flash`. The key lives in Apps Script UserProperties and is never returned by bootstrap or written to browser storage. A blank key preserves the existing key; the explicit removal checkbox deletes it. Chat messages are transient and clear when changing simulation/case or signing out. Requests are only sent by pressing Send. Validated proposals appear as buttons that create separate scenarios after confirmation.
 
 Deploy the regenerated `Code.gs` and `Index.html` together. Apps Script may ask for authorization for external requests after adding UrlFetchApp. Reference: [Gemini generateContent API](https://ai.google.dev/api/generate-content). The integration is tested with mocked API responses; a live request requires the user's API key. DOM and CSS checks do not substitute for final visual review in the deployed Apps Script web app.
 

@@ -30,12 +30,14 @@
     var charts = STCharts(state,formatNumber);
     var drawSimulationChart = charts.drawSimulationChart, drawEquipmentSpeedChart = charts.drawEquipmentSpeedChart, drawEquipmentSpeedSparkline = charts.drawEquipmentSpeedSparkline;
     var renderCaseComparison = STComparison(state,isFiniteNumber).render;
-    var assistant = STAssistant(state);
+    var assistant = STAssistant(state, {flush:flushCase, applyScenario:applyChatScenario});
     var sheetImport = STSheetImport(state,{apply:applySheetImport,capture:captureSheetImport});
     var shell = STShell(state,{assistant:assistant.sync,signout:lockWorkspace,navigate:navigateView,home:showCaseHome,save:saveActiveCase,cases:function(){renderCases(state.bootstrap?.cases||[]);},redraw:renderPlaybackFrame});
     function navigateView(view) {
       if (!state.activeCase) return;
+      if (!syncPersistentSimulation()) return;
       state.uiView = view;
+      if(view==='whatif')renderSimulationAnalysis();
       if (view === 'comparison') showCaseComparison();
       else { state.workspaceView = 'simulation'; renderWorkspaceTabs(); }
       shell.sync(); renderPlaybackFrame();
@@ -65,40 +67,73 @@
         toggle('new-case-form', true); document.getElementById('new-case-name').focus();
       });
       document.getElementById('case-search').addEventListener('input', function() { renderCases(state.bootstrap ? state.bootstrap.cases : []); });
-      document.getElementById('workspace-form').addEventListener('submit', saveWorkspace);
+      document.getElementById('workspace-form').addEventListener('submit', function(event){event.preventDefault();});
+      STSettings.connect(saveWorkspace);
+      document.getElementById('retry-autosave').onclick = retryAutosave;
       document.getElementById('new-case-form').addEventListener('submit', createDraftCase);
       document.getElementById('create-public-demo-case').addEventListener('click', createPublicDemoCase);
-      document.getElementById('reload-case').addEventListener('click', reloadActiveCase);
       document.getElementById('clone-case').addEventListener('click', cloneActiveSimulation);
       document.getElementById('delete-case').addEventListener('click', deleteActiveCase);
-      document.getElementById('save-case').addEventListener('click', saveActiveCase);
+      document.getElementById('rename-simulation').onclick = renameSimulation;
+      document.getElementById('delete-simulation').onclick = deleteSimulation;
       document.getElementById('add-equipment').addEventListener('click', addEquipment);
       document.getElementById('case-editor-form').addEventListener('input', markCaseDirty);
       document.getElementById('equipment-list').addEventListener('input', markCaseDirty);
       document.getElementById('equipment-list').addEventListener('change', markCaseDirty);
+      document.getElementById('case-editor-form').addEventListener('change', markCaseDirty);
       document.getElementById('add-control-event').addEventListener('click', addControlEvent);
       document.getElementById('run-simulation').addEventListener('click', runSimulation);
       document.getElementById('play-simulation').addEventListener('click', startPlayback);
       document.getElementById('pause-simulation').addEventListener('click', pausePlayback);
       document.getElementById('reset-playback').addEventListener('click', resetPlayback);
+      ['run-duration','run-sample-interval','run-seed'].forEach(function(id){document.getElementById(id).addEventListener('input',markCaseDirty);});
       document.getElementById('duration-mode').addEventListener('change', function(event) {
         state.run.durationMode = event.target.value;
+        markCaseDirty();
       });
     }
 
+    var autosave = STAutosave({capture:captureForSave,send:function(payload,done){callServer('saveCase',[payload],done);},accept:function(saved){
+      if (!state.activeCase || state.activeCase.id !== saved.id) return;
+      state.activeCase.revision=saved.revision;state.activeCase.updatedAt=saved.updatedAt;
+      var item=(state.bootstrap?.cases||[]).find(function(x){return x.id===saved.id;});
+      if(item){item.name=saved.name;item.updatedAt=saved.updatedAt;item.equipmentCount=saved.equipment.length;item.isSimulationReady=saved.equipment.length>=2;}
+    },status:function(status,error){
+      state.saving=status==='saving';state.isDirty=status!=='saved';
+      var label=document.getElementById('autosave-status');if(!label)return;
+      label.textContent={saved:__ST_TEXT__('autosave.saved'),pending:__ST_TEXT__('autosave.pending'),saving:__ST_TEXT__('autosave.saving'),error:__ST_TEXT__('autosave.error')}[status];
+      label.title=error?error.message:'';label.dataset.state=status;
+      document.getElementById('retry-autosave').classList.toggle('hidden',status!=='error');
+      if(shell)shell.sync();
+    }});
+    window.addEventListener('beforeunload',function(event){if(autosave.pending()||STSettings.pending()){event.preventDefault();event.returnValue='';}});
+    window.addEventListener('online',function(){if(autosave.pending())autosave.retry().catch(function(){});});
+    function flushCase(){if(state.activeCase&&!syncPersistentSimulation())return Promise.reject(new Error(__ST_TEXT__('autosave.invalid')));return autosave.flush();}
+    async function retryAutosave(){
+      try{await flushCase();}catch(error){
+        if(error.code==='CASE_CONFLICT'){
+          var answer=await STDialog.open({title:__ST_TEXT__('autosave.conflict_title'),message:__ST_TEXT__('autosave.conflict_message'),buttons:[{id:'cancel',label:__ST_TEXT__('view.cancel')},{id:'reload',label:__ST_TEXT__('autosave.export_reload')}]});
+          if(answer.action==='reload'){
+            var draft=captureForSave();if(!draft)return;
+            var url=URL.createObjectURL(new Blob([JSON.stringify(draft,null,2)],{type:'application/json'}));var link=document.createElement('a');link.href=url;link.download='case-draft.json';link.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+            var id=state.activeCase.id;autosave.reset();state.isDirty=false;openCase(id);
+          }
+        }else showError({message:error.message});
+      }
+    }
     function signIn() {
       document.getElementById('sign-in-button').disabled = true;
       document.getElementById('auth-status').textContent = __ST_TEXT__('client.verifying_your_google_access');
       initialize();
     }
 
-    function showCaseHome() {
-      if(state.saving){setStatus(__ST_TEXT__('client.saving_your_changes'));return false;}
-      if (state.isDirty && !window.confirm(__ST_TEXT__('client.discard_unsaved_changes_and_return_to_cases'))) return false;
+    async function showCaseHome() {
+      try { await flushCase(); } catch(error) { showError({message:error.message}); return false; }
       state.openSequence += 1;
       stopPlaybackTimer();
       sheetImport.close();
       state.activeCase = null;
+      autosave.reset();
       state.run.result = null;
       state.isDirty = false;
       ['editor-panel', 'run-panel', 'comparison-panel', 'workspace-tabs', 'engine-panel'].forEach(function(id) { toggle(id, false); });
@@ -108,8 +143,9 @@
       return true;
     }
 
-    function lockWorkspace() {
-      if (!showCaseHome()) return;
+    async function lockWorkspace() {
+      if (!await showCaseHome()) return;
+      if (!await STSettings.flush()) return;
       state.requestEpoch += 1;
       STPreferences.write('remember', null);
       document.getElementById('remember-session').checked = false;
@@ -131,6 +167,7 @@
       document.getElementById('sign-in-button').disabled = false;
       document.getElementById('auth-status').textContent = '';
       STPreferences.write('remember', document.getElementById('remember-session').checked ? 'yes' : null);
+      document.documentElement.classList.remove('restoring-session');
       toggle('auth-panel', false); toggle('application', true);
       state.bootstrap = response.data;
       STSettings.configureGemini(response.data.gemini || {});
@@ -151,19 +188,16 @@
       shell.sync();
     }
 
-    function saveWorkspace(event) {
-      event.preventDefault();
-      STSettings.setSaving(true);
-      callServer('saveUserSettings', [{
-        workspaceRootFolderId: document.getElementById('workspace-folder-id').value,
-        preferredPlaybackRate: Number(document.getElementById('playback-rate').value),
-        gemini: {model:document.getElementById('gemini-model').value,apiKey:document.getElementById('gemini-api-key').value,clearKey:document.getElementById('gemini-clear-key').checked}
-      }], function(response) {
-        STSettings.setSaving(false);
-        if (!response.ok) return STSettings.error(response.error.message || __ST_TEXT__('client.settings_could_not_be_saved'));
-        STSettings.saved();
-        shell.toast(__ST_TEXT__('client.settings_saved'));
-        initialize();
+    function saveWorkspace(request, done) {
+      callServer('saveUserSettings', [request], function(response) {
+        if(response.ok){
+          state.bootstrap.settings=response.data;
+          state.bootstrap.gemini={model:request.gemini.model,configured:request.gemini.clearKey?false:Boolean(request.gemini.apiKey||state.bootstrap.gemini?.configured)};
+          document.getElementById('gemini-key-status').textContent=state.bootstrap.gemini.configured?__ST_TEXT__('settings.api_key_saved_for_your_google_account'):__ST_TEXT__('settings.no_api_key_configured');
+          shell.sync();
+          if(!state.activeCase)callServer('getBootstrap',[],function(r){if(r.ok&&state.bootstrap?.settings.workspaceRootFolderId===response.data.workspaceRootFolderId){state.bootstrap.cases=r.data.cases;renderCases(r.data.cases);shell.sync();}});
+        }
+        done(response);
       });
     }
 
@@ -198,8 +232,9 @@ function createPublicDemoCase() {
       requestCaseDeletion(state.activeCase.id, state.activeCase.name, document.getElementById('delete-case'));
     }
 
-    function requestCaseDeletion(caseId, caseName, button) {
-      if (!window.confirm(__ST_TEXT__('client.move_case') + caseName + __ST_TEXT__('client.to_the_drive_trash'))) return;
+    async function requestCaseDeletion(caseId, caseName, button) {
+      if (!await STDialog.confirm(__ST_TEXT__('dialog.delete_case'),__ST_TEXT__('client.move_case') + caseName + __ST_TEXT__('client.to_the_drive_trash'),true)) return;
+      try{await flushCase();}catch(error){showError({message:error.message});return;}
       if (button) button.disabled = true;
       callServer('deleteCase', [caseId], function(response) {
         if (button) button.disabled = false;
@@ -208,6 +243,8 @@ function createPublicDemoCase() {
         if (deletedActiveCase) {
           stopPlaybackTimer();
           state.activeCase = null;
+          autosave.reset();
+          STSettings.close();
           state.isDirty = false;
           state.run.commands = [];
           state.run.result = null;
@@ -221,14 +258,15 @@ function createPublicDemoCase() {
       });
     }
 
-function openCase(caseId) {
-      if (state.isDirty && !window.confirm(__ST_TEXT__('client.discard_unsaved_changes_and_open_this_case'))) return;
+async function openCase(caseId) {
+      try{await flushCase();}catch(error){showError({message:error.message});return;}
       var sequence = ++state.openSequence;
       callServer('getCase', [caseId], function(response) {
         if(sequence !== state.openSequence) return;
         if (!response.ok) return showError(response.error);
         stopPlaybackTimer();
         state.activeCase = response.data;
+        autosave.reset();
         toggle('cases-panel', false);
 
         state.isDirty = false;
@@ -244,67 +282,56 @@ function openCase(caseId) {
       });
     }
 
-    function reloadActiveCase() {
-      if (!state.activeCase) return;
-      openCase(state.activeCase.id);
+    function makeSimulationClone(source) {
+      var copy=cloneJson(source), count=state.activeCase.simulations.length;
+      copy.id='simulation-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9);
+      copy.name=__ST_TEXT__('simulation.copy_name')+source.name;
+      copy.results=null;copy.clonedFromSimulationId=source.id;copy.createdAt=new Date().toISOString();copy.updatedAt=copy.createdAt;
+      return copy;
     }
-
-    function cloneActiveSimulation() {
-      if (!state.activeCase) return;
-      saveActiveCase(function() {
-        cloneSavedActiveSimulation();
-      });
+    async function cloneActiveSimulation() {
+      if(!state.activeCase)return;
+      try{await flushCase();}catch(error){showError({message:error.message});return;}
+      var copy=makeSimulationClone(activePersistentSimulation());
+      state.activeCase.simulations.push(copy);
+      activatePersistentSimulation(copy.id,true);state.uiView='editor';shell.sync();autosave.change(true);
     }
-
-    function cloneSavedActiveSimulation(afterClone) {
-      if (!state.activeCase) return;
-      var button = document.getElementById('clone-case');
-      if (button) button.disabled = true;
-      callServer('cloneSimulation', [state.activeCase.id, state.activeSimulationId], function(response) {
-        if (button) button.disabled = false;
-        if (!response.ok) return showError(response.error);
-        state.activeCase = response.data;
-        state.activeSimulationId = response.data.simulations[response.data.simulations.length - 1].id;
-        if (typeof afterClone === 'function') {
-          afterClone(activePersistentSimulation());
-          return;
-        }
-        renderWorkspaceTabs();
-        activatePersistentSimulation(state.activeSimulationId);
-        setStatus(__ST_TEXT__('client.active_simulation') + activePersistentSimulation().name + __ST_TEXT__('client.this_is_a_clone_the_source_remains_unchanged'));
-      });
+    async function renameSimulation() {
+      var source=activePersistentSimulation();if(!source)return;
+      var answer=await STDialog.open({title:__ST_TEXT__('simulation.rename'),input:{label:__ST_TEXT__('simulation.name'),value:source.name},buttons:[{id:'cancel',label:__ST_TEXT__('view.cancel')},{id:'ok',label:__ST_TEXT__('dialog.ok')}]});
+      if(answer.action!=='ok'||activePersistentSimulation()?.id!==source.id||answer.value===source.name)return;
+      source.name=answer.value;source.updatedAt=new Date().toISOString();renderEditorMeta();renderWorkspaceTabs();autosave.change(true);
     }
-
-    function markCaseDirty() {
-      if (!state.activeCase) return;
-      state.isDirty = true;
-      renderEditorMeta();
-      renderRunWorkspace();
+    async function deleteSimulation() {
+      var source=activePersistentSimulation();if(!source)return;
+      if(state.activeCase.simulations.length<2){await STDialog.alert(__ST_TEXT__('simulation.delete'),__ST_TEXT__('simulation.keep_one'));return;}
+      if(!await STDialog.confirm(__ST_TEXT__('simulation.delete'),__ST_TEXT__('simulation.delete_message')+source.name,true))return;
+      try{await flushCase();}catch(error){showError({message:error.message});return;}
+      state.activeCase.simulations=state.activeCase.simulations.filter(function(s){return s.id!==source.id;});
+      activatePersistentSimulation(state.activeCase.simulations[0].id,true);state.uiView='editor';shell.sync();autosave.change(true);
     }
-
+    function invalidateActiveResult() {
+      var simulation=activePersistentSimulation();if(!simulation)return;
+      simulation.results=null;state.run.result=null;state.run.configuration=null;stopPlaybackTimer();
+      document.getElementById('simulation-json-preview').value='';
+      toggle('simulation-results',false);
+    }
+    function markCaseDirty(event) {
+      if (!state.activeCase) return;
+      if(!event||!['case-name','unit-of-flow'].includes(event.target?.id))invalidateActiveResult();
+      autosave.change();renderEditorMeta();
+    }
+    function captureForSave() {
+      var next=collectCaseEditor();if(!next)return null;
+      if(!next.name.trim()||next.equipment.some(function(e){return !e.id||!e.name||!(e.nominalRatePerSecond>0);}))throw new Error(__ST_TEXT__('autosave.invalid'));
+      var simulation=activePersistentSimulation(),run=readRunConfiguration();if(!run)return null;
+      if(simulation){simulation.equipment=cloneJson(next.equipment);simulation.dynamicConfig=cloneJson(run);simulation.updatedAt=new Date().toISOString();}
+      next.simulations=cloneJson(state.activeCase.simulations);
+      return cloneJson(next);
+    }
     function saveActiveCase(afterSave) {
-      var next = collectCaseEditor();
-      if (!next) return;
-      var simulation = activePersistentSimulation();
-      if (simulation) {
-        simulation.equipment = cloneJson(next.equipment || []);
-        simulation.dynamicConfig = cloneJson(readRunConfiguration() || simulation.dynamicConfig || {});
-        next.simulations = cloneJson(state.activeCase.simulations || []);
-      }
-      if(state.saving) return;
-      state.saving=true; shell.sync();
-      setBusy('save-case', true);
-      callServer('saveCase', [next], function(response) {
-        state.saving=false; shell.sync();
-        setBusy('save-case', false);
-        if (!response.ok) return showError(response.error);
-        state.activeCase = response.data;
-        state.isDirty = false;
-        renderEditor();
-        initialize();
-        if (typeof afterSave === 'function') afterSave(response.data);
-        else setStatus(__ST_TEXT__('client.case_saved_as_revision') + response.data.revision + '.');
-      });
+      autosave.change(true);
+      return flushCase().then(function(){if(typeof afterSave==='function')afterSave(state.activeCase);}).catch(function(error){showError({message:error.message});});
     }
 
     function captureSheetImport() {
@@ -329,7 +356,7 @@ function openCase(caseId) {
       }
       state.activeCase.metadata=Object.assign({},state.activeCase.metadata,{dataClassification:'USER_PROVIDED'});
       state.isDirty=true;state.uiView='editor';
-      renderEditor();shell.sync();
+      renderEditor();shell.sync();autosave.change(true);
       setStatus(__ST_TEXT__('client.applied_sheet_selection_to')+simulation.name+': '+result.added+__ST_TEXT__('client.added')+result.updated+__ST_TEXT__('client.updated_save_the_case')+(result.equipmentChanged?__ST_TEXT__('client.run_again_to_refresh_results'):''));
       return true;
     }
@@ -339,6 +366,7 @@ function openCase(caseId) {
       state.activeCase.equipment.push(createBlankEquipment());
       state.isDirty = true;
       renderEquipment();
+      invalidateActiveResult();autosave.change(true);
       renderRunWorkspace();
     }
 
@@ -396,6 +424,7 @@ function openCase(caseId) {
       card.dataset.index = String(index);
       card.innerHTML = ("<div class=\"equipment-header\"><strong></strong><div class=\"button-row\"><button class=\"equipment-drag ghost icon-button\" type=\"button\" aria-label=\"" + __ST_HTML_TEXT__('client.reorder_equipment') + "\" title=\"" + __ST_HTML_TEXT__('client.drag_to_reorder_use_arrow_up_or_down_on_this_handle') + "\"></button><button class=\"remove-equipment danger\" type=\"button\">" + __ST_HTML_TEXT__('client.remove') + "</button></div></div><div class=\"equipment-grid\"><label>" + __ST_HTML_TEXT__('client.equipment_id') + "<input class=\"equipment-id\"></label><label>" + __ST_HTML_TEXT__('sheetimportmerge.type') + "<select class=\"equipment-type\"><option value=\"BLOWER\">" + __ST_HTML_TEXT__('client.blower') + "</option><option value=\"BLOWMOLDER\">" + __ST_HTML_TEXT__('client.blowmolder') + "</option><option value=\"CONVEYOR\">" + __ST_HTML_TEXT__('client.conveyor') + "</option><option value=\"PACEMAKER\">" + __ST_HTML_TEXT__('client.pacemaker') + "</option><option value=\"PUCKER\">" + __ST_HTML_TEXT__('client.pucker') + "</option><option value=\"FILLER\">" + __ST_HTML_TEXT__('client.filler') + "</option><option value=\"DEPUCKER\">" + __ST_HTML_TEXT__('client.de_pucker') + "</option><option value=\"SLEEVER\">" + __ST_HTML_TEXT__('client.sleever') + "</option><option value=\"CASE_PACKER\">" + __ST_HTML_TEXT__('client.case_packer') + "</option><option value=\"PALLETIZER\">" + __ST_HTML_TEXT__('client.palletizer') + "</option><option value=\"CUSTOM\">" + __ST_HTML_TEXT__('client.other_custom') + "</option></select></label><label>" + __ST_HTML_TEXT__('sheetimportmerge.name') + "<input class=\"equipment-name\"></label><label>" + __ST_HTML_TEXT__('client.nominal_rate_sec') + "<input class=\"equipment-rate\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + __ST_HTML_TEXT__('client.initial_mode') + "<select class=\"equipment-mode\"><option value=\"AUTO\">" + __ST_HTML_TEXT__('client.automatic') + "</option><option value=\"MANUAL\">" + __ST_HTML_TEXT__('client.manual') + "</option><option value=\"PAUSE\">" + __ST_HTML_TEXT__('client.paused') + "</option><option value=\"STOP\">" + __ST_HTML_TEXT__('client.stopped') + "</option></select></label></div><section class=\"format-zone-setup\"><div class=\"format-zone-heading\"><div><strong>" + __ST_HTML_TEXT__('client.flowpilot_conveyor_design') + "</strong><p>" + __ST_HTML_TEXT__('client.required_for_every_conveyor_geometry_is_always_active_the_engine_derives_co') + "</p></div></div><div class=\"format-zone-grid\"><label>" + __ST_HTML_TEXT__('client.installed_length_l_act_mm') + "<input class=\"format-zone-lact\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + __ST_HTML_TEXT__('client.prime_reserve_l_p_mm') + "<input class=\"format-zone-lp-prime\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + __ST_HTML_TEXT__('sheetimportmerge.package_length_mm') + "<input class=\"format-zone-package-length\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + __ST_HTML_TEXT__('client.upstream_discharge_pitch_mm') + "<input class=\"format-zone-discharge-pitch\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + __ST_HTML_TEXT__('client.conveyor_speed_factor') + "<input class=\"format-zone-speed-factor\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + __ST_HTML_TEXT__('client.installed_back_up_position_mm') + "<input class=\"format-zone-backup\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + __ST_HTML_TEXT__('client.discharge_runout_mm') + "<input class=\"format-zone-discharge-runout\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + __ST_HTML_TEXT__('client.reject_runout_mm') + "<input class=\"format-zone-reject-runout\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + __ST_HTML_TEXT__('client.blocked_time_delay_s') + "<input class=\"format-zone-blocked-delay\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + __ST_HTML_TEXT__('client.clear_time_delay_s') + "<input class=\"format-zone-clear-delay\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + __ST_HTML_TEXT__('client.insurance_factor_units') + "<input class=\"format-zone-insurance\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + __ST_HTML_TEXT__('client.upstream_stop_response_s') + "<input class=\"format-zone-stop-response\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + __ST_HTML_TEXT__('sheetimportmerge.bottles_discharged_at_stop') + "<input class=\"format-zone-residual\" type=\"number\" min=\"0\" step=\"any\"></label><label>" + __ST_HTML_TEXT__('client.downstream_ramp_up_s') + "<input class=\"format-zone-downstream-ramp\" type=\"number\" min=\"0\" step=\"any\"></label></div><p class=\"format-zone-preview\"></p></section><details class=\"equipment-json-details\"><summary>" + __ST_HTML_TEXT__('client.advanced_json_fields') + "</summary><label class=\"characteristics-label\">" + __ST_HTML_TEXT__('client.characteristics_json_optional') + "<textarea class=\"equipment-characteristics\" spellcheck=\"false\"></textarea></label><label class=\"characteristics-label\">" + __ST_HTML_TEXT__('client.noise_profile_json_optional') + "<textarea class=\"equipment-noise-profile\" spellcheck=\"false\"></textarea></label><label class=\"characteristics-label\">" + __ST_HTML_TEXT__('client.advanced_process_format_json_optional') + "<textarea class=\"equipment-process-data\" spellcheck=\"false\"></textarea></label></details>");
       card.querySelector('strong').textContent = __ST_TEXT__('client.step') + (index + 1) + ' · ' + (equipment.type || 'CUSTOM') + ' · ' + (equipment.name || equipment.id || 'Unnamed') + ' · ' + (Number(equipment.nominalRatePerSecond || 0) * 60) + __ST_TEXT__('client.bpm');
+      var jsonNote=document.createElement('p');jsonNote.className='chart-note';jsonNote.textContent=__ST_TEXT__('editor.json_note');card.querySelector('.equipment-json-details summary').after(jsonNote);
       card.querySelector('.equipment-id').value = equipment.id || '';
       card.querySelector('.equipment-type').value = equipment.type || 'CUSTOM';
       card.querySelector('.equipment-name').value = equipment.name || '';
@@ -643,14 +672,17 @@ function numericInputValue(input) {
       state.isDirty = true;
       renderEquipment();
       STEquipmentDrag.animate(positions,targetIndex);
+      invalidateActiveResult();autosave.change(true);
       renderRunWorkspace();
     }
 
-    function removeEquipment(index) {
+    async function removeEquipment(index) {
+      if (!await STDialog.confirm(__ST_TEXT__('dialog.delete_equipment'),__ST_TEXT__('dialog.delete_equipment_message'),true))return;
       if (!syncEquipmentFromEditor()) return;
       state.activeCase.equipment.splice(index, 1);
       state.isDirty = true;
       renderEquipment();
+      invalidateActiveResult();autosave.change(true);
       renderRunWorkspace();
     }
 
@@ -720,10 +752,10 @@ function parseJsonObject(rawValue, label, step) {
 
 function createBlankEquipment() {
       return {
-        id: '',
+        id: 'equipment-'+Date.now().toString(36),
         type: 'CUSTOM',
-        name: '',
-        nominalRatePerSecond: undefined,
+        name: __ST_TEXT__('simulation.new_equipment'),
+        nominalRatePerSecond: 1,
         initialMode: 'AUTO',
         characteristics: {},
         noiseProfile: {},
@@ -812,19 +844,24 @@ function renderRawJson() {
 
     function syncPersistentSimulation() {
       var simulation = activePersistentSimulation();
-      if (!simulation || !state.activeCase) return;
+      if (!simulation || !state.activeCase) return false;
+      var before=JSON.stringify([simulation.equipment,simulation.dynamicConfig]);
       var editor = collectCaseEditor();
+      if (!editor) return false;
       if (editor) {
         state.activeCase.name = editor.name;
         state.activeCase.unitOfFlow = editor.unitOfFlow;
       }
       simulation.equipment = cloneJson(state.activeCase.equipment || []);
-      simulation.dynamicConfig = cloneJson(readRunConfiguration() || simulation.dynamicConfig || {});
+      var config=readRunConfiguration();if(!config)return false;
+      simulation.dynamicConfig = cloneJson(config);
+      if(before!==JSON.stringify([simulation.equipment,simulation.dynamicConfig]))autosave.change();
+      return true;
     }
 
     function activatePersistentSimulation(simulationId, initial) {
       var hadUnsavedChanges = state.isDirty;
-      if (!initial) syncPersistentSimulation();
+      if (!initial && !syncPersistentSimulation()) return;
       var simulation = (state.activeCase.simulations || []).find(function(item) { return item.id === simulationId; });
       if (!simulation) return;
       stopPlaybackTimer();
@@ -837,7 +874,7 @@ function renderRawJson() {
       state.run.commands = cloneJson(simulation.dynamicConfig?.commands || []);
       applyScenarioRunInputs(simulation.dynamicConfig);
       state.run.result = simulation.results?.replay ? cloneJson(simulation.results.replay) : null;
-      state.isDirty = initial ? false : hadUnsavedChanges;
+      state.isDirty = autosave.pending() || hadUnsavedChanges;
       renderEditor();
       if (state.run.result) {
         document.getElementById('simulation-json-preview').value = JSON.stringify(state.run.result, null, 2);
@@ -871,487 +908,35 @@ function renderRawJson() {
     }
 
     function renderSimulationAnalysis() {
-      var section = document.getElementById('simulation-analysis');
-      var target = document.getElementById('simulation-analysis-content');
-      if (!section || !target) return;
-      var simulation = activePersistentSimulation();
-      if (!simulation || !state.run.result) {
-        target.textContent = '';
-        toggle('simulation-analysis', false);
-        return;
-      }
-
-      var analysis = buildSimulationAnalysis(simulation, state.run.result);
-      target.textContent = '';
-      target.appendChild(createSimulationAnalysisView(analysis));
-      toggle('simulation-analysis', true);
+      var simulation=activePersistentSimulation(),target=document.getElementById('simulation-analysis-content');
+      if(!simulation){target.textContent='';toggle('simulation-analysis',false);return;}
+      STWhatIf.render(simulation,target,createWhatIfScenario);toggle('simulation-analysis',true);
     }
-
-    function createSimulationAnalysisView(analysis) {
-      var fragment = document.createDocumentFragment();
-      var primary = analysis.primary;
-      if (primary) {
-        var grid = document.createElement('div');
-        grid.className = 'simulation-analysis-grid';
-
-        var finding = document.createElement('article');
-        finding.className = 'analysis-finding analysis-' + String(primary.severity || 'ATTENTION').toLowerCase().replace(/_/g, '-');
-        var status = document.createElement('span');
-        status.className = 'analysis-status analysis-status-' + String(primary.severity || 'ATTENTION').toLowerCase().replace(/_/g, '-');
-        status.textContent = primary.severity === 'INPUT_REQUIRED' ? __ST_TEXT__('client.input_required') : primary.severity;
-        finding.appendChild(status);
-        var findingTitle = document.createElement('h4');
-        findingTitle.textContent = primary.finding;
-        finding.appendChild(findingTitle);
-        var findingText = document.createElement('p');
-        findingText.textContent = primary.diagnosis;
-        finding.appendChild(findingText);
-        var evidence = document.createElement('p');
-        evidence.className = 'analysis-evidence';
-        evidence.textContent = __ST_TEXT__('client.evidence') + primary.evidence;
-        finding.appendChild(evidence);
-        grid.appendChild(finding);
-
-        var recommendation = document.createElement('article');
-        recommendation.className = 'analysis-recommendation';
-        var capex = document.createElement('span');
-        capex.className = 'analysis-capex';
-        capex.textContent = primary.capex;
-        recommendation.appendChild(capex);
-        var recommendationTitle = document.createElement('h4');
-        recommendationTitle.textContent = primary.title;
-        recommendation.appendChild(recommendationTitle);
-        var description = document.createElement('p');
-        description.textContent = primary.description;
-        recommendation.appendChild(description);
-        if (primary.canApply) {
-          var button = document.createElement('button');
-          button.type = 'button';
-          button.innerHTML = STIcons.svg('plus')+__ST_TEXT__('client.create_recommended_simulation_b');
-          button.title = __ST_TEXT__('client.create_a_saved_clone_apply_only_these_inputs_then_review_and_run_the_succes');
-          button.addEventListener('click', function() { createWhatIfScenario(primary.kind, button); });
-          recommendation.appendChild(button);
-        } else {
-          var unavailable = document.createElement('p');
-          unavailable.className = 'analysis-evidence';
-          unavailable.textContent = __ST_TEXT__('client.no_automatic_clone_is_created_until_the_required_physical_inputs_are_comple');
-          recommendation.appendChild(unavailable);
-        }
-        grid.appendChild(recommendation);
-        fragment.appendChild(grid);
-      } else {
-        var noAction = document.createElement('article');
-        noAction.className = 'analysis-no-action';
-        var stable = document.createElement('span');
-        stable.className = 'analysis-status analysis-status-stable';
-        stable.textContent = __ST_TEXT__('client.no_priority_change');
-        noAction.appendChild(stable);
-        var noActionTitle = document.createElement('h4');
-        noActionTitle.textContent = __ST_TEXT__('client.no_material_design_issue_was_detected_in_this_run');
-        noAction.appendChild(noActionTitle);
-        var noActionText = document.createElement('p');
-        noActionText.textContent = __ST_TEXT__('client.the_available_geometry_audit_and_observed_loss_counters_do_not_justify_an_a');
-        noAction.appendChild(noActionText);
-        fragment.appendChild(noAction);
-      }
-
-      var checks = document.createElement('details');
-      checks.className = 'analysis-checks';
-      var summary = document.createElement('summary');
-      summary.textContent = __ST_TEXT__('client.evidence_considered') + analysis.checks.length + ')';
-      checks.appendChild(summary);
-      var list = document.createElement('ul');
-      analysis.checks.forEach(function(item) {
-        var row = document.createElement('li');
-        row.textContent = item;
-        list.appendChild(row);
-      });
-      checks.appendChild(list);
-      fragment.appendChild(checks);
-      return fragment;
+    async function createWhatIfScenario(proposal,button) {
+      await createProposedScenario(proposal,'LOCAL',button);
     }
-
-    function buildSimulationAnalysis(simulation, result) {
-      var proposals = buildWhatIfProposals(simulation, result);
-      var primary = proposals.filter(function(item) { return item.recommended; }).sort(function(left, right) {
-        return Number(right.priority || 0) - Number(left.priority || 0);
-      })[0] || null;
-      var summary = result.summary || {};
-      var checks = [];
-      if (isFiniteNumber(summary.lineOeePercent)) checks.push(__ST_TEXT__('client.global_oee') + formatNumber(summary.lineOeePercent) + __ST_TEXT__('client.using') + (summary.lineOeePacemakerName || 'the selected pacemaker') + '.');
-      checks.push(__ST_TEXT__('client.line_losses_starvation') + formatSeconds(summary.totalStarvedSeconds || 0) + __ST_TEXT__('client.waiting_for_prime') + formatSeconds(summary.totalWaitingForPrimeSeconds || 0) + __ST_TEXT__('client.failures') + formatSeconds(summary.totalFailureSeconds || 0) + '.');
-      proposals.filter(function(item) { return item.recommended || item.evidence; }).forEach(function(item) {
-        if (item.evidence) checks.push(item.title + ': ' + item.evidence);
-      });
-      return { primary: primary, checks: uniqueAnalysisChecks(checks) };
+    async function applyChatScenario(proposal,button) {
+      await createProposedScenario(proposal,'GEMINI',button);
     }
-
-    function uniqueAnalysisChecks(checks) {
-      return checks.filter(function(item, index) { return item && checks.indexOf(item) === index; });
-    }
-
-    function buildWhatIfProposals(simulation, result) {
-      var target = selectWhatIfConveyorTarget(simulation, result);
-      var summary = result.summary || {};
-      var targetEngineering = target && target.metrics ? target.metrics.engineering : null;
-      var audit = targetEngineering?.audit || null;
-      var auditStatus = audit?.status || 'NOT_EVALUATED';
-      var calculated = targetEngineering?.calculated || {};
-      var input = targetEngineering?.input || {};
-      var speedFactor = target ? readConveyorSpeedFactor(target.equipment) : null;
-      var recommendedSpeedFactor = calculated.recommendedConveyorSpeedFactorPercent;
-      var speedFactorDiffers = isFiniteNumber(speedFactor) && isFiniteNumber(recommendedSpeedFactor) &&
-        recommendedSpeedFactor >= 0 && Math.abs(speedFactor - recommendedSpeedFactor) >= 0.25;
-      var requiredBackup = calculated.recommendedBackupSensorPositionMm;
-      var installedBackup = input.backupSensorPositionMm;
-      var recoveryLength = calculated.recoveryLengthMm;
-      var installedLengthGoal = findAuditGoal(audit, 'INSTALLED_LENGTH');
-      var recoveryGoal = findAuditGoal(audit, 'SMOOTH_RECOVERY');
-      var backupGoal = findAuditGoal(audit, 'BACKUP_POSITION');
-      var sensorGoal = findAuditGoal(audit, 'SENSOR_DEBOUNCE');
-      var recommendationInputsReady = hasPhysicalRecommendationInputs(input);
-      var geometryNeedsRecovery = installedLengthGoal?.status === 'FAIL' || recoveryGoal?.status === 'WARNING' || backupGoal?.status === 'WARNING';
-      var bufferPlan = geometryNeedsRecovery ? calculateBufferRecoveryPlan(targetEngineering) : null;
-      var sensorDebounceNeedsTune = sensorGoal?.status === 'WARNING';
-      var sensorDebouncePlan = sensorDebounceNeedsTune ? calculateSensorDebouncePlan(input, calculated) : null;
-      var highWaitingOrStarvation = Number(summary.totalWaitingForPrimeSeconds || 0) > 30 || Number(summary.totalStarvedSeconds || 0) > 60;
-      var reliabilityTargets = simulation.equipment.filter(function(equipment) {
-        var profile = equipment.noiseProfile?.reliability;
-        return equipment.type !== 'CONVEYOR' && profile && isFiniteNumber(profile.mtbfMinutes) && profile.mtbfMinutes > 0 &&
-          isFiniteNumber(profile.mttrMinutes) && profile.mttrMinutes > 0;
-      });
-      var lowAvailability = Object.values(result.equipmentMetrics || {}).some(function(metrics) {
-        return isFiniteNumber(metrics.availabilityPercent) && metrics.availabilityPercent < 85;
-      });
-      var reliabilityRecommended = Number(summary.totalFailureSeconds || 0) > 30 || lowAvailability;
-      var auditMessages = auditGoalMessages(audit);
-      var proposals = [];
-
-      if (!target) {
-        proposals.push({
-          kind: 'INPUT_REQUIRED', title: __ST_TEXT__('client.complete_physical_conveyor_data'), capex: __ST_TEXT__('client.input_required'), canApply: false,
-          recommended: true, priority: 100, severity: 'INPUT_REQUIRED',
-          finding: __ST_TEXT__('client.no_physical_conveyor_can_be_evaluated'),
-          diagnosis: __ST_TEXT__('client.this_simulation_has_no_conveyor_with_flowpilot_geometry_available_for_a_phy'),
-          description: __ST_TEXT__('client.add_a_machine_conveyor_machine_section_with_geometry_before_creating_an_aut'),
-          evidence: __ST_TEXT__('client.no_conveyor_metrics_were_saved_with_this_run')
-        });
-        return proposals;
-      }
-
-      if (!recommendationInputsReady) {
-        proposals.push({
-          kind: 'INPUT_REQUIRED', title: __ST_TEXT__('client.complete_physical_conveyor_data'), capex: __ST_TEXT__('client.input_required'), canApply: false,
-          recommended: true, priority: 100, severity: 'INPUT_REQUIRED', target: target,
-          finding: __ST_TEXT__('client.the_physical_audit_is_incomplete_on') + target.equipment.name,
-          diagnosis: __ST_TEXT__('client.a_safe_sensor_speed_or_buffer_change_cannot_be_calculated_until_the_missing'),
-          description: __ST_TEXT__('client.complete_the_listed_flowpilot_fields_save_the_simulation_and_run_it_again_b'),
-          evidence: missingPhysicalRecommendationInputs(input).join(', ') + '. ' + (auditMessages.join(' ') || __ST_TEXT__('client.audit_status') + auditStatus + '.')
-        });
-      }
-
-      proposals.push({
-        kind: 'BUFFER_RECOVERY', title: __ST_TEXT__('client.restore_buffer_recovery'), capex: __ST_TEXT__('client.high_capex'), target: target,
-        bufferPlan: bufferPlan, canApply: Boolean(bufferPlan), recommended: geometryNeedsRecovery,
-        priority: installedLengthGoal?.status === 'FAIL' ? 96 : recoveryGoal?.status === 'WARNING' ? 92 : backupGoal?.status === 'WARNING' ? 88 : 0,
-        severity: installedLengthGoal?.status === 'FAIL' ? 'CRITICAL' : 'ATTENTION',
-        finding: __ST_TEXT__('client.physical_recovery_margin_is_insufficient_on') + target.equipment.name,
-        diagnosis: __ST_TEXT__('client.the_conveyor_audit_indicates_that_a_normal_stop_restart_may_consume_the_ava'),
-        description: bufferPlan
-          ? __ST_TEXT__('client.set_back_up_to_the_calculated_required_l_bu_of') + formatNumber(bufferPlan.backupSensorPositionMm) + __ST_TEXT__('client.mm_and_set_l_act_to_the_minimum_modeled_length_of') + formatNumber(bufferPlan.installedLengthMm) + __ST_TEXT__('client.mm') + formatNumber(bufferPlan.addedLengthMm) + __ST_TEXT__('client.mm_added')
-          : __ST_TEXT__('client.the_audit_found_a_geometry_issue_but_the_available_inputs_cannot_derive_a_v'),
-        evidence: __ST_TEXT__('client.target') + target.equipment.name + __ST_TEXT__('client.audit') + auditStatus +
-          (isFiniteNumber(recoveryLength) ? __ST_TEXT__('client.l_rec') + formatNumber(recoveryLength) + __ST_TEXT__('client.mm_2') : '') +
-          (isFiniteNumber(requiredBackup) ? __ST_TEXT__('client.required_l_bu') + formatNumber(requiredBackup) + __ST_TEXT__('client.mm_2') : '') +
-          (highWaitingOrStarvation ? __ST_TEXT__('client.observed_waiting_starvation_is_elevated') : '')
-      });
-
-      proposals.push({
-        kind: 'SENSOR_DEBOUNCE', title: __ST_TEXT__('client.tune_back_up_confirmation_timers'), capex: __ST_TEXT__('client.zero_capex'), target: target,
-        sensorDebouncePlan: sensorDebouncePlan, canApply: Boolean(sensorDebouncePlan && sensorDebouncePlan.changed),
-        recommended: sensorDebounceNeedsTune && !geometryNeedsRecovery && recommendationInputsReady,
-        priority: sensorDebounceNeedsTune ? 82 : 0, severity: 'ATTENTION',
-        finding: __ST_TEXT__('client.normal_photoeye_pulses_can_be_mistaken_for_a_sustained_back_up_signal'),
-        diagnosis: __ST_TEXT__('client.at_least_one_configured_back_up_confirmation_delay_is_not_longer_than_the_m'),
-        description: sensorDebouncePlan
-          ? __ST_TEXT__('client.set_blocked_delay_to') + formatNumber(sensorDebouncePlan.blockedTimeDelaySeconds) + __ST_TEXT__('client.s_and_clear_delay_to') + formatNumber(sensorDebouncePlan.clearTimeDelaySeconds) + __ST_TEXT__('client.s_these_are_simulated_plc_confirmation_settings_confirm_them_with_controls_')
-          : __ST_TEXT__('client.package_pulse_and_gap_timing_are_required_to_derive_a_safe_confirmation_del'),
-        evidence: __ST_TEXT__('client.target') + target.equipment.name +
-          (isFiniteNumber(calculated.packagePassSensorSeconds) ? __ST_TEXT__('client.normal_occupied_pulse') + formatNumber(calculated.packagePassSensorSeconds) + ' s' : '') +
-          (isFiniteNumber(calculated.sensorClearGapSeconds) ? __ST_TEXT__('client.normal_clear_gap') + formatNumber(calculated.sensorClearGapSeconds) + ' s' : '') +
-          __ST_TEXT__('client.installed_delays') + formatNumber(input.blockedTimeDelaySeconds || 0) + ' s / ' + formatNumber(input.clearTimeDelaySeconds || 0) + ' s'
-      });
-
-      proposals.push({
-        kind: 'SPEED_BALANCE', title: __ST_TEXT__('client.balance_downstream_infeed_speed'), capex: __ST_TEXT__('client.zero_capex'), target: target,
-        recommendedSpeedFactorPercent: isFiniteNumber(recommendedSpeedFactor) && recommendedSpeedFactor >= 0 ? Number(recommendedSpeedFactor.toFixed(2)) : null,
-        canApply: Boolean(target && speedFactorDiffers), recommended: speedFactorDiffers && !geometryNeedsRecovery,
-        priority: speedFactorDiffers ? 64 : 0, severity: 'ATTENTION',
-        finding: __ST_TEXT__('client.infeed_conveyor_speed_does_not_match_the_calculated_downstream_demand'),
-        diagnosis: __ST_TEXT__('client.the_current_belt_factor_differs_from_the_flowpilot_infeed_calculation_which'),
-        description: speedFactorDiffers
-          ? __ST_TEXT__('client.change_conveyor_speed_factor_from') + formatNumber(speedFactor) + __ST_TEXT__('client.to_the_calculated') + formatNumber(recommendedSpeedFactor) + '%.'
-          : __ST_TEXT__('client.the_current_factor_is_already_aligned_with_the_calculated_downstream_infeed'),
-        evidence: __ST_TEXT__('client.target') + target.equipment.name +
-          (isFiniteNumber(calculated.recommendedInfeedConveyorSpeedMmPerSecond) ? __ST_TEXT__('client.recommended_infeed_speed') + formatNumber(calculated.recommendedInfeedConveyorSpeedMmPerSecond) + __ST_TEXT__('client.mm_s_2') : '') +
-          (isFiniteNumber(calculated.sensorClearGapSeconds) ? __ST_TEXT__('client.normal_clear_gap') + formatNumber(calculated.sensorClearGapSeconds) + ' s' : '')
-      });
-
-      proposals.push({
-        kind: 'RELIABILITY', title: __ST_TEXT__('client.reliability_sensitivity_check'), capex: __ST_TEXT__('client.low_capex_opex'),
-        canApply: reliabilityTargets.length > 0, recommended: reliabilityRecommended && !geometryNeedsRecovery,
-        priority: reliabilityRecommended ? 52 : 0, severity: 'ATTENTION',
-        finding: __ST_TEXT__('client.intrinsic_equipment_downtime_is_reducing_the_result'),
-        diagnosis: __ST_TEXT__('client.failures_or_low_intrinsic_availability_were_observed_this_scenario_is_a_tra'),
-        description: reliabilityTargets.length
-          ? __ST_TEXT__('client.for') + reliabilityTargets.length + __ST_TEXT__('client.critical_machines_test_the_stated_maintenance_assumption_mtbf_1_20_and_mttr')
-          : __ST_TEXT__('client.mtbf_and_mttr_are_required_on_at_least_one_non_conveyor_machine'),
-        evidence: __ST_TEXT__('client.failure') + formatSeconds(summary.totalFailureSeconds || 0) +
-          __ST_TEXT__('client.availability_trigger') + (lowAvailability ? 'present' : 'not present') + '.'
-      });
-
-      return proposals;
-    }
-
-    function findAuditGoal(audit, id) {
-      return (audit?.goals || []).find(function(goal) { return goal.id === id; }) || null;
-    }
-
-    function auditGoalMessages(audit) {
-      return (audit?.goals || []).filter(function(goal) { return goal.status !== 'PASS'; }).map(function(goal) {
-        return goal.id + ': ' + goal.message;
-      });
-    }
-
-    function missingPhysicalRecommendationInputs(input) {
-      var labels = [
-        ['installedLengthMm', __ST_TEXT__('client.installed_length_l_act')],
-        ['primeReserveMm', __ST_TEXT__('client.prime_reserve_l_p')],
-        ['packageLengthMm', 'package length'],
-        ['upstreamDischargePitchMm', 'upstream discharge pitch'],
-        ['upstreamNominalSpeedBpm', 'upstream nominal speed'],
-        ['conveyorSpeedFactorPercent', 'conveyor speed factor'],
-        ['downstreamHighSpeedBpm', 'downstream high speed'],
-        ['downstreamInfeedPitchMm', 'downstream infeed pitch']
-      ];
-      return labels.filter(function(item) {
-        var value = input ? input[item[0]] : undefined;
-        return !isFiniteNumber(value) || value < 0 || (item[0] !== 'primeReserveMm' && item[0] !== 'conveyorSpeedFactorPercent' && value === 0);
-      }).map(function(item) { return item[1]; });
-    }
-
-    function hasPhysicalRecommendationInputs(input) {
-      return missingPhysicalRecommendationInputs(input).length === 0;
-    }
-
-    function calculateSensorDebouncePlan(input, calculated) {
-      var normalBlockedPulse = calculated?.packagePassSensorSeconds;
-      var normalClearGap = calculated?.sensorClearGapSeconds;
-      if (!isFiniteNumber(normalBlockedPulse) || !isFiniteNumber(normalClearGap)) return null;
-      function minimumGreaterThan(value) {
-        return Number((Math.ceil((value + 0.01) * 100) / 100).toFixed(2));
-      }
-      var currentBlocked = isFiniteNumber(input?.blockedTimeDelaySeconds) ? input.blockedTimeDelaySeconds : 0;
-      var currentClear = isFiniteNumber(input?.clearTimeDelaySeconds) ? input.clearTimeDelaySeconds : 0;
-      var blockedTimeDelaySeconds = Math.max(currentBlocked, minimumGreaterThan(normalBlockedPulse));
-      var clearTimeDelaySeconds = Math.max(currentClear, minimumGreaterThan(normalClearGap));
-      return {
-        blockedTimeDelaySeconds: blockedTimeDelaySeconds,
-        clearTimeDelaySeconds: clearTimeDelaySeconds,
-        changed: blockedTimeDelaySeconds !== currentBlocked || clearTimeDelaySeconds !== currentClear
-      };
-    }
-
-    function calculateBufferRecoveryPlan(engineering) {
-      var calculator = window.SimulatorEngine?.calculateConveyorEngineering;
-      var input = engineering?.input || {};
-      if (!calculator || !isFiniteNumber(input.installedLengthMm) || !isFiniteNumber(input.primeReserveMm)) return null;
-      var initialCalculation = calculator(input);
-      var requiredBackup = initialCalculation?.calculated?.recommendedBackupSensorPositionMm;
-      if (!isFiniteNumber(requiredBackup)) return null;
-
-      function evaluate(installedLengthMm) {
-        var withLength = calculator(Object.assign({}, input, { installedLengthMm: installedLengthMm }));
-        var backup = withLength?.calculated?.recommendedBackupSensorPositionMm;
-        if (!isFiniteNumber(backup)) return null;
-        var assessment = calculator(Object.assign({}, input, {
-          installedLengthMm: installedLengthMm,
-          backupSensorPositionMm: Math.ceil(backup)
-        }));
-        return { assessment: assessment, backupSensorPositionMm: Math.ceil(backup), installedLengthMm: Math.ceil(installedLengthMm) };
-      }
-
-      function hasRecoveryMargin(plan) {
-        if (!plan || !plan.assessment) return false;
-        var audit = plan.assessment.audit;
-        return findAuditGoal(audit, 'INSTALLED_LENGTH')?.status === 'PASS' &&
-          findAuditGoal(audit, 'SMOOTH_RECOVERY')?.status === 'PASS' &&
-          findAuditGoal(audit, 'BACKUP_POSITION')?.status === 'PASS';
-      }
-
-      var currentLength = Math.ceil(input.installedLengthMm);
-      var lower = Math.max(currentLength, Math.ceil(input.primeReserveMm + requiredBackup + 1));
-      var low = lower;
-      var high = lower;
-      var plan = evaluate(high);
-      var ceiling = Math.max(high + 50000, high * 5);
-      while (!hasRecoveryMargin(plan) && high < ceiling) {
-        low = high;
-        high += Math.max(100, Math.ceil(high * 0.2));
-        plan = evaluate(high);
-      }
-      if (!hasRecoveryMargin(plan)) return null;
-
-      while (high - low > 1) {
-        var midpoint = Math.floor((low + high) / 2);
-        var midpointPlan = evaluate(midpoint);
-        if (hasRecoveryMargin(midpointPlan)) {
-          high = midpoint;
-          plan = midpointPlan;
-        } else {
-          low = midpoint;
-        }
-      }
-      plan = evaluate(high);
-      return {
-        backupSensorPositionMm: plan.backupSensorPositionMm,
-        installedLengthMm: plan.installedLengthMm,
-        addedLengthMm: Math.max(0, plan.installedLengthMm - currentLength),
-        recoveryLengthMm: plan.assessment?.calculated?.recoveryLengthMm
-      };
-    }
-
-    function selectWhatIfConveyorTarget(simulation, result) {
-      var metricsByOwner = {};
-      Object.values(result.accumulationZoneMetrics || {}).forEach(function(metrics) {
-        if (metrics && metrics.ownerEquipmentId) metricsByOwner[metrics.ownerEquipmentId] = metrics;
-      });
-      var duration = Math.max(1, Number(result.durationSeconds || 0));
-      var candidates = (simulation.equipment || []).filter(function(equipment) {
-        return equipment.type === 'CONVEYOR' || equipment.processData?.role === 'CONVEYOR';
-      }).map(function(equipment) {
-        var metrics = metricsByOwner[equipment.id] || null;
-        var status = metrics?.engineering?.audit?.status || 'NOT_EVALUATED';
-        var auditScore = status === 'FAIL' ? 400 : status === 'WARNING' ? 300 : status === 'NOT_EVALUATED' ? 200 : 100;
-        var dynamicScore = metrics
-          ? Number(metrics.overflowUnits || 0) * 20 + Number(metrics.emptyInventorySeconds || 0) / duration * 10 + Number(metrics.backupSignalBlockedSeconds || 0) / duration * 5
-          : 0;
-        return { equipment: equipment, metrics: metrics, score: auditScore + dynamicScore };
-      });
-      candidates.sort(function(left, right) { return right.score - left.score; });
-      return candidates[0] || null;
-    }
-
-    function readConveyorSpeedFactor(equipment) {
-      var accumulation = equipment?.processData?.accumulation || {};
-      var speedSensors = equipment?.processData?.speedAndSensors || {};
-      var value = accumulation.conveyorSpeedFactorPercent;
-      if (!isFiniteNumber(value)) value = speedSensors.conveyorSpeedFactorVsDischargeVelocityPercent;
-      return isFiniteNumber(value) ? value : null;
-    }
-
-    function createWhatIfScenario(kind, button) {
-      var source = activePersistentSimulation();
-      if (!source || !state.run.result) return;
-      var proposal = buildWhatIfProposals(source, state.run.result).find(function(item) { return item.kind === kind; });
-      if (!proposal || !proposal.canApply) return;
-      if (button) button.disabled = true;
-
-      // Persist first so the server clones exactly the configuration and result
-      // the user is looking at, not an older Drive revision.
-      saveActiveCase(function() {
-        cloneSavedActiveSimulation(function(clone) {
-          var changes = applyWhatIfOverrides(clone, proposal);
-          clone.scenario = {
-            kind: proposal.kind,
-            title: proposal.title,
-            capex: proposal.capex,
-            sourceSimulationId: source.id,
-            sourceSimulationName: source.name,
-            createdAt: new Date().toISOString(),
-            finding: proposal.finding,
-            diagnosis: proposal.diagnosis,
-            evidence: proposal.evidence,
-            changes: changes
-          };
-          state.activeSimulationId = clone.id;
-          activatePersistentSimulation(clone.id, true);
-          state.isDirty = true;
-          saveActiveCase(function() {
-            setStatus(__ST_TEXT__('client.created') + clone.name + __ST_TEXT__('client.from') + source.name + '. ' + proposal.title + __ST_TEXT__('client.is_applied_review_the_changed_inputs_and_run_it_when_ready'));
-          });
-        });
-      });
-    }
-
-    function applyWhatIfOverrides(simulation, proposal) {
-      if (proposal.kind === 'SPEED_BALANCE') return applySpeedBalanceOverride(simulation, proposal);
-      if (proposal.kind === 'BUFFER_RECOVERY') return applyBufferRecoveryOverride(simulation, proposal);
-      if (proposal.kind === 'SENSOR_DEBOUNCE') return applySensorDebounceOverride(simulation, proposal);
-      if (proposal.kind === 'RELIABILITY') return applyReliabilityOverride(simulation);
-      return [];
-    }
-
-    function applySpeedBalanceOverride(simulation, proposal) {
-      var target = proposal.target;
-      var conveyor = simulation.equipment.find(function(equipment) { return equipment.id === target?.equipment?.id; });
-      var next = proposal.recommendedSpeedFactorPercent;
-      if (!conveyor || !isFiniteNumber(next)) return [];
-      conveyor.processData = conveyor.processData || {};
-      conveyor.processData.accumulation = conveyor.processData.accumulation || {};
-      var current = readConveyorSpeedFactor(conveyor);
-      conveyor.processData.accumulation.conveyorSpeedFactorPercent = next;
-      return [{ equipmentId: conveyor.id, path: 'processData.accumulation.conveyorSpeedFactorPercent', before: current, after: next, unit: '%' }];
-    }
-
-    function applyBufferRecoveryOverride(simulation, proposal) {
-      var target = proposal.target;
-      var conveyor = simulation.equipment.find(function(equipment) { return equipment.id === target?.equipment?.id; });
-      var plan = proposal.bufferPlan;
-      if (!conveyor || !plan || !isFiniteNumber(plan.backupSensorPositionMm) || !isFiniteNumber(plan.installedLengthMm)) return [];
-      conveyor.processData = conveyor.processData || {};
-      conveyor.processData.geometry = conveyor.processData.geometry || {};
-      conveyor.processData.accumulation = conveyor.processData.accumulation || {};
-      var beforeBackup = conveyor.processData.accumulation.backupSensorPositionMm;
-      var beforeLength = conveyor.processData.geometry.lactMm;
-      conveyor.processData.accumulation.backupSensorPositionMm = plan.backupSensorPositionMm;
-      conveyor.processData.geometry.lactMm = plan.installedLengthMm;
-      return [
-        { equipmentId: conveyor.id, path: 'processData.accumulation.backupSensorPositionMm', before: beforeBackup, after: plan.backupSensorPositionMm, unit: 'mm' },
-        { equipmentId: conveyor.id, path: 'processData.geometry.lactMm', before: beforeLength, after: plan.installedLengthMm, unit: 'mm' }
-      ].filter(function(change) { return change.before !== change.after; });
-    }
-
-    function applySensorDebounceOverride(simulation, proposal) {
-      var target = proposal.target;
-      var conveyor = simulation.equipment.find(function(equipment) { return equipment.id === target?.equipment?.id; });
-      var plan = proposal.sensorDebouncePlan;
-      if (!conveyor || !plan) return [];
-      conveyor.processData = conveyor.processData || {};
-      conveyor.processData.accumulation = conveyor.processData.accumulation || {};
-      var beforeBlocked = conveyor.processData.accumulation.blockedTimeDelaySeconds;
-      var beforeClear = conveyor.processData.accumulation.clearTimeDelaySeconds;
-      conveyor.processData.accumulation.blockedTimeDelaySeconds = plan.blockedTimeDelaySeconds;
-      conveyor.processData.accumulation.clearTimeDelaySeconds = plan.clearTimeDelaySeconds;
-      return [
-        { equipmentId: conveyor.id, path: 'processData.accumulation.blockedTimeDelaySeconds', before: beforeBlocked, after: plan.blockedTimeDelaySeconds, unit: 's' },
-        { equipmentId: conveyor.id, path: 'processData.accumulation.clearTimeDelaySeconds', before: beforeClear, after: plan.clearTimeDelaySeconds, unit: 's' }
-      ].filter(function(change) { return change.before !== change.after; });
-    }
-
-    function applyReliabilityOverride(simulation) {
-      var changes = [];
-      (simulation.equipment || []).forEach(function(equipment) {
-        var reliability = equipment.noiseProfile?.reliability;
-        if (equipment.type === 'CONVEYOR' || !reliability || !isFiniteNumber(reliability.mtbfMinutes) || !isFiniteNumber(reliability.mttrMinutes)) return;
-        var beforeMtbf = reliability.mtbfMinutes;
-        var beforeMttr = reliability.mttrMinutes;
-        reliability.mtbfMinutes = Number((beforeMtbf * 1.2).toFixed(6));
-        reliability.mttrMinutes = Number((beforeMttr * 0.85).toFixed(6));
-        changes.push({ equipmentId: equipment.id, path: 'noiseProfile.reliability.mtbfMinutes', before: beforeMtbf, after: reliability.mtbfMinutes, unit: 'min' });
-        changes.push({ equipmentId: equipment.id, path: 'noiseProfile.reliability.mttrMinutes', before: beforeMttr, after: reliability.mttrMinutes, unit: 'min' });
-      });
-      return changes;
+    async function createProposedScenario(proposal,origin,button) {
+      var caseId=state.activeCase?.id,simulationId=state.activeSimulationId;
+      if(button)button.disabled=true;
+      try{
+        await flushCase();
+        var source=activePersistentSimulation();
+        if(state.activeCase?.id!==caseId||source?.id!==simulationId||proposal.sourceSimulationId!==simulationId||proposal.sourceSignature!==STScenarios.signature(source))throw new Error(__ST_TEXT__('scenario.stale'));
+        var approved=await STDialog.confirm(__ST_TEXT__('scenario.create'),__ST_TEXT__('scenario.confirm'));
+        if(!approved)return;
+        await flushCase();
+        if(state.activeCase?.id!==caseId||state.activeSimulationId!==simulationId)throw new Error(__ST_TEXT__('scenario.stale'));
+        var payload={caseId:caseId,simulationId:simulationId,expectedRevision:state.activeCase.revision,sourceSignature:proposal.sourceSignature,origin:origin,proposal:Object.assign({},proposal,{title:proposal.title||STScenarioText[proposal.titleKey]})};
+        document.getElementById('application').inert=true;
+        await new Promise(function(resolve,reject){callServer('createScenario',[payload],function(response){
+          if(!response.ok){reject(new Error(response.error.message));return;}
+          state.activeCase=response.data.case;autosave.reset();activatePersistentSimulation(response.data.simulationId,true);state.uiView='editor';shell.sync();resolve();
+        });});
+        setStatus(__ST_TEXT__('scenario.created'));
+      }catch(error){showError({message:error.message});}finally{document.getElementById('application').inert=false;if(button?.isConnected)button.disabled=false;}
     }
 
     function applyScenarioRunInputs(run) {
@@ -1372,7 +957,7 @@ function renderRawJson() {
         equipmentId: state.activeCase.equipment[0].id,
         action: 'PAUSE'
       });
-      renderControlEvents();
+      renderControlEvents();markCaseDirty();
     }
 
     function renderControlEvents() {
@@ -1407,6 +992,8 @@ function renderRawJson() {
         state.run.commands.splice(index, 1);
         renderControlEvents();
       });
+      row.addEventListener('change',markCaseDirty);
+      row.querySelector('.remove-command').addEventListener('click',markCaseDirty);
       return row;
     }
 
@@ -1414,6 +1001,7 @@ function renderRawJson() {
       if (state.isDirty && !collectCaseEditor()) return;
       var run = readRunConfiguration();
       if (!run) return;
+      activePersistentSimulation().dynamicConfig=cloneJson(run);
       state.run.configuration = copyRunConfiguration(run);
       if (!calculateSimulation(run, 0)) return;
       var tab = activePersistentSimulation();
@@ -1945,6 +1533,7 @@ function summarizeGeometrySources(sources, assumptions) {
 
       var run = createStoredRunConfiguration();
       if (!run || !calculateSimulation(run, sample.virtualSecond)) return;
+      var tab=activePersistentSimulation();if(tab){tab.results=createStoredSimulationResult(state.run.result,run);saveActiveCase();}
       var equipment = state.activeCase.equipment.find(function(item) { return item.id === equipmentId; });
       var label = equipment ? equipment.name : equipmentId;
       setStatus((action === 'RESET_AND_RUN' ? __ST_TEXT__('client.reset_and_run') : action.replace(/_/g, ' ').toLowerCase()) + __ST_TEXT__('client.scheduled_for') + label + __ST_TEXT__('client.at_virtual') + sample.virtualSecond + __ST_TEXT__('client.s_the_deterministic_path_was_recalculated'));
@@ -1995,7 +1584,7 @@ function summarizeGeometrySources(sources, assumptions) {
           state.saving=false;
           document.querySelectorAll('[data-busy="true"]').forEach(function(button){button.disabled=false;delete button.dataset.busy;});
           shell.sync();
-          showError({ code: 'NETWORK_ERROR', message: __ST_TEXT__('client.the_server_request_could_not_be_completed_please_try_again') });
+          onSuccess({ok:false,error:{ code: 'NETWORK_ERROR', message: __ST_TEXT__('client.the_server_request_could_not_be_completed_please_try_again') }});
         })
         .withSuccessHandler(function(response) { done(); if(epoch === state.requestEpoch) onSuccess(response); });
       runner[name].apply(runner, args);
@@ -2006,6 +1595,8 @@ function summarizeGeometrySources(sources, assumptions) {
     function showError(error) {
       var message = (error.code || 'ERROR') + ': ' + (error.message || __ST_TEXT__('client.the_request_failed'));
       var target = document.getElementById('status'); target.className = 'status error'; target.textContent = message;
+      document.documentElement.classList.remove('restoring-session');
+      if(!state.bootstrap)toggle('auth-panel',true);
       document.getElementById('auth-status').textContent = message;
       document.getElementById('sign-in-button').disabled = false;
       if (document.getElementById('settings-dialog').open) STSettings.error(message);

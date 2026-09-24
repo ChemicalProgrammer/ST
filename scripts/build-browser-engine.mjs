@@ -8,7 +8,8 @@ const sourceFiles = [
   'src/simulation/ConveyorEngineering.js',
   'src/simulation/FormatGeometryAdapter.js',
   'src/simulation/SimulationValidation.js',
-  'src/simulation/LineSimulationEngine.js'
+  'src/simulation/LineSimulationEngine.js',
+  'src/analysis/ScenarioPlanner.js'
 ];
 const targetFile = path.join(repositoryRoot, 'apps-script', 'SimulationEngine.html');
 
@@ -29,15 +30,21 @@ window.SimulatorEngine = {
   validateSimulationInput: validateSimulationInput,
   calculateConveyorEngineering: calculateConveyorEngineering
 };
+window.STScenarios = {plan:planScenarios,apply:applyScenarioChanges,signature:scenarioSignature,audit:scenarioAudit,fields:SCENARIO_FIELDS};
 })(window);
 </script>
 `;
 
 fs.writeFileSync(targetFile, output);
 
+const scenarioSources = ['src/simulation/ConveyorEngineering.js','src/simulation/FormatGeometryAdapter.js','src/simulation/SimulationValidation.js','src/analysis/ScenarioPlanner.js'];
+fs.writeFileSync(path.join(repositoryRoot,'apps-script','ScenarioEngine.gs'),
+  '// GENERATED scenario validation and planning. Edit src/analysis/ScenarioPlanner.js.\nvar STScenarioEngine_ = (function(){\n'+
+  scenarioSources.map(file=>removeModuleSyntax(fs.readFileSync(path.join(repositoryRoot,file),'utf8'))).join('\n')+
+  '\nreturn {plan:planScenarios,apply:applyScenarioChanges,signature:scenarioSignature,audit:scenarioAudit,fields:SCENARIO_FIELDS};\n})();\n');
+
 function removeModuleSyntax(moduleSource) {
   return moduleSource
     .replace(/^import .*;\n/gm, '')
     .replace(/^export /gm, '');
 }
-

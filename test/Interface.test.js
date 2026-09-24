@@ -7,6 +7,7 @@ import postcss from 'postcss';
 import selectorParser from 'postcss-selector-parser';
 const read = file => fs.readFileSync(new URL('../apps-script/'+file,import.meta.url),'utf8');
 const settle = () => new Promise(resolve=>setTimeout(resolve,35));
+async function waitFor(predicate){for(let i=0;i<80;i++){if(predicate())return;await settle();}assert(predicate(),'Asynchronous UI did not settle');}
 async function setup({remember=false,fail=false,many=false,invalidSheet=false,empty=false}={}) {
  const context={}; vm.createContext(context);vm.runInContext(read('PublicDemoCaseFactory.gs'),context);
  const initial=JSON.parse(JSON.stringify(context.createPublicDemoCaseRequest_()));
@@ -21,7 +22,7 @@ async function setup({remember=false,fail=false,many=false,invalidSheet=false,em
   askGemini:()=>({text:'Analysis of the saved case.'}),
   previewSheetImport:()=>({canImport:!invalidSheet,source:{schemaVersion:'plant-sheet-v1',sheetName:'Synthetic sheet',readAt:'2026-09-16',spreadsheetId:'synthetic-id'},metadata:{site:'Synthetic site',formatName:'Imported format'},equipment:copy(sourceEquipment.slice(0,3)).map((e,i)=>({...e,noiseProfile:{...e.noiseProfile,reliability:{...e.noiseProfile.reliability,mtbfMinutes:e.noiseProfile.reliability.mtbfMinutes+60}},processData:{...e.processData,equipment:{...e.processData.equipment,mtbfMinutes:e.processData.equipment.mtbfMinutes+60}},characteristics:{...e.characteristics,sourceSheetRow:i+10}})),sourceRows:[],errors:invalidSheet?[{cell:'D10:E10',message:'Supply both MTBF and MTTR.'}]:[],warnings:[],notes:['Review model assumptions.']}),
   getCase:id=>copy(cases.find(c=>c.id===id)),
-  saveCase:c=>{c=copy(c);c.revision++;cases=cases.map(x=>x.id===c.id?c:x);return c;},
+  saveCase:c=>{c=copy(c);c.revision=c.expectedRevision+1;cases=cases.map(x=>x.id===c.id?c:x);return c;},
   saveUserSettings:s=>(stored=s),
   cloneSimulation:(id,sid)=>{const c=cases.find(c=>c.id===id),source=c.simulations.find(s=>s.id===sid),next=copy(source);next.id='simulation-b';next.name='Simulation B';next.results=null;c.simulations.push(next);return copy(c);},
   deleteCase:id=>{cases=cases.filter(c=>c.id!==id);return {id};},
@@ -40,7 +41,7 @@ async function setup({remember=false,fail=false,many=false,invalidSheet=false,em
  }});
  await new Promise(r=>dom.window.addEventListener('load',r));await settle();
  const w=dom.window,d=w.document;
- return {w,d,dom,errors,calls,media,click:async selector=>{d.querySelector(selector).click();await settle();},visible:id=>!d.getElementById(id).classList.contains('hidden')};
+ return {w,d,dom,errors,calls,media,storedCases:()=>copy(cases),api,click:async selector=>{d.querySelector(selector).click();await settle();},visible:id=>!d.getElementById(id).classList.contains('hidden')};
 }
 test('UI: cases-only entry, accessible navigation, theme settings and remembered access',async()=>{
  const h=await setup();try{
@@ -52,9 +53,9 @@ test('UI: cases-only entry, accessible navigation, theme settings and remembered
   const theme=h.d.getElementById('settings-theme');theme.value='dark';theme.dispatchEvent(new h.w.Event('change'));assert.equal(h.d.documentElement.dataset.theme,'dark');
   theme.value='auto';theme.dispatchEvent(new h.w.Event('change'));h.media.matches=true;h.media.listener();assert.equal(h.d.documentElement.dataset.theme,'dark');
   h.media.matches=false;h.media.listener();assert.equal(h.d.documentElement.dataset.theme,'light');
-  const field=h.d.getElementById('workspace-folder-id');field.value='new-folder';field.dispatchEvent(new h.w.Event('input',{bubbles:true}));assert.match(h.d.getElementById('settings-unsaved').textContent,/Unsaved/);
-  h.d.getElementById('settings-dialog').dispatchEvent(new h.w.Event('cancel',{cancelable:true}));assert(!h.d.getElementById('settings-dialog').open);assert.equal(field.value,'preview');
-  await h.click('#cases-settings');field.value='saved-folder';await h.click('#settings-save');assert(!h.d.getElementById('settings-dialog').open);assert.equal(field.value,'saved-folder');
+  const field=h.d.getElementById('workspace-folder-id');field.value='new-folder';field.dispatchEvent(new h.w.Event('input',{bubbles:true}));assert.match(h.d.getElementById('settings-unsaved').textContent,/pending/);
+  h.d.getElementById('settings-dialog').dispatchEvent(new h.w.Event('cancel',{cancelable:true}));await settle();assert(!h.d.getElementById('settings-dialog').open);assert.equal(field.value,'new-folder');
+  await h.click('#cases-settings');field.value='saved-folder';field.dispatchEvent(new h.w.Event('input',{bubbles:true}));await h.click('#settings-cancel');assert(!h.d.getElementById('settings-dialog').open);assert.equal(field.value,'saved-folder');
   await h.click('#collapse-sidebar');assert(h.d.getElementById('application').classList.contains('sidebar-collapsed'));
   await h.click('#cases-sign-out');assert(h.visible('auth-panel'));assert.equal(h.w.localStorage.getItem('st.ui.v1.remember'),null);
   assert.deepEqual(h.errors,[]);
@@ -74,7 +75,8 @@ test('UI: run, edit, clone, compare, and delete retain the existing engine workf
   await h.click('.sidebar [data-view="whatif"]');assert(h.visible('whatif-panel'));assert(!h.visible('comparison-panel'));await h.click('.workspace-tab-comparison');assert(h.visible('comparison-panel'));assert(!h.visible('whatif-panel'));assert(h.d.querySelector('#case-comparison-content .comparison-context'));
   await h.click('.sidebar [data-view="simulation"]');await h.click('#run-simulation');await settle();await h.click('#pause-simulation');
   await h.click('.workspace-tab-comparison');assert(h.d.querySelector('#case-comparison-content table'));assert.match(h.d.getElementById('case-comparison-content').textContent,/Absolute Δ/);
-  await h.click('#home-cases');assert(h.visible('cases-panel'));await h.click('.delete-case');assert.equal(h.d.querySelectorAll('.case-row').length,0);
+  await h.click('.sidebar [data-view="simulation"]');h.d.getElementById('run-duration').value='90';h.d.getElementById('run-duration').dispatchEvent(new h.w.Event('input',{bubbles:true}));assert(!h.visible('simulation-results'),'changing run inputs hides stale results immediately');
+  await h.click('#open-settings');await h.click('#delete-case');assert(h.d.querySelector('.message-dialog[open]'));await h.click('.message-dialog .danger');await waitFor(()=>h.d.querySelectorAll('.case-row').length===0);assert(h.visible('cases-panel'));
   assert.deepEqual(h.errors,[]);
  }finally{h.dom.window.close();}
 });
@@ -88,6 +90,52 @@ test('UI: compact case pagination, search and filters',async()=>{
 });
 test('UI: network failure restores entry and reports the error',async()=>{
  const h=await setup({fail:true});try{await h.click('#sign-in-button');assert(h.visible('auth-panel'));assert(!h.d.getElementById('sign-in-button').disabled);assert.match(h.d.getElementById('auth-status').textContent,/NETWORK_ERROR/);assert.deepEqual(h.errors,[]);}finally{h.dom.window.close();}
+});
+test('UI: automatic edits survive reload and simulation rename/delete uses reusable dialogs',async()=>{
+ const h=await setup();try{
+  await h.click('#sign-in-button');await h.click('.open-case');await h.click('.sidebar [data-view="editor"]');
+  assert(!h.d.querySelector('#save-case,#save-workspace-case,#settings-save,#reload-case,.delete-case'));
+  const name=h.d.querySelector('.equipment-name');name.value='Automatically saved equipment';name.dispatchEvent(new h.w.Event('input',{bubbles:true}));
+  await waitFor(()=>h.storedCases()[0].equipment[0].name==='Automatically saved equipment');assert.equal(h.d.activeElement===name,false);
+  assert.equal(h.d.getElementById('autosave-status').textContent,'Saved');
+  await h.click('#clone-case');await waitFor(()=>h.storedCases()[0].simulations?.length===2);
+  await h.click('#rename-simulation');const dialog=h.d.querySelector('.message-dialog');assert(dialog.open);const input=dialog.querySelector('input');input.value='Proposed B';await h.click('.message-dialog button:last-child');
+  await waitFor(()=>h.storedCases()[0].simulations[1].name==='Proposed B');
+  await h.click('#delete-simulation');await h.click('.message-dialog button:first-child');assert.equal(h.storedCases()[0].simulations.length,2);
+  await h.click('#delete-simulation');await h.click('.message-dialog .danger');await waitFor(()=>h.storedCases()[0].simulations.length===1);
+  await h.click('#home-cases');await h.click('.open-case');assert.equal(h.d.querySelector('.equipment-name').value,'Automatically saved equipment');
+  assert.deepEqual(Array.from(h.d.querySelector('#run-playback-rate').options).map(o=>o.value),['0.5','1','2','5','10','20','50']);assert.deepEqual(h.errors,[]);
+ }finally{h.dom.window.close();}
+});
+test('UI: local and Gemini chat buttons clone only validated changes into persistent scenarios',async()=>{
+ const h=await setup();try{
+  h.api.createScenario=request=>{
+    const source=h.storedCases()[0],simulation=source.simulations.find(s=>s.id===request.simulationId);
+    assert.equal(request.sourceSignature,h.w.STScenarios.signature(simulation));
+    const copy=h.w.STScenarios.apply(simulation,request.proposal.changes);copy.id='scenario-'+source.simulations.length;copy.name=request.proposal.title;copy.scenario={changes:request.proposal.changes,sourceSimulationId:simulation.id};
+    source.simulations.push(copy);const saved=h.api.saveCase({...source,expectedRevision:source.revision});return {case:saved,simulationId:copy.id};
+  };
+  await h.click('#sign-in-button');await h.click('.open-case');await h.click('.sidebar [data-view="whatif"]');
+  assert.equal(h.d.querySelectorAll('.scenario-grid>article').length,3);assert.match(h.d.querySelector('.scenario-grid').textContent,/Static inputs only/);
+  await h.click('.scenario-grid button');await h.click('.message-dialog button:last-child');await waitFor(()=>h.storedCases()[0].simulations.length===2);
+  assert(!h.storedCases()[0].simulations[0].results);assert.equal(h.storedCases()[0].simulations[1].results,null);
+  h.api.askGemini=request=>{
+    const source=h.storedCases()[0].simulations.find(s=>s.id===request.simulationId),proposal=h.w.STScenarios.plan(source).projects.find(p=>p.canApply);
+    assert(proposal);return {text:'Review these input changes.',proposals:[{...proposal,title:'Chat proposal'}]};
+  };
+  await h.click('#toggle-gemini');h.d.getElementById('gemini-question').value='Suggest an improvement';await h.click('#send-gemini');await waitFor(()=>!!h.d.querySelector('#gemini-messages .analysis-recommendation button'));
+  await h.click('#gemini-messages .analysis-recommendation button');await h.click('.message-dialog button:last-child');await waitFor(()=>h.storedCases()[0].simulations.length===3);
+  assert.equal(h.storedCases()[0].simulations[2].name,'Chat proposal');assert.deepEqual(h.errors,[]);
+ }finally{h.dom.window.close();}
+});
+test('UI: invalid JSON remains visible and blocks closing until corrected; failed remembered entry returns to login',async()=>{
+ const h=await setup();try{
+  await h.click('#sign-in-button');await h.click('.open-case');await h.click('.sidebar [data-view="editor"]');
+  const json=h.d.querySelector('.equipment-noise-profile'),previous=json.value;json.value='{invalid';json.dispatchEvent(new h.w.Event('input',{bubbles:true}));
+  await h.click('#home-cases');assert(!h.visible('cases-panel'));assert.equal(json.value,'{invalid');assert.match(h.d.getElementById('status').textContent,/JSON/);
+  json.value=previous;json.dispatchEvent(new h.w.Event('input',{bubbles:true}));await h.click('#home-cases');assert(h.visible('cases-panel'));assert.deepEqual(h.errors,[]);
+ }finally{h.dom.window.close();}
+ const failed=await setup({remember:true,fail:true});try{assert(failed.visible('auth-panel'));assert(!failed.d.documentElement.classList.contains('restoring-session'));}finally{failed.dom.window.close();}
 });
 test('styles have valid selectors and all custom properties are defined',()=>{
  const html=read('Index.html'),css=[...html.matchAll(/<style>([\s\S]*?)<\/style>/g)].map(m=>m[1]).join('\n');const ast=postcss.parse(css),defined=new Set(),used=new Set();
@@ -126,8 +174,8 @@ test('UI: compact editor reorders equipment with keyboard and preserves values',
  h.d.querySelector('.equipment-drag').dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
  assert.equal(ids()[1],before[0]);assert.equal(ids()[0],before[1]);assert.equal(h.d.querySelectorAll('.move-up,.move-down').length,0);
  assert.equal(h.d.querySelector('.remove-equipment').textContent,'');assert.equal(h.d.querySelector('.toggle-step').textContent,'');
- await h.click('#open-settings');assert.equal(h.d.querySelectorAll('.accent-choice').length,25);assert.equal(h.d.getElementById('settings-save').getAttribute('form'),'workspace-form');assert(!h.d.querySelector('.dialog-body #settings-save'));
- await h.click('#settings-save');assert(!h.d.getElementById('status').textContent.includes('Loading console'));
+ await h.click('#open-settings');assert.equal(h.d.querySelectorAll('.accent-choice').length,25);assert(!h.d.getElementById('settings-save'));assert(!h.d.querySelector('.dialog-body #settings-cancel'));
+ await h.click('#settings-cancel');assert(!h.d.getElementById('status').textContent.includes('Loading console'));
  await h.click('#toggle-gemini');const grip=h.d.getElementById('gemini-resize');const initial=Number(grip.getAttribute('aria-valuenow'));grip.dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'ArrowLeft'}));assert(Number(grip.getAttribute('aria-valuenow'))>initial);
  assert.deepEqual(h.errors,[]);
  }finally{h.dom.window.close();}
@@ -147,7 +195,7 @@ test('UI: selective Sheet reload updates the active simulation, preserves other 
  h.d.getElementById('sheet-import-ack').checked=true;h.d.getElementById('sheet-import-ack').dispatchEvent(new h.w.Event('change'));assert(!h.d.getElementById('sheet-import-apply').disabled);await h.click('#sheet-import-apply');
  let record=JSON.parse(h.d.getElementById('case-json-preview').value);assert.equal(record.simulations.length,2);assert.equal(record.simulations[1].id,simId);assert.equal(record.equipment.length,13);assert.equal(record.equipment[0].id,firstId);assert.equal(record.equipment[0].name,'Local equipment name');assert.equal(record.equipment[0].noiseProfile.reliability.mtbfMinutes,oldMTBF+60);assert.equal(record.simulations[1].results,null);assert(record.simulations[0].results.summary);
  assert.deepEqual(record.simulations[1].sourceImport.lastApplied.equipment[0].fields.map(f=>f.field),['mtbf']);
- await h.click('#save-workspace-case');await h.click('#reload-case');record=JSON.parse(h.d.getElementById('case-json-preview').value);assert.equal(record.simulations.length,2);assert.equal(record.simulations[1].equipment[0].name,'Local equipment name');assert.equal(record.simulations[1].equipment[0].noiseProfile.reliability.mtbfMinutes,oldMTBF+60);assert.deepEqual(h.errors,[]);
+ await h.click('#home-cases');await h.click('.open-case');await h.click('#workspace-tabs button:nth-child(2)');record=JSON.parse(h.d.getElementById('case-json-preview').value);assert.equal(record.simulations.length,2);assert.equal(record.simulations[1].equipment[0].name,'Local equipment name');assert.equal(record.simulations[1].equipment[0].noiseProfile.reliability.mtbfMinutes,oldMTBF+60);assert.deepEqual(h.errors,[]);
  }finally{h.dom.window.close();}
 });
 test('UI: empty simulation imports all selected equipment without creating another simulation',async()=>{

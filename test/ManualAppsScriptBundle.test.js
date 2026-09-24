@@ -28,7 +28,7 @@ test('manual Apps Script bundle contains all server modules and resolved HTML in
   assert.doesNotMatch(index, /<\?\s*include_/);
 
   const scripts = Array.from(index.matchAll(/<script>([\s\S]*?)<\/script>/g), (match) => match[1]);
-  assert.equal(scripts.length, 14);
+  assert.equal(scripts.length, 17);
   for (const script of scripts) new Function(script);
   new Function(code);
   assert.match(code, /GENERATED SERVER BUNDLE/);
@@ -89,7 +89,7 @@ test('manual bundle makes FlowPilot conveyor geometry mandatory and exposes Case
   assert.match(index, /FlowPilot geometry is active by default/);
   assert.doesNotMatch(index, /Use format fields/);
   assert.doesNotMatch(index, /Explicit accumulation-zone override JSON/);
-  assert.match(index, /Delete Case/);
+  assert.match(index, /Delete case/);
   assert.match(code, /function deleteCase\(/);
 });
 
@@ -105,30 +105,15 @@ test('manual bundle exposes photoeye pulses, sustained Back-up timers, and Waiti
   assert.match(index, /SENSOR_DEBOUNCE/);
 });
 
-test('manual bundle exposes one evidence-led What-If recommendation and OEE results', () => {
+test('manual bundle includes shared three-tier planning, dialogs and automatic persistence', () => {
   const output = buildManualAppsScriptBundle(repositoryRoot);
   const code = fs.readFileSync(output.codePath, 'utf8');
   const index = fs.readFileSync(output.indexPath, 'utf8');
-
-  assert.match(index, /What this run indicates/);
-  assert.match(index, /Create recommended Simulation B/);
-  assert.match(index, /function renderSimulationAnalysis\(/);
-  assert.match(index, /function buildSimulationAnalysis\(/);
-  assert.match(index, /function calculateBufferRecoveryPlan\(/);
-  assert.match(index, /Balance downstream infeed speed/);
-  assert.match(index, /Restore buffer recovery/);
-  assert.match(index, /Tune Back-up confirmation timers/);
-  assert.match(index, /Reliability sensitivity check/);
-  assert.match(index, /function createWhatIfScenario\(/);
-  assert.match(index, /function applySpeedBalanceOverride\(/);
-  assert.match(index, /function applySensorDebounceOverride\(/);
-  assert.match(index, /workspaceView: 'simulation'/);
-  assert.match(index, /aria-pressed/);
-  assert.match(index, /Global OEE/);
-  assert.match(index, /function formatLineOeeAtSample\(/);
-  assert.match(code, /scenario: normalizeObject_\(simulation\.scenario\)/);
-  assert.match(index, /Advanced JSON fields/);
-  assert.doesNotMatch(index, /Suggested next simulations/);
-  assert.doesNotMatch(index, /function renderExperimentWorkspace\(/);
-  assert.doesNotMatch(index, /id="experiment-workspace"/);
+  for (const name of ['STAutosave','STDialog','STScenarios','STWhatIf']) assert(index.includes(name),name);
+  for (const label of ['Zero CAPEX','Medium CAPEX / OPEX','High CAPEX','Static inputs only','Static + dynamic evidence','Advanced engine configuration']) assert(index.includes(label),label);
+  assert(index.includes('Global OEE'));
+  assert(code.includes('function createScenario_'));
+  assert(code.includes('function buildGeminiContext_'));
+  assert(!index.includes('id="save-case"'));
+  assert(!index.includes('id="reload-case"'));
 });

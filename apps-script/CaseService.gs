@@ -39,7 +39,8 @@ function cloneCase_(caseId, user) {
   return createCase_(copy, user);
 }
 
-function cloneSimulation_(caseId, simulationId, user) {
+function cloneSimulation_(caseId, simulationId, user) { return withCaseWriteLock_(function(){return cloneSimulationUnlocked_(caseId,simulationId,user);}); }
+function cloneSimulationUnlocked_(caseId, simulationId, user) {
   var owned = getOwnedCaseFile_(caseId, user);
   var current = ensureCaseSimulations_(owned.caseData);
   var source = current.simulations.filter(function(item) { return item.id === simulationId; })[0];
@@ -63,14 +64,21 @@ function getCase_(caseId, user) {
   return ensureCaseSimulations_(getOwnedCaseFile_(caseId, user).caseData);
 }
 
-function deleteCase_(caseId, user) {
+function deleteCase_(caseId, user) { return withCaseWriteLock_(function(){return deleteCaseUnlocked_(caseId,user);}); }
+function deleteCaseUnlocked_(caseId, user) {
   var owned = getOwnedCaseFile_(caseId, user);
   var summary = { id: owned.caseData.id, name: owned.caseData.name };
   owned.file.setTrashed(true);
   return summary;
 }
 
-function saveCase_(request, user) {
+function withCaseWriteLock_(action) {
+  var lock=LockService.getUserLock();
+  if(!lock.tryLock(10000))throw createSimulatorError_('CASE_BUSY','Another save is in progress. Try again.');
+  try{return action();}finally{lock.releaseLock();}
+}
+function saveCase_(request, user) { return withCaseWriteLock_(function(){return saveCaseUnlocked_(request,user);}); }
+function saveCaseUnlocked_(request, user) {
   if (!request || typeof request !== 'object') {
     throw createSimulatorError_('INVALID_CASE', 'The case must be an object.');
   }
@@ -141,11 +149,15 @@ function ensureCaseSimulations_(caseData) {
 }
 
 function normalizeSimulations_(simulations, fallbackEquipment, fallbackConfig) {
+  if(Array.isArray(simulations)&&!simulations.length)throw createSimulatorError_('INVALID_CASE','Keep at least one simulation in a case.');
+  var ids={};
   var source = Array.isArray(simulations) && simulations.length ? simulations : [{
     id: 'simulation-a', name: 'Simulation A', equipment: fallbackEquipment || [],
     dynamicConfig: normalizeObject_(fallbackConfig), results: null
   }];
   return source.map(function(simulation, index) {
+    if(simulation.id&&ids[simulation.id])throw createSimulatorError_('INVALID_CASE','Simulation identifiers must be unique.');
+    if(simulation.id)ids[simulation.id]=true;
     var simulationEquipment = normalizeEquipmentList_(simulation.equipment === undefined ? fallbackEquipment : simulation.equipment || []);
     return {
       id: typeof simulation.id === 'string' && simulation.id ? simulation.id : generateSimulationId_(index),
@@ -302,4 +314,3 @@ function toCaseSummary_(caseData, file) {
     dataClassification: typeof metadata.dataClassification === 'string' ? metadata.dataClassification : null
   };
 }
-

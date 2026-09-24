@@ -48,8 +48,9 @@ function normalizeUserSettings_(settings) {
   }
 
   var playbackRate = Number(settings.preferredPlaybackRate || 1);
-  if (!isFinite(playbackRate) || playbackRate <= 0) {
-    throw createSimulatorError_('INVALID_USER_SETTINGS', 'preferredPlaybackRate must be greater than zero.');
+  if(playbackRate===1.5)playbackRate=2;
+  if (![0.5,1,2,5,10,20,50].includes(playbackRate)) {
+    throw createSimulatorError_('INVALID_USER_SETTINGS', 'Choose a supported playback speed.');
   }
 
   return {
@@ -58,4 +59,3 @@ function normalizeUserSettings_(settings) {
     preferredPlaybackRate: playbackRate
   };
 }
-
