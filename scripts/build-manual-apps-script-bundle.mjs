@@ -43,6 +43,7 @@ const htmlIncludes = [
   ['WhatIf', 'WhatIf.html'],
   ['CaseGallery', 'CaseGallery.html'],
   ['Results', 'Results.html'],
+  ['LinePerformance', 'LinePerformance.html'],
   ['Shell', 'Shell.html'],
   ['Charts', 'Charts.html'],
   ['Comparison', 'Comparison.html'],

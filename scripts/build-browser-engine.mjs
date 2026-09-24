@@ -9,6 +9,7 @@ const sourceFiles = [
   'src/simulation/FormatGeometryAdapter.js',
   'src/simulation/SimulationValidation.js',
   'src/simulation/LineSimulationEngine.js',
+  'src/analysis/LinePerformanceAnalysis.js',
   'src/analysis/ScenarioPlanner.js'
 ];
 const targetFile = path.join(repositoryRoot, 'apps-script', 'SimulationEngine.html');
@@ -28,7 +29,8 @@ ${source}
 window.SimulatorEngine = {
   simulateLine: simulateLine,
   validateSimulationInput: validateSimulationInput,
-  calculateConveyorEngineering: calculateConveyorEngineering
+  calculateConveyorEngineering: calculateConveyorEngineering,
+  analyzeLinePerformance: analyzeLinePerformance
 };
 window.STScenarios = {plan:planScenarios,apply:applyScenarioChanges,signature:scenarioSignature,audit:scenarioAudit,fields:SCENARIO_FIELDS};
 })(window);

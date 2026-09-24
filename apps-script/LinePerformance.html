@@ -1,0 +1,65 @@
+<script>
+window.STLinePerformance = (function() {
+  function el(tag, text) { var item = document.createElement(tag); if (text !== undefined) item.textContent = text; return item; }
+  function value(n, digits) { return Number.isFinite(n) ? n.toLocaleString(undefined, {maximumFractionDigits: digits === undefined ? 1 : digits}) : '—'; }
+  function svg(tag, attrs, text) {
+    var item = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attrs).forEach(function(pair) { item.setAttribute(pair[0], String(pair[1])); });
+    if (text !== undefined) item.textContent = text;
+    return item;
+  }
+  function plot(target, points) {
+    target.textContent = '';
+    var valid = points.filter(function(p) { return Number.isFinite(p.normalPercent); });
+    if (!valid.length) return;
+    var all = valid.flatMap(function(p) { return [p.normalPercent, p.maximumPercent].filter(Number.isFinite); });
+    var minimum = Math.max(0, Math.floor((Math.min.apply(null, all) - 10) / 10) * 10);
+    var maximum = Math.ceil((Math.max.apply(null, all) + 10) / 10) * 10;
+    if (minimum === maximum) maximum += 10;
+    var chart = svg('svg', {viewBox:'0 0 740 220', role:'img', 'aria-label':__ST_TEXT__('performance.chart_label'), preserveAspectRatio:'xMidYMid meet'});
+    var left = 65, right = 690, bottom = 166, top = 24;
+    var x = function(i) { return left + (valid.length === 1 ? (right - left) / 2 : i * (right - left) / (valid.length - 1)); };
+    var y = function(pct) { return bottom - (pct - minimum) / (maximum - minimum) * (bottom - top); };
+    [minimum, (minimum + maximum) / 2, maximum].forEach(function(pct) {
+      chart.appendChild(svg('line', {x1:left, x2:right, y1:y(pct), y2:y(pct), class:'vgraph-grid'}));
+      chart.appendChild(svg('text', {x:left - 8, y:y(pct) + 4, class:'vgraph-label', 'text-anchor':'end'}, value(pct, 0) + '%'));
+    });
+    chart.appendChild(svg('polyline', {points:valid.map(function(p, i) { return x(i) + ',' + y(p.normalPercent); }).join(' '), class:'vgraph-normal'}));
+    var segment = [];
+    function flush() { if (segment.length > 1) chart.appendChild(svg('polyline', {points:segment.join(' '), class:'vgraph-maximum'})); segment = []; }
+    valid.forEach(function(p, i) { if (Number.isFinite(p.maximumPercent)) segment.push(x(i) + ',' + y(p.maximumPercent)); else flush(); });
+    flush();
+    valid.forEach(function(p, i) {
+      chart.appendChild(svg('circle', {cx:x(i), cy:y(p.normalPercent), r:4, class:'vgraph-normal-dot'}));
+      if (Number.isFinite(p.maximumPercent)) chart.appendChild(svg('circle', {cx:x(i), cy:y(p.maximumPercent), r:4, class:'vgraph-maximum-dot'}));
+      chart.appendChild(svg('text', {x:x(i), y:190, class:'vgraph-label', 'text-anchor':'middle'}, p.name.length > 13 ? p.name.slice(0, 12) + '…' : p.name));
+      if (p.isPacemaker) chart.appendChild(svg('text', {x:x(i), y:206, class:'vgraph-reference', 'text-anchor':'middle'}, __ST_TEXT__('performance.reference_short')));
+    });
+    target.appendChild(chart);
+  }
+  function render(result, equipment) {
+    if (!document.getElementById('line-performance')) return;
+    var analysis = window.SimulatorEngine.analyzeLinePerformance(equipment, result);
+    document.getElementById('vgraph-context').textContent = __ST_TEXT__('performance.context') + (analysis.points.find(function(p) { return p.isPacemaker; })?.name || '—');
+    plot(document.getElementById('vgraph-plot'), analysis.points);
+    document.getElementById('vgraph-caveat').textContent = analysis.hasSpeedHeadroom
+      ? __ST_TEXT__('performance.design_only') : __ST_TEXT__('performance.no_headroom');
+    var tbody = document.getElementById('performance-rows');
+    tbody.textContent = '';
+    analysis.points.forEach(function(point) {
+      var row = el('tr');
+      [point.name + (point.isPacemaker ? ' · ' + __ST_TEXT__('performance.reference_short') : ''),
+        value(point.normalBpm), value(point.maximumBpm), value(point.speedHeadroomPercent) + (point.speedHeadroomPercent === null ? '' : '%'),
+        value(point.availability === null ? null : point.availability * 100) + (point.availability === null ? '' : '%'),
+        value(point.runtimeEfficiency === null ? null : point.runtimeEfficiency * 100) + (point.runtimeEfficiency === null ? '' : '%'),
+        value(point.observedBpm)].forEach(function(cell, i) { var item = el('td', cell); if (i) item.className = 'numeric'; row.appendChild(item); });
+      tbody.appendChild(row);
+    });
+    document.getElementById('throughput-method').textContent =
+      __ST_TEXT__('performance.method') + ' ' + value(analysis.outputCount) + ' ' + analysis.unitOfFlow + ' ÷ ' +
+      value(analysis.durationSeconds / 60, 3) + ' min = ' + value(analysis.outletBpm) + ' ' + analysis.unitOfFlow + '/min. ' +
+      __ST_TEXT__('performance.equipment_note');
+  }
+  return {render:render};
+})();
+</script>

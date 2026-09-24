@@ -488,6 +488,22 @@ select { appearance:none; padding-right:var(--space-8); background-image:url("da
   @media (max-width: 600px) { .app-shell { padding-left: var(--size-16); padding-right: var(--size-16); } .topbar, .section-heading, .editor-subheading, .equipment-header, .format-zone-heading { align-items: flex-start; flex-direction: column; } .field-grid, .equipment-grid, .new-case-form, .run-fields, .control-event, .metrics-grid, .format-zone-grid { grid-template-columns: 1fr; } .case-row, .case-actions { align-items: flex-start; flex-direction: column; } .live-equipment-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); } .live-equipment-controls .live-control-run { grid-column: span 1; } .accumulation-zone-details summary { align-items: flex-start; flex-wrap: wrap; } .accumulation-zone-summary-name { flex-basis: calc(100% - var(--size-22)); } }
 </style>
     <style>
+  .line-performance { margin-top: var(--space-5); border-top: var(--border-width) solid var(--line); padding-top: var(--space-4); }
+  .line-performance h3 { font-size: var(--font-card); }
+  .vgraph-legend { display: flex; flex-wrap: wrap; gap: var(--space-4); font-size: var(--font-secondary); color: var(--muted); }
+  .vgraph-key { display: inline-flex; align-items: center; gap: var(--space-2); }
+  .vgraph-key::before { content: ''; width: var(--size-16); border-top: var(--focus-width) solid var(--series-0); }
+  .vgraph-key-maximum::before { border-color: var(--series-1); }
+  .vgraph-plot { width: 100%; overflow-x: auto; }
+  .vgraph-plot svg { display: block; width: 100%; min-width: min(100%, 580px); height: auto; }
+  .vgraph-grid { stroke: var(--chart-grid); stroke-width: var(--border-width); }
+  .vgraph-label { fill: var(--muted); font-size: var(--font-caption); }
+  .vgraph-reference { fill: var(--accent); font-size: var(--font-caption); font-weight: var(--weight-bold); }
+  .vgraph-normal, .vgraph-maximum { fill: none; stroke-width: var(--focus-width); stroke-linecap: round; stroke-linejoin: round; }
+  .vgraph-normal { stroke: var(--series-0); }
+  .vgraph-maximum { stroke: var(--series-1); }
+  .vgraph-normal-dot { fill: var(--series-0); }
+  .vgraph-maximum-dot { fill: var(--series-1); }
   .simulation-analysis { background: var(--surface); border: var(--size-1) solid var(--line); border-radius: var(--size-12); margin-top: var(--size-16); padding: var(--size-16); }
   .simulation-analysis-heading h3 { color: var(--ink); font-size: var(--text-16); margin: 0 0 var(--size-4); }
   .simulation-analysis-heading p { font-size: var(--text-12); margin: 0; max-width: var(--size-980); }
@@ -966,6 +982,14 @@ window.STPreferences = (function() {
         <div id="results-empty" class="empty"><h3>No results yet</h3><p>Run this simulation to inspect production, losses and equipment performance.</p><button data-view="simulation" data-icon="play">Go to simulation</button></div>
         <div id="results-body" class="hidden"><div id="results-kpis" class="result-kpis"></div><p id="results-reference" class="chart-note"></p><div id="results-insight" class="result-insight"></div>
         <h3>Equipment comparison</h3><div id="results-table" class="table-scroll"></div>
+        <section id="line-performance" class="line-performance" aria-labelledby="vgraph-title">
+          <div class="section-heading"><div><h3 id="vgraph-title">Line speed profile · V-Graph</h3><p id="vgraph-context" class="chart-note"></p></div></div>
+          <div class="vgraph-legend"><span class="vgraph-key vgraph-key-normal">Normal speed</span><span class="vgraph-key vgraph-key-maximum">Maximum configured speed</span></div>
+          <div id="vgraph-plot" class="vgraph-plot"></div><p id="vgraph-caveat" class="chart-note"></p>
+          <h3>Effective throughput by machine</h3>
+          <div class="table-scroll"><table><thead><tr><th>Machine</th><th class="numeric">Normal · /min</th><th class="numeric">Maximum · /min</th><th class="numeric">Speed reserve</th><th class="numeric">Availability</th><th class="numeric">Run efficiency</th><th class="numeric">Effective · /min</th></tr></thead><tbody id="performance-rows"></tbody></table></div>
+          <p id="throughput-method" class="chart-note"></p>
+        </section>
         <div class="chart-layout"><section class="chart-panel"><h3>Cumulative production</h3><p class="chart-note">Complete simulated duration · output units</p>          <canvas id="simulation-chart" height="210" aria-label="Cumulative output chart"></canvas>
 </section><section class="equipment-speed-chart-panel" aria-labelledby="equipment-speed-chart-title">
             <div class="equipment-speed-chart-heading">
@@ -3090,6 +3114,60 @@ function round(value) {
 }
 
 
+/** Design-speed profile and observed flow, without changing the simulation engine. */
+function analyzeLinePerformance(equipment, result) {
+  const machines = (equipment || []).filter(item => item.type !== 'CONVEYOR' && item.processData?.role !== 'CONVEYOR');
+  const duration = Number(result?.durationSeconds) || 0;
+  const referenceId = result?.summary?.lineOeePacemakerEquipmentId ||
+    machines.find(item => item.type === 'PACEMAKER' || item.processData?.role === 'PACEMAKER' || item.characteristics?.isPacemaker)?.id ||
+    machines.find(item => item.type === 'FILLER')?.id || machines[0]?.id;
+  const reference = machines.find(item => item.id === referenceId);
+  const baselineBpm = Number(reference?.nominalRatePerSecond) * 60;
+  const points = machines.map(item => {
+    const normalBpm = Number(item.nominalRatePerSecond) * 60;
+    const configuredMaximum = item.processData?.equipment?.maximumSpeedBpm;
+    const maximumBpm = configuredMaximum === null || configuredMaximum === undefined || configuredMaximum === ''
+      ? null : Number(configuredMaximum);
+    const validMaximum = Number.isFinite(maximumBpm) && maximumBpm >= normalBpm && normalBpm > 0;
+    const metrics = result?.equipmentMetrics?.[item.id];
+    const output = Number(metrics?.outputCount);
+    const stopped = Number(metrics?.stoppedSeconds);
+    // Availability excludes line interactions; starvation and blocking therefore
+    // reduce the operational-efficiency component of effective throughput.
+    const availableSeconds = duration > 0 && Number.isFinite(stopped)
+      ? Math.max(0, duration - stopped) : 0;
+    const availability = duration > 0 && Number.isFinite(stopped) ? availableSeconds / duration : null;
+    const runtimeEfficiency = availableSeconds > 0 && Number.isFinite(output) && normalBpm > 0
+      ? output / (availableSeconds * normalBpm / 60) : null;
+    const observedBpm = duration > 0 && Number.isFinite(output) ? output * 60 / duration : null;
+    return {
+      id: item.id, name: item.name, isPacemaker: item.id === referenceId,
+      normalBpm, maximumBpm: validMaximum ? maximumBpm : null,
+      speedHeadroomPercent: validMaximum ? (maximumBpm / normalBpm - 1) * 100 : null,
+      normalPercent: baselineBpm > 0 ? normalBpm / baselineBpm * 100 : null,
+      maximumPercent: validMaximum && baselineBpm > 0 ? maximumBpm / baselineBpm * 100 : null,
+      availability, runtimeEfficiency, observedBpm,
+      computedBpm: availability !== null && runtimeEfficiency !== null
+        ? normalBpm * availability * runtimeEfficiency : null,
+      hasDynamicEvidence: observedBpm !== null
+    };
+  });
+  const outletCount = Number(result?.summary?.outputCount);
+  return {
+    points, referenceId,
+    unitOfFlow: result?.unitOfFlow || 'units',
+    outletBpm: duration > 0 && Number.isFinite(outletCount) ? outletCount * 60 / duration : null,
+    outputCount: Number.isFinite(outletCount) ? outletCount : null,
+    durationSeconds: duration,
+    hasSpeedHeadroom: points.some(point => point.speedHeadroomPercent > 0),
+    hasCompleteMaxima: points.length > 0 && points.every(point => point.maximumBpm !== null),
+    // The engine uses nominal speed for processing; maximum is design evidence,
+    // not a simulated recovery-speed controller or a V-Graph certification.
+    simulatesOverspeed: false
+  };
+}
+
+
 
 // Scenario policy is separate from the unchanged simulation mathematics.
 const SCENARIO_POLICY = Object.freeze({microstopLimitMinutes:4,availabilityThreshold:85,failureThresholdSeconds:30,mtbfFactor:1.20,mttrFactor:0.85,maxChanges:64});
@@ -3218,7 +3296,8 @@ function planScenarios(simulation){
 window.SimulatorEngine = {
   simulateLine: simulateLine,
   validateSimulationInput: validateSimulationInput,
-  calculateConveyorEngineering: calculateConveyorEngineering
+  calculateConveyorEngineering: calculateConveyorEngineering,
+  analyzeLinePerformance: analyzeLinePerformance
 };
 window.STScenarios = {plan:planScenarios,apply:applyScenarioChanges,signature:scenarioSignature,audit:scenarioAudit,fields:SCENARIO_FIELDS};
 })(window);
@@ -3462,7 +3541,7 @@ window.STResults=(function(){
   function number(value,digits){return Number.isFinite(value)?value.toLocaleString(undefined,{maximumFractionDigits:digits===undefined?1:digits}):'—';}
   function downtime(result){return Object.values(result.equipmentMetrics||{}).reduce(function(n,m){return n+(m.pausedSeconds||0)+(m.stoppedSeconds||0)+(m.failureSeconds||0)+(m.microStopSeconds||0)+(m.emergencyStopSeconds||0);},0)/60;}
   function metrics(result){var s=result.summary;return [
-    ["Global OEE",s.lineOeePercent,'%',false],["Throughput",s.averageOutputRatePerSecond*60," / min",false],["Production",s.outputCount," units",false],
+    ["Global OEE",s.lineOeePercent,'%',false],["Throughput",s.outputCount/result.durationSeconds*60,' '+(result.unitOfFlow||'units')+'/min',false],["Production",s.outputCount,' '+(result.unitOfFlow||'units'),false],
     ["Equipment downtime",downtime(result)," min",true],["Starving",s.totalStarvedSeconds/60," min",true],["Blocking",s.totalBlockedSeconds/60," min",true],["Failure time",s.totalFailureSeconds/60," min",true]
   ];}
   function render(result,activeCase){
@@ -3473,6 +3552,7 @@ window.STResults=(function(){
     var target=document.getElementById('results-kpis');target.textContent='';
     metrics(result).forEach(function(item,index){var card=document.createElement('article');card.className='result-kpi'+(index===0?" primary-kpi":'');var label=document.createElement('span'),value=document.createElement('strong');label.textContent=item[0];value.textContent=number(item[1])+item[2];card.append(label,value);target.appendChild(card);});
     document.getElementById('results-reference').textContent="OEE reference: "+(result.summary.lineOeePacemakerName||'not available')+". Quality assumes 100% (no reject model). Loss and downtime totals are equipment-minutes; simultaneous losses are not line downtime.";
+    window.STLinePerformance.render(result,activeCase.equipment||[]);
     var rows=(activeCase.equipment||[]).map(function(e){return {model:e,metric:(result.equipmentMetrics||{})[e.id]||{}};});
     var worst=rows.filter(function(r){return r.model.type!=='CONVEYOR';}).sort(function(a,b){return (b.metric.starvedSeconds||0)+(b.metric.blockedSeconds||0)+(b.metric.failureSeconds||0)-(a.metric.starvedSeconds||0)-(a.metric.blockedSeconds||0)-(a.metric.failureSeconds||0);})[0];
     document.getElementById('results-insight').textContent=worst?"Investigate "+worst.model.name+": highest combined starving, blocking and failure time among machines. This is a loss indicator, not proof of the line bottleneck.":'';
@@ -3482,11 +3562,77 @@ window.STResults=(function(){
   }
   function compare(target,a,b){
     if(!a.results?.summary||!b.results?.summary)return;
+    if((a.results.unitOfFlow||'units')!==(b.results.unitOfFlow||'units')){var notice=document.createElement('p');notice.className='chart-note';notice.textContent="The compared runs use different flow units. Convert them to a common unit before interpreting throughput and production differences.";target.appendChild(notice);}
     var section=document.createElement('section');section.className='comparison-section';section.innerHTML=("<h3>" + "Outcome comparison" + "</h3><div class=\"table-scroll\"><table><thead><tr><th>" + "Metric" + "</th><th class=\"numeric\">" + "Baseline" + "</th><th class=\"numeric\">" + "Proposed" + "</th><th class=\"numeric\">" + "Absolute Δ" + "</th><th class=\"numeric\">" + "Relative Δ" + "</th></tr></thead><tbody></tbody></table></div>");
     var right=metrics(b.results);
     metrics(a.results).forEach(function(m,i){var n=right[i][1],d=n-m[1],tr=document.createElement('tr');[m[0],number(m[1])+m[2],number(n)+m[2],(d>0?'+':'')+number(d)+(i===0?" pp":m[2]),m[1]===0?"N/A (zero baseline)":(d>0?'+':'')+number(d/Math.abs(m[1])*100)+'%'].forEach(function(v,j){var td=document.createElement('td');td.textContent=v;if(j)td.className='numeric';tr.appendChild(td);});section.querySelector('tbody').appendChild(tr);});target.appendChild(section);
   }
   return {render:render,compare:compare};
+})();
+</script>
+    <script>
+window.STLinePerformance = (function() {
+  function el(tag, text) { var item = document.createElement(tag); if (text !== undefined) item.textContent = text; return item; }
+  function value(n, digits) { return Number.isFinite(n) ? n.toLocaleString(undefined, {maximumFractionDigits: digits === undefined ? 1 : digits}) : '—'; }
+  function svg(tag, attrs, text) {
+    var item = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attrs).forEach(function(pair) { item.setAttribute(pair[0], String(pair[1])); });
+    if (text !== undefined) item.textContent = text;
+    return item;
+  }
+  function plot(target, points) {
+    target.textContent = '';
+    var valid = points.filter(function(p) { return Number.isFinite(p.normalPercent); });
+    if (!valid.length) return;
+    var all = valid.flatMap(function(p) { return [p.normalPercent, p.maximumPercent].filter(Number.isFinite); });
+    var minimum = Math.max(0, Math.floor((Math.min.apply(null, all) - 10) / 10) * 10);
+    var maximum = Math.ceil((Math.max.apply(null, all) + 10) / 10) * 10;
+    if (minimum === maximum) maximum += 10;
+    var chart = svg('svg', {viewBox:'0 0 740 220', role:'img', 'aria-label':"Machine normal and maximum speeds as percentages of the pacemaker normal speed", preserveAspectRatio:'xMidYMid meet'});
+    var left = 65, right = 690, bottom = 166, top = 24;
+    var x = function(i) { return left + (valid.length === 1 ? (right - left) / 2 : i * (right - left) / (valid.length - 1)); };
+    var y = function(pct) { return bottom - (pct - minimum) / (maximum - minimum) * (bottom - top); };
+    [minimum, (minimum + maximum) / 2, maximum].forEach(function(pct) {
+      chart.appendChild(svg('line', {x1:left, x2:right, y1:y(pct), y2:y(pct), class:'vgraph-grid'}));
+      chart.appendChild(svg('text', {x:left - 8, y:y(pct) + 4, class:'vgraph-label', 'text-anchor':'end'}, value(pct, 0) + '%'));
+    });
+    chart.appendChild(svg('polyline', {points:valid.map(function(p, i) { return x(i) + ',' + y(p.normalPercent); }).join(' '), class:'vgraph-normal'}));
+    var segment = [];
+    function flush() { if (segment.length > 1) chart.appendChild(svg('polyline', {points:segment.join(' '), class:'vgraph-maximum'})); segment = []; }
+    valid.forEach(function(p, i) { if (Number.isFinite(p.maximumPercent)) segment.push(x(i) + ',' + y(p.maximumPercent)); else flush(); });
+    flush();
+    valid.forEach(function(p, i) {
+      chart.appendChild(svg('circle', {cx:x(i), cy:y(p.normalPercent), r:4, class:'vgraph-normal-dot'}));
+      if (Number.isFinite(p.maximumPercent)) chart.appendChild(svg('circle', {cx:x(i), cy:y(p.maximumPercent), r:4, class:'vgraph-maximum-dot'}));
+      chart.appendChild(svg('text', {x:x(i), y:190, class:'vgraph-label', 'text-anchor':'middle'}, p.name.length > 13 ? p.name.slice(0, 12) + '…' : p.name));
+      if (p.isPacemaker) chart.appendChild(svg('text', {x:x(i), y:206, class:'vgraph-reference', 'text-anchor':'middle'}, "Pacemaker"));
+    });
+    target.appendChild(chart);
+  }
+  function render(result, equipment) {
+    if (!document.getElementById('line-performance')) return;
+    var analysis = window.SimulatorEngine.analyzeLinePerformance(equipment, result);
+    document.getElementById('vgraph-context').textContent = "Machine speeds relative to reference: " + (analysis.points.find(function(p) { return p.isPacemaker; })?.name || '—');
+    plot(document.getElementById('vgraph-plot'), analysis.points);
+    document.getElementById('vgraph-caveat').textContent = analysis.hasSpeedHeadroom
+      ? "Design speeds only. The current engine does not accelerate machines above their nominal speed after a stop; this profile does not certify recovery or pacemaker protection." : "No recovery overspeed is configured: maximum and normal speeds are equal or maximum speeds are missing. Imported maximum speed currently initializes normal speed. Recovery and V-Graph compliance are not evaluated.";
+    var tbody = document.getElementById('performance-rows');
+    tbody.textContent = '';
+    analysis.points.forEach(function(point) {
+      var row = el('tr');
+      [point.name + (point.isPacemaker ? ' · ' + "Pacemaker" : ''),
+        value(point.normalBpm), value(point.maximumBpm), value(point.speedHeadroomPercent) + (point.speedHeadroomPercent === null ? '' : '%'),
+        value(point.availability === null ? null : point.availability * 100) + (point.availability === null ? '' : '%'),
+        value(point.runtimeEfficiency === null ? null : point.runtimeEfficiency * 100) + (point.runtimeEfficiency === null ? '' : '%'),
+        value(point.observedBpm)].forEach(function(cell, i) { var item = el('td', cell); if (i) item.className = 'numeric'; row.appendChild(item); });
+      tbody.appendChild(row);
+    });
+    document.getElementById('throughput-method').textContent =
+      "Line throughput = final equipment output ÷ complete run:" + ' ' + value(analysis.outputCount) + ' ' + analysis.unitOfFlow + ' ÷ ' +
+      value(analysis.durationSeconds / 60, 3) + ' min = ' + value(analysis.outletBpm) + ' ' + analysis.unitOfFlow + '/min. ' +
+      "Each machine's effective throughput = availability × run efficiency × normal speed. Starving and blocking reduce run efficiency. Rates use the case's equivalent flow unit; pack pattern is not an automatic conversion.";
+  }
+  return {render:render};
 })();
 </script>
     <script>
