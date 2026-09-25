@@ -24,3 +24,18 @@ test('high CAPEX recovery uses recalculated geometry rather than a fixed length 
  const copy=applyScenarioChanges(sim,p.changes),after=scenarioAudit(copy).find(a=>a.equipmentId===e.id).engineering;
  assert(after.calculated.recoveryLengthMm>0);assert(after.input.backupSensorPositionMm>=after.calculated.recommendedBackupSensorPositionMm);assert.equal(sim.equipment[1].processData.geometry.lactMm,1000);
 });
+
+test('scenario fingerprint survives server equipment normalization and JSON key order',()=>{
+ const sim=fixture(),signature=scenarioSignature(sim);
+ const browserCopy=JSON.parse(JSON.stringify(sim));
+ browserCopy.equipment=browserCopy.equipment.map(unit=>({
+  uiExpanded:true,processData:Object.fromEntries(Object.entries(unit.processData||{}).reverse()),
+  noiseProfile:unit.noiseProfile||{},characteristics:unit.characteristics||{},
+  initialMode:unit.initialMode,nominalRatePerSecond:String(unit.nominalRatePerSecond),
+  name:' '+unit.name+' ',type:unit.type,id:unit.id
+ }));
+ browserCopy.dynamicConfig=Object.fromEntries(Object.entries(browserCopy.dynamicConfig).reverse());
+ assert.equal(scenarioSignature(browserCopy),signature);
+ browserCopy.dynamicConfig.seed++;
+ assert.notEqual(scenarioSignature(browserCopy),signature);
+});

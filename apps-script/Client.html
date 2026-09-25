@@ -69,6 +69,7 @@
       document.getElementById('case-search').addEventListener('input', function() { renderCases(state.bootstrap ? state.bootstrap.cases : []); });
       document.getElementById('workspace-form').addEventListener('submit', function(event){event.preventDefault();});
       STSettings.connect(saveWorkspace);
+      STSettings.connectRemoval(function(done){callServer('deleteGeminiApiKey',[],function(response){if(response.ok){state.bootstrap.gemini=response.data;STSettings.configureGemini(response.data);}done(response);});});
       document.getElementById('retry-autosave').onclick = retryAutosave;
       document.getElementById('new-case-form').addEventListener('submit', createDraftCase);
       document.getElementById('create-public-demo-case').addEventListener('click', createPublicDemoCase);
@@ -192,8 +193,8 @@
       callServer('saveUserSettings', [request], function(response) {
         if(response.ok){
           state.bootstrap.settings=response.data;
-          state.bootstrap.gemini={model:request.gemini.model,configured:request.gemini.clearKey?false:Boolean(request.gemini.apiKey||state.bootstrap.gemini?.configured)};
-          document.getElementById('gemini-key-status').textContent=state.bootstrap.gemini.configured?__ST_TEXT__('settings.api_key_saved_for_your_google_account'):__ST_TEXT__('settings.no_api_key_configured');
+          state.bootstrap.gemini={model:request.gemini.model,configured:Boolean(request.gemini.apiKey||state.bootstrap.gemini?.configured)};
+          STSettings.setKeyConfigured(state.bootstrap.gemini.configured);
           shell.sync();
           if(!state.activeCase)callServer('getBootstrap',[],function(r){if(r.ok&&state.bootstrap?.settings.workspaceRootFolderId===response.data.workspaceRootFolderId){state.bootstrap.cases=r.data.cases;renderCases(r.data.cases);shell.sync();}});
         }
@@ -924,12 +925,26 @@ function renderRawJson() {
       try{
         await flushCase();
         var source=activePersistentSimulation();
-        if(state.activeCase?.id!==caseId||source?.id!==simulationId||proposal.sourceSimulationId!==simulationId||proposal.sourceSignature!==STScenarios.signature(source))throw new Error(__ST_TEXT__('scenario.stale'));
+        if(origin==='LOCAL'&&source?.id===simulationId&&proposal.sourceSignature!==STScenarios.signature(source)){
+          var refreshed=STScenarios.plan(source).candidates.find(function(candidate){
+            return candidate.canApply&&candidate.kind===proposal.kind&&candidate.tier===proposal.tier&&
+              candidate.equipmentId===proposal.equipmentId&&JSON.stringify(candidate.changes)===JSON.stringify(proposal.changes);
+          });
+          if(refreshed)proposal=refreshed;
+        }
+        if(state.activeCase?.id!==caseId||source?.id!==simulationId||proposal.sourceSimulationId!==simulationId||proposal.sourceSignature!==STScenarios.signature(source)){
+          if(origin==='LOCAL')renderSimulationAnalysis();
+          throw new Error(__ST_TEXT__('scenario.stale'));
+        }
         var approved=await STDialog.confirm(__ST_TEXT__('scenario.create'),__ST_TEXT__('scenario.confirm'));
         if(!approved)return;
         await flushCase();
-        if(state.activeCase?.id!==caseId||state.activeSimulationId!==simulationId)throw new Error(__ST_TEXT__('scenario.stale'));
-        var payload={caseId:caseId,simulationId:simulationId,expectedRevision:state.activeCase.revision,sourceSignature:proposal.sourceSignature,origin:origin,proposal:Object.assign({},proposal,{title:proposal.title||STScenarioText[proposal.titleKey]})};
+        source=activePersistentSimulation();
+        if(state.activeCase?.id!==caseId||source?.id!==simulationId||proposal.sourceSignature!==STScenarios.signature(source)){
+          if(origin==='LOCAL')renderSimulationAnalysis();
+          throw new Error(__ST_TEXT__('scenario.stale'));
+        }
+        var payload={caseId:caseId,simulationId:simulationId,expectedRevision:state.activeCase.revision,sourceSignature:STScenarios.signature(source),origin:origin,proposal:Object.assign({},proposal,{title:proposal.title||STScenarioText[proposal.titleKey]})};
         document.getElementById('application').inert=true;
         await new Promise(function(resolve,reject){callServer('createScenario',[payload],function(response){
           if(!response.ok){reject(new Error(response.error.message));return;}

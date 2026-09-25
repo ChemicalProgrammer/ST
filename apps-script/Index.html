@@ -1044,7 +1044,7 @@ window.STPreferences = (function() {
         <section id="workspace-panel" class="settings-section"><h3>Storage &amp; simulation defaults</h3><p>Choose a Drive folder you can access. Cases and results are saved in this workspace.</p>
         <form id="workspace-form"><label for="workspace-folder-id">Drive folder ID</label><input id="workspace-folder-id" autocomplete="off" required><p id="workspace-folder-note" class="chart-note hidden">Close the current case before changing its storage folder.</p>
         <label for="playback-rate">Default playback speed</label><select id="playback-rate"><option value="0.5">0.5×</option><option value="1">1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option><option value="20">20×</option><option value="50">50×</option></select>
-        <fieldset class="gemini-settings"><legend>Gemini</legend><p class="chart-note">Your API key is stored in your Apps Script user properties and used only by the server.</p><label for="gemini-model">Model ID</label><input id="gemini-model" value="gemini-2.5-flash" maxlength="100" pattern="gemini-[a-zA-Z0-9.\-]+" required><label for="gemini-api-key">API key</label><input id="gemini-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep your saved key"><span id="gemini-key-status" class="chart-note"></span><label class="remember"><input id="gemini-clear-key" type="checkbox">Remove saved API key</label></fieldset>
+        <fieldset class="gemini-settings"><legend>Gemini</legend><p class="chart-note">Your API key is stored in your Apps Script user properties and used only by the server.</p><label for="gemini-model">Model ID</label><input id="gemini-model" value="gemini-2.5-flash" maxlength="100" pattern="gemini-[a-zA-Z0-9.\-]+" required><label for="gemini-api-key">API key</label><input id="gemini-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep your saved key"><span id="gemini-key-status" class="chart-note" role="status"></span><button id="gemini-delete-key" type="button" class="danger" data-icon="trash" disabled>Remove API key</button></fieldset>
         <p id="settings-error" role="alert"></p></form></section>
         <section id="case-danger-zone" class="settings-section hidden"><h3>Delete case</h3><p>Move the open case and all its simulations to the Drive trash.</p><button id="delete-case" type="button" class="danger" data-icon="trash">Delete case</button></section>
       </div>
@@ -3186,8 +3186,27 @@ const SCENARIO_FIELDS = Object.freeze({
 function scenarioCopy(value){return JSON.parse(JSON.stringify(value));}
 function scenarioGet(e,path){return path.split('.').reduce((value,key)=>value?.[key],e);}
 function scenarioSet(e,path,value){const parts=path.split('.'),key=parts.pop();let node=e;parts.forEach(p=>{node[p]=node[p]||{};node=node[p];});node[key]=value;}
+function stableScenarioValue(value){
+  if(Array.isArray(value))return value.map(stableScenarioValue);
+  if(value&&typeof value==='object')return Object.keys(value).sort().reduce((result,key)=>{
+    if(value[key]!==undefined)result[key]=stableScenarioValue(value[key]);
+    return result;
+  },{});
+  return value;
+}
 function scenarioSignature(simulation){
-  const text=JSON.stringify([simulation.id,simulation.equipment,simulation.dynamicConfig]);
+  // CaseService normalizes each equipment record on write. Hash only the
+  // persisted input fields and sort nested keys so JSON editor formatting and
+  // key insertion order cannot invalidate a proposal with identical inputs.
+  const equipment=(simulation.equipment||[]).map(unit=>({
+    id:unit.id,type:unit.type,name:typeof unit.name==='string'?unit.name.trim():unit.name,
+    nominalRatePerSecond:Number(unit.nominalRatePerSecond),initialMode:unit.initialMode,
+    characteristics:unit.characteristics&&typeof unit.characteristics==='object'?unit.characteristics:{},
+    noiseProfile:unit.noiseProfile&&typeof unit.noiseProfile==='object'?unit.noiseProfile:{},
+    processData:unit.processData&&typeof unit.processData==='object'?unit.processData:{}
+  }));
+  const config=simulation.dynamicConfig&&typeof simulation.dynamicConfig==='object'&&!Array.isArray(simulation.dynamicConfig)?simulation.dynamicConfig:{};
+  const text=JSON.stringify(stableScenarioValue([simulation.id,equipment,config]));
   let hash=2166136261;for(let i=0;i<text.length;i++){hash^=text.charCodeAt(i);hash=Math.imul(hash,16777619);}
   return (hash>>>0).toString(16)+':'+text.length;
 }
@@ -3467,9 +3486,9 @@ window.STScenarioText = {
 </script>
     <script>
 window.STSettings = (function() {
-  var save, timer, version=0, savedVersion=0, sending=false, lastFocus, failure=null, waiters=[];
+  var save, removeKey, timer, version=0, savedVersion=0, sending=false, removing=false, hasKey=false, lastFocus, failure=null, waiters=[];
   function el(id){return document.getElementById(id);}
-  function request(){return {workspaceRootFolderId:el('workspace-folder-id').value,preferredPlaybackRate:Number(el('playback-rate').value),gemini:{model:el('gemini-model').value,apiKey:el('gemini-api-key').value,clearKey:el('gemini-clear-key').checked}};}
+  function request(){return {workspaceRootFolderId:el('workspace-folder-id').value,preferredPlaybackRate:Number(el('playback-rate').value),gemini:{model:el('gemini-model').value,apiKey:el('gemini-api-key').value}};}
   function refresh(){el('settings-unsaved').textContent=failure?"Not saved":sending?"Saving…":version>savedVersion?"Changes pending":"Saved";el('settings-retry').classList.toggle('hidden',!failure);}
   function open(){var dialog=el('settings-dialog');if(dialog.open)return;lastFocus=document.activeElement;refresh();dialog.showModal();}
   function settle(ok){waiters.splice(0).forEach(function(done){done(ok);});}
@@ -3481,20 +3500,35 @@ window.STSettings = (function() {
       sending=false;
       if(!response.ok){failure=true;el('settings-error').textContent=response.error.message;refresh();settle(false);return;}
       savedVersion=ticket;el('settings-error').textContent='';
-      if(version===ticket){el('gemini-api-key').value='';el('gemini-clear-key').checked=false;}
+      if(version===ticket)el('gemini-api-key').value='';
       if(version>savedVersion)write();else{refresh();settle(true);}
     });
   }
   function flush(){return new Promise(function(resolve){waiters.push(resolve);write();});}
-  async function close(){if(!await flush())return;el('settings-dialog').close();if(lastFocus?.isConnected)lastFocus.focus();}
+  async function close(){if(removing||!await flush())return;el('settings-dialog').close();if(lastFocus?.isConnected)lastFocus.focus();}
+  function keyStatus(){el('gemini-key-status').textContent=removing?"Removing API key…":hasKey?"API key saved for your Google account.":"No API key configured.";el('gemini-delete-key').disabled=removing||!hasKey;}
+  async function deleteKey(){
+    if(removing||!hasKey||!removeKey)return;
+    if(!await STDialog.confirm("Remove Gemini API key?","Gemini chat will stop working until you add a new API key. Your cases and simulation results will remain available.",true))return;
+    if(!await flush())return;
+    el('gemini-api-key').value='';removing=true;keyStatus();el('gemini-api-key').disabled=true;
+    removeKey(function(response){
+      removing=false;el('gemini-api-key').disabled=false;
+      if(!response.ok)el('settings-error').textContent=response.error.message;
+      else el('settings-error').textContent='';
+      keyStatus();
+    });
+  }
   function init(){
     el('settings-close').onclick=close;el('settings-cancel').onclick=close;el('settings-retry').onclick=write;
+    el('gemini-delete-key').onclick=deleteKey;
     el('settings-dialog').addEventListener('cancel',function(e){e.preventDefault();close();});
     function change(){version++;failure=null;refresh();clearTimeout(timer);timer=setTimeout(write,600);}
     el('workspace-form').addEventListener('input',change);el('workspace-form').addEventListener('change',change);
   }
-  function configureGemini(config){el('gemini-model').value=config.model||'gemini-2.5-flash';el('gemini-key-status').textContent=config.configured?"API key saved for your Google account.":"No API key configured.";}
-  return {init:init,open:open,close:close,configureGemini:configureGemini,connect:function(fn){save=fn;},flush:flush,pending:function(){return sending||version>savedVersion;},error:function(message){failure=true;el('settings-error').textContent=message;refresh();}};
+  function configureGemini(config){el('gemini-model').value=config.model||'gemini-2.5-flash';hasKey=Boolean(config.configured);keyStatus();}
+  function setKeyConfigured(value){hasKey=Boolean(value);keyStatus();}
+  return {init:init,open:open,close:close,configureGemini:configureGemini,setKeyConfigured:setKeyConfigured,connect:function(fn){save=fn;},connectRemoval:function(fn){removeKey=fn;},flush:flush,pending:function(){return sending||version>savedVersion;},error:function(message){failure=true;el('settings-error').textContent=message;refresh();}};
 })();
 </script>
     <script>
@@ -4295,6 +4329,7 @@ window.STSheetImport=function(state,actions){
       document.getElementById('case-search').addEventListener('input', function() { renderCases(state.bootstrap ? state.bootstrap.cases : []); });
       document.getElementById('workspace-form').addEventListener('submit', function(event){event.preventDefault();});
       STSettings.connect(saveWorkspace);
+      STSettings.connectRemoval(function(done){callServer('deleteGeminiApiKey',[],function(response){if(response.ok){state.bootstrap.gemini=response.data;STSettings.configureGemini(response.data);}done(response);});});
       document.getElementById('retry-autosave').onclick = retryAutosave;
       document.getElementById('new-case-form').addEventListener('submit', createDraftCase);
       document.getElementById('create-public-demo-case').addEventListener('click', createPublicDemoCase);
@@ -4418,8 +4453,8 @@ window.STSheetImport=function(state,actions){
       callServer('saveUserSettings', [request], function(response) {
         if(response.ok){
           state.bootstrap.settings=response.data;
-          state.bootstrap.gemini={model:request.gemini.model,configured:request.gemini.clearKey?false:Boolean(request.gemini.apiKey||state.bootstrap.gemini?.configured)};
-          document.getElementById('gemini-key-status').textContent=state.bootstrap.gemini.configured?"API key saved for your Google account.":"No API key configured.";
+          state.bootstrap.gemini={model:request.gemini.model,configured:Boolean(request.gemini.apiKey||state.bootstrap.gemini?.configured)};
+          STSettings.setKeyConfigured(state.bootstrap.gemini.configured);
           shell.sync();
           if(!state.activeCase)callServer('getBootstrap',[],function(r){if(r.ok&&state.bootstrap?.settings.workspaceRootFolderId===response.data.workspaceRootFolderId){state.bootstrap.cases=r.data.cases;renderCases(r.data.cases);shell.sync();}});
         }
@@ -5150,12 +5185,26 @@ function renderRawJson() {
       try{
         await flushCase();
         var source=activePersistentSimulation();
-        if(state.activeCase?.id!==caseId||source?.id!==simulationId||proposal.sourceSimulationId!==simulationId||proposal.sourceSignature!==STScenarios.signature(source))throw new Error("The source simulation changed. Generate a new proposal before applying it.");
+        if(origin==='LOCAL'&&source?.id===simulationId&&proposal.sourceSignature!==STScenarios.signature(source)){
+          var refreshed=STScenarios.plan(source).candidates.find(function(candidate){
+            return candidate.canApply&&candidate.kind===proposal.kind&&candidate.tier===proposal.tier&&
+              candidate.equipmentId===proposal.equipmentId&&JSON.stringify(candidate.changes)===JSON.stringify(proposal.changes);
+          });
+          if(refreshed)proposal=refreshed;
+        }
+        if(state.activeCase?.id!==caseId||source?.id!==simulationId||proposal.sourceSimulationId!==simulationId||proposal.sourceSignature!==STScenarios.signature(source)){
+          if(origin==='LOCAL')renderSimulationAnalysis();
+          throw new Error("The source simulation changed. Generate a new proposal before applying it.");
+        }
         var approved=await STDialog.confirm("Create scenario","Create a separate simulation with the listed changes? The baseline and random seed are preserved. Run the new scenario to measure its effect.");
         if(!approved)return;
         await flushCase();
-        if(state.activeCase?.id!==caseId||state.activeSimulationId!==simulationId)throw new Error("The source simulation changed. Generate a new proposal before applying it.");
-        var payload={caseId:caseId,simulationId:simulationId,expectedRevision:state.activeCase.revision,sourceSignature:proposal.sourceSignature,origin:origin,proposal:Object.assign({},proposal,{title:proposal.title||STScenarioText[proposal.titleKey]})};
+        source=activePersistentSimulation();
+        if(state.activeCase?.id!==caseId||source?.id!==simulationId||proposal.sourceSignature!==STScenarios.signature(source)){
+          if(origin==='LOCAL')renderSimulationAnalysis();
+          throw new Error("The source simulation changed. Generate a new proposal before applying it.");
+        }
+        var payload={caseId:caseId,simulationId:simulationId,expectedRevision:state.activeCase.revision,sourceSignature:STScenarios.signature(source),origin:origin,proposal:Object.assign({},proposal,{title:proposal.title||STScenarioText[proposal.titleKey]})};
         document.getElementById('application').inert=true;
         await new Promise(function(resolve,reject){callServer('createScenario',[payload],function(response){
           if(!response.ok){reject(new Error(response.error.message));return;}

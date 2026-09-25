@@ -4,6 +4,11 @@ function getGeminiClientConfig_() {
   return {configured: Boolean(properties.getProperty('GEMINI_API_KEY')), model: properties.getProperty('GEMINI_MODEL') || 'gemini-2.5-flash'};
 }
 
+function deleteGeminiApiKey_() {
+  PropertiesService.getUserProperties().deleteProperty('GEMINI_API_KEY');
+  return getGeminiClientConfig_();
+}
+
 function normalizeGeminiSettings_(request) {
   var model = String(request.model || 'gemini-2.5-flash').trim();
   var key = typeof request.apiKey === 'string' ? request.apiKey.trim() : '';

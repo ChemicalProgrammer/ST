@@ -26,6 +26,12 @@ function saveUserSettings(request) {
   });
 }
 
+function deleteGeminiApiKey() {
+  return executeServerAction_(function() {
+    return deleteGeminiApiKey_();
+  });
+}
+
 function createCase(request) {
   return executeServerAction_(function(user) {
     return createCase_(request, user);

@@ -19,3 +19,17 @@ test('stale or invalid proposals create no partially saved clone and always rele
  const invalid={...h.request,proposal:{...h.request.proposal,changes:[{equipmentId:'unknown',path:'processData.geometry.lactMm',before:null,after:100}]}};
  assert.throws(()=>h.ctx.createScenario_(invalid,{email:'owner@test'}));assert.equal(h.writes(),0);assert.equal(h.record().simulations.length,1);assert.equal(h.releases(),2);
 });
+
+test('server accepts an equivalent browser fingerprint after storage normalization',()=>{
+ const h=setup(),saved=h.record().simulations[0],client=JSON.parse(JSON.stringify(saved));
+ client.equipment=client.equipment.map(unit=>({
+  transientRowOpen:true,processData:Object.fromEntries(Object.entries(unit.processData||{}).reverse()),
+  characteristics:unit.characteristics||{},noiseProfile:unit.noiseProfile||{},
+  initialMode:unit.initialMode,nominalRatePerSecond:String(unit.nominalRatePerSecond),
+  name:' '+unit.name+' ',type:unit.type,id:unit.id
+ }));
+ client.dynamicConfig=Object.fromEntries(Object.entries(client.dynamicConfig).reverse());
+ const request={...h.request,sourceSignature:h.ctx.STScenarioEngine_.signature(client)};
+ assert.equal(request.sourceSignature,h.ctx.STScenarioEngine_.signature(saved));
+ assert.equal(h.ctx.createScenario_(request,{email:'owner@test'}).case.simulations.length,2);
+});

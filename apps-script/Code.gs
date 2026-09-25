@@ -298,6 +298,10 @@ var ST_TEXT_RESOURCES = {
   "settings.discard_unsaved_settings": "Discard unsaved settings?",
   "settings.api_key_saved_for_your_google_account": "API key saved for your Google account.",
   "settings.no_api_key_configured": "No API key configured.",
+  "settings.delete_api_key": "Remove API key",
+  "settings.delete_api_key_title": "Remove Gemini API key?",
+  "settings.delete_api_key_message": "Gemini chat will stop working until you add a new API key. Your cases and simulation results will remain available.",
+  "settings.removing_api_key": "Removing API key…",
   "casegallery.switch_to": "Switch to ",
   "casegallery.view": " view",
   "casegallery.no_matching_cases": "No matching cases",
@@ -316,6 +320,25 @@ var ST_TEXT_RESOURCES = {
   "results.global_oee": "Global OEE",
   "results.throughput": "Throughput",
   "results.production": "Production",
+  "performance.title": "Line speed profile · V-Graph",
+  "performance.context": "Machine speeds relative to reference: ",
+  "performance.normal": "Normal speed",
+  "performance.maximum": "Maximum configured speed",
+  "performance.chart_label": "Machine normal and maximum speeds as percentages of the pacemaker normal speed",
+  "performance.reference_short": "Pacemaker",
+  "performance.design_only": "Design speeds only. The current engine does not accelerate machines above their nominal speed after a stop; this profile does not certify recovery or pacemaker protection.",
+  "performance.no_headroom": "No recovery overspeed is configured: maximum and normal speeds are equal or maximum speeds are missing. Imported maximum speed currently initializes normal speed. Recovery and V-Graph compliance are not evaluated.",
+  "performance.throughput_by_machine": "Effective throughput by machine",
+  "performance.machine": "Machine",
+  "performance.normal_bpm": "Normal · /min",
+  "performance.maximum_bpm": "Maximum · /min",
+  "performance.headroom": "Speed reserve",
+  "performance.availability": "Availability",
+  "performance.efficiency": "Run efficiency",
+  "performance.effective_bpm": "Effective · /min",
+  "performance.method": "Line throughput = final equipment output ÷ complete run:",
+  "performance.equipment_note": "Each machine's effective throughput = availability × run efficiency × normal speed. Starving and blocking reduce run efficiency. Rates use the case's equivalent flow unit; pack pattern is not an automatic conversion.",
+  "performance.unit_mismatch": "The compared runs use different flow units. Convert them to a common unit before interpreting throughput and production differences.",
   "results.equipment_downtime": "Equipment downtime",
   "results.starving": "Starving",
   "results.blocking": "Blocking",
@@ -576,7 +599,6 @@ var ST_TEXT_RESOURCES = {
   "view.model_id": "Model ID",
   "view.api_key": "API key",
   "view.leave_blank_to_keep_your_saved_key": "Leave blank to keep your saved key",
-  "view.remove_saved_api_key": "Remove saved API key",
   "view.save_settings": "Save settings",
   "view.import_equipment_from_google_sheets": "Import equipment from Google Sheets",
   "view.close_import": "Close import",
@@ -2311,8 +2333,27 @@ const SCENARIO_FIELDS = Object.freeze({
 function scenarioCopy(value){return JSON.parse(JSON.stringify(value));}
 function scenarioGet(e,path){return path.split('.').reduce((value,key)=>value?.[key],e);}
 function scenarioSet(e,path,value){const parts=path.split('.'),key=parts.pop();let node=e;parts.forEach(p=>{node[p]=node[p]||{};node=node[p];});node[key]=value;}
+function stableScenarioValue(value){
+  if(Array.isArray(value))return value.map(stableScenarioValue);
+  if(value&&typeof value==='object')return Object.keys(value).sort().reduce((result,key)=>{
+    if(value[key]!==undefined)result[key]=stableScenarioValue(value[key]);
+    return result;
+  },{});
+  return value;
+}
 function scenarioSignature(simulation){
-  const text=JSON.stringify([simulation.id,simulation.equipment,simulation.dynamicConfig]);
+  // CaseService normalizes each equipment record on write. Hash only the
+  // persisted input fields and sort nested keys so JSON editor formatting and
+  // key insertion order cannot invalidate a proposal with identical inputs.
+  const equipment=(simulation.equipment||[]).map(unit=>({
+    id:unit.id,type:unit.type,name:typeof unit.name==='string'?unit.name.trim():unit.name,
+    nominalRatePerSecond:Number(unit.nominalRatePerSecond),initialMode:unit.initialMode,
+    characteristics:unit.characteristics&&typeof unit.characteristics==='object'?unit.characteristics:{},
+    noiseProfile:unit.noiseProfile&&typeof unit.noiseProfile==='object'?unit.noiseProfile:{},
+    processData:unit.processData&&typeof unit.processData==='object'?unit.processData:{}
+  }));
+  const config=simulation.dynamicConfig&&typeof simulation.dynamicConfig==='object'&&!Array.isArray(simulation.dynamicConfig)?simulation.dynamicConfig:{};
+  const text=JSON.stringify(stableScenarioValue([simulation.id,equipment,config]));
   let hash=2166136261;for(let i=0;i<text.length;i++){hash^=text.charCodeAt(i);hash=Math.imul(hash,16777619);}
   return (hash>>>0).toString(16)+':'+text.length;
 }
@@ -2507,6 +2548,11 @@ function compactGeminiHistory_(history) {
 function getGeminiClientConfig_() {
   var properties = PropertiesService.getUserProperties();
   return {configured: Boolean(properties.getProperty('GEMINI_API_KEY')), model: properties.getProperty('GEMINI_MODEL') || 'gemini-2.5-flash'};
+}
+
+function deleteGeminiApiKey_() {
+  PropertiesService.getUserProperties().deleteProperty('GEMINI_API_KEY');
+  return getGeminiClientConfig_();
 }
 
 function normalizeGeminiSettings_(request) {
@@ -2737,6 +2783,12 @@ function getBootstrap() {
 function saveUserSettings(request) {
   return executeServerAction_(function() {
     return saveUserSettings_(request);
+  });
+}
+
+function deleteGeminiApiKey() {
+  return executeServerAction_(function() {
+    return deleteGeminiApiKey_();
   });
 }
 

@@ -867,8 +867,27 @@ const SCENARIO_FIELDS = Object.freeze({
 function scenarioCopy(value){return JSON.parse(JSON.stringify(value));}
 function scenarioGet(e,path){return path.split('.').reduce((value,key)=>value?.[key],e);}
 function scenarioSet(e,path,value){const parts=path.split('.'),key=parts.pop();let node=e;parts.forEach(p=>{node[p]=node[p]||{};node=node[p];});node[key]=value;}
+function stableScenarioValue(value){
+  if(Array.isArray(value))return value.map(stableScenarioValue);
+  if(value&&typeof value==='object')return Object.keys(value).sort().reduce((result,key)=>{
+    if(value[key]!==undefined)result[key]=stableScenarioValue(value[key]);
+    return result;
+  },{});
+  return value;
+}
 function scenarioSignature(simulation){
-  const text=JSON.stringify([simulation.id,simulation.equipment,simulation.dynamicConfig]);
+  // CaseService normalizes each equipment record on write. Hash only the
+  // persisted input fields and sort nested keys so JSON editor formatting and
+  // key insertion order cannot invalidate a proposal with identical inputs.
+  const equipment=(simulation.equipment||[]).map(unit=>({
+    id:unit.id,type:unit.type,name:typeof unit.name==='string'?unit.name.trim():unit.name,
+    nominalRatePerSecond:Number(unit.nominalRatePerSecond),initialMode:unit.initialMode,
+    characteristics:unit.characteristics&&typeof unit.characteristics==='object'?unit.characteristics:{},
+    noiseProfile:unit.noiseProfile&&typeof unit.noiseProfile==='object'?unit.noiseProfile:{},
+    processData:unit.processData&&typeof unit.processData==='object'?unit.processData:{}
+  }));
+  const config=simulation.dynamicConfig&&typeof simulation.dynamicConfig==='object'&&!Array.isArray(simulation.dynamicConfig)?simulation.dynamicConfig:{};
+  const text=JSON.stringify(stableScenarioValue([simulation.id,equipment,config]));
   let hash=2166136261;for(let i=0;i<text.length;i++){hash^=text.charCodeAt(i);hash=Math.imul(hash,16777619);}
   return (hash>>>0).toString(16)+':'+text.length;
 }

@@ -14,16 +14,17 @@ async function setup({remember=false,fail=false,many=false,invalidSheet=false,em
  Object.assign(initial,{id:'demo',revision:1,updatedAt:'2026-09-15T10:00:00Z'});
  const sourceEquipment=JSON.parse(JSON.stringify(initial.equipment));
  if(empty)initial.equipment=[];
- let cases=[initial], stored={workspaceRootFolderId:'preview',preferredPlaybackRate:10}, calls=[];
+ let cases=[initial], stored={workspaceRootFolderId:'preview',preferredPlaybackRate:10}, calls=[], geminiConfigured=true;
  if(many) cases=Array.from({length:60},(_,i)=>({...initial,id:'case-'+i,name:'Line '+String(i).padStart(2,'0')}));
  const copy=x=>JSON.parse(JSON.stringify(x));
  const api={
-  getBootstrap:()=>({user:{email:'preview@example.test'},settings:stored,globalConfig:{},gemini:{configured:true,model:'gemini-2.5-flash'},cases:cases.map(c=>({id:c.id,name:c.name,equipmentCount:c.equipment.length,isSimulationReady:c.equipment.length>1,updatedAt:c.updatedAt}))}),
+  getBootstrap:()=>({user:{email:'preview@example.test'},settings:stored,globalConfig:{},gemini:{configured:geminiConfigured,model:'gemini-2.5-flash'},cases:cases.map(c=>({id:c.id,name:c.name,equipmentCount:c.equipment.length,isSimulationReady:c.equipment.length>1,updatedAt:c.updatedAt}))}),
   askGemini:()=>({text:'Analysis of the saved case.'}),
   previewSheetImport:()=>({canImport:!invalidSheet,source:{schemaVersion:'plant-sheet-v1',sheetName:'Synthetic sheet',readAt:'2026-09-16',spreadsheetId:'synthetic-id'},metadata:{site:'Synthetic site',formatName:'Imported format'},equipment:copy(sourceEquipment.slice(0,3)).map((e,i)=>({...e,noiseProfile:{...e.noiseProfile,reliability:{...e.noiseProfile.reliability,mtbfMinutes:e.noiseProfile.reliability.mtbfMinutes+60}},processData:{...e.processData,equipment:{...e.processData.equipment,mtbfMinutes:e.processData.equipment.mtbfMinutes+60}},characteristics:{...e.characteristics,sourceSheetRow:i+10}})),sourceRows:[],errors:invalidSheet?[{cell:'D10:E10',message:'Supply both MTBF and MTTR.'}]:[],warnings:[],notes:['Review model assumptions.']}),
   getCase:id=>copy(cases.find(c=>c.id===id)),
   saveCase:c=>{c=copy(c);c.revision=c.expectedRevision+1;cases=cases.map(x=>x.id===c.id?c:x);return c;},
-  saveUserSettings:s=>(stored=s),
+  saveUserSettings:s=>{if(s.gemini?.apiKey)geminiConfigured=true;return stored=s;},
+  deleteGeminiApiKey:()=>{geminiConfigured=false;return {configured:false,model:'gemini-2.5-flash'};},
   cloneSimulation:(id,sid)=>{const c=cases.find(c=>c.id===id),source=c.simulations.find(s=>s.id===sid),next=copy(source);next.id='simulation-b';next.name='Simulation B';next.results=null;c.simulations.push(next);return copy(c);},
   deleteCase:id=>{cases=cases.filter(c=>c.id!==id);return {id};},
   createCase:c=>{c={...c,id:'new',equipment:[],revision:1,updatedAt:new Date().toISOString()};cases.push(c);return c;}
@@ -61,6 +62,19 @@ test('UI: cases-only entry, accessible navigation, theme settings and remembered
   assert.deepEqual(h.errors,[]);
  }finally{h.dom.window.close();}
  const remembered=await setup({remember:true});assert(remembered.visible('application'));remembered.dom.window.close();
+});
+test('UI: remove Gemini key requires confirmation and immediately updates its saved state',async()=>{
+ const h=await setup();try{
+  await h.click('#sign-in-button');await h.click('#cases-settings');
+  const button=h.d.getElementById('gemini-delete-key');assert(!button.disabled);
+  await h.click('#gemini-delete-key');assert(h.d.querySelector('.message-dialog[open]'));
+  await h.click('.message-dialog .ghost');assert(!button.disabled);assert(!h.calls.includes('deleteGeminiApiKey'));
+  await h.click('#gemini-delete-key');await h.click('.message-dialog .danger');
+  await waitFor(()=>button.disabled && /No API key configured/.test(h.d.getElementById('gemini-key-status').textContent));
+  assert.equal(h.calls.filter(name=>name==='deleteGeminiApiKey').length,1);
+  assert.equal(h.d.querySelectorAll('.case-row').length,1);
+  assert.deepEqual(h.errors,[]);
+ }finally{h.dom.window.close();}
 });
 test('UI: run, edit, clone, compare, and delete retain the existing engine workflow',async()=>{
  const h=await setup();try{
