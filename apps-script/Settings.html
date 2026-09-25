@@ -2,7 +2,7 @@
 window.STSettings = (function() {
   var save, removeKey, timer, version=0, savedVersion=0, sending=false, removing=false, hasKey=false, lastFocus, failure=null, waiters=[];
   function el(id){return document.getElementById(id);}
-  function request(){return {workspaceRootFolderId:el('workspace-folder-id').value,preferredPlaybackRate:Number(el('playback-rate').value),gemini:{model:el('gemini-model').value,apiKey:el('gemini-api-key').value}};}
+  function request(){return {workspaceRootFolderId:el('workspace-folder-id').value,gemini:{model:el('gemini-model').value,apiKey:el('gemini-api-key').value}};}
   function refresh(){el('settings-unsaved').textContent=failure?__ST_TEXT__('autosave.error'):sending?__ST_TEXT__('autosave.saving'):version>savedVersion?__ST_TEXT__('autosave.pending'):__ST_TEXT__('autosave.saved');el('settings-retry').classList.toggle('hidden',!failure);}
   function open(){var dialog=el('settings-dialog');if(dialog.open)return;lastFocus=document.activeElement;refresh();dialog.showModal();}
   function settle(ok){waiters.splice(0).forEach(function(done){done(ok);});}

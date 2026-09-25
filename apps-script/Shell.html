@@ -29,7 +29,7 @@ window.STShell = function(state,actions) {
     STSettings.init();STIcons.decorate();
     document.getElementById('cases-settings').onclick=STSettings.open;
     document.getElementById('cases-sign-out').onclick=actions.signout;
-    function collapse(){document.getElementById('application').classList.toggle('sidebar-collapsed',collapsed);var el=document.getElementById('collapse-sidebar');el.setAttribute('aria-expanded',String(!collapsed));el.setAttribute('aria-label',collapsed?__ST_TEXT__('shell.expand_sidebar'):__ST_TEXT__('shell.collapse_sidebar'));el.title=el.getAttribute('aria-label');}
+    function collapse(){document.getElementById('application').classList.toggle('sidebar-collapsed',collapsed);var el=document.getElementById('collapse-sidebar');el.setAttribute('aria-expanded',String(!collapsed));el.setAttribute('aria-label',collapsed?__ST_TEXT__('shell.expand_sidebar'):__ST_TEXT__('shell.collapse_sidebar'));el.title=el.getAttribute('aria-label');el.dataset.icon=collapsed?'expand':'collapse';el.innerHTML=STIcons.svg(el.dataset.icon);}
     collapse();document.getElementById('collapse-sidebar').onclick=function(){collapsed=!collapsed;STPreferences.write('sidebar',collapsed?'collapsed':'expanded');collapse();setTimeout(actions.redraw,180);};
     document.querySelectorAll('[data-view]').forEach(function(button){button.addEventListener('click',function(){actions.navigate(button.dataset.view);});});
     document.getElementById('cancel-new-case').onclick=function(){document.getElementById('new-case-form').classList.add('hidden');document.getElementById('show-new-case').focus();};

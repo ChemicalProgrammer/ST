@@ -6,7 +6,7 @@
   .vgraph-key::before { content: ''; width: var(--size-16); border-top: var(--focus-width) solid var(--series-0); }
   .vgraph-key-maximum::before { border-color: var(--series-1); }
   .vgraph-plot { width: 100%; overflow-x: auto; }
-  .vgraph-plot svg { display: block; width: 100%; min-width: min(100%, 580px); height: auto; }
+  .vgraph-plot svg { display: block; width: 100%; height: var(--vgraph-height); min-width: var(--vgraph-min-width); }
   .vgraph-grid { stroke: var(--chart-grid); stroke-width: var(--border-width); }
   .vgraph-label { fill: var(--muted); font-size: var(--font-caption); }
   .vgraph-reference { fill: var(--accent); font-size: var(--font-caption); font-weight: var(--weight-bold); }
@@ -67,4 +67,7 @@
 .scenario-changes { font-size:var(--font-caption); padding-left:var(--space-4); overflow-wrap:anywhere; }
 .analysis-recommendation .badge { margin-left:var(--space-2); white-space:normal; }
 .gemini-messages .analysis-recommendation { margin:var(--space-3) 0; }
+  .analysis-capex[data-tier="ZERO"] { color: var(--capex-zero); background: var(--capex-zero-bg); }
+  .analysis-capex[data-tier="MEDIUM"] { color: var(--capex-medium); background: var(--capex-medium-bg); }
+  .analysis-capex[data-tier="HIGH"] { color: var(--capex-high); background: var(--capex-high-bg); }
 </style>

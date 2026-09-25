@@ -42,3 +42,18 @@ test('history uses a bounded suffix and reports omitted messages',()=>{
  const h=setup();const history=Array.from({length:24},(_,i)=>({role:i%2?'model':'user',text:'text'.repeat(2000)}));
  const result=h.ctx.askGemini_({...request,history},user);assert(result.historyOmitted>0);assert(h.calls[0].options.payload.length<125000);
 });
+
+test('Gemini standalone scenario JSON becomes a validated actionable proposal',()=>{
+ const fixture=setup(),project=fixture.ctx.STScenarioEngine_.plan(fixture.record.simulations[0]).projects.find(p=>p.canApply);
+ const scenario={...project,title:'Sensor study',description:'Review the proposed sensor settings.'};
+ for(const answer of [JSON.stringify(scenario),'```json\n'+JSON.stringify(scenario)+'\n```',JSON.stringify([scenario])]){
+  const h=setup({answer}),result=h.ctx.askGemini_(request,user);
+  assert.equal(result.proposals.length,1);assert.equal(result.proposals[0].title,'Sensor study');
+  assert(!result.text.includes('"changes"'));assert.equal(result.proposals[0].canApply,true);
+  assert.equal(JSON.parse(h.calls[0].options.payload).generationConfig.responseMimeType,'application/json');
+ }
+});
+test('Gemini incomplete scenario JSON reports a readable error and creates no proposal',()=>{
+ const h=setup({answer:'{"title":"unfinished","changes":['});
+ assert.throws(()=>h.ctx.askGemini_(request,user),error=>error.code==='GEMINI_RESPONSE_ERROR');
+});

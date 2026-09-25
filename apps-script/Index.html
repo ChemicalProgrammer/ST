@@ -8,6 +8,10 @@
     <style>
 :root {
   color-scheme: light;
+  --vgraph-height: 260px; --vgraph-min-width: 580px;
+  --capex-zero: var(--success); --capex-zero-bg: var(--success-soft);
+  --capex-medium: var(--info); --capex-medium-bg: var(--info-soft);
+  --capex-high: var(--critical); --capex-high-bg: var(--critical-soft);
   --font-ui: "ST Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
   --font-page: 1.25rem; --font-section: 1rem; --font-card: .875rem;
@@ -495,7 +499,7 @@ select { appearance:none; padding-right:var(--space-8); background-image:url("da
   .vgraph-key::before { content: ''; width: var(--size-16); border-top: var(--focus-width) solid var(--series-0); }
   .vgraph-key-maximum::before { border-color: var(--series-1); }
   .vgraph-plot { width: 100%; overflow-x: auto; }
-  .vgraph-plot svg { display: block; width: 100%; min-width: min(100%, 580px); height: auto; }
+  .vgraph-plot svg { display: block; width: 100%; height: var(--vgraph-height); min-width: var(--vgraph-min-width); }
   .vgraph-grid { stroke: var(--chart-grid); stroke-width: var(--border-width); }
   .vgraph-label { fill: var(--muted); font-size: var(--font-caption); }
   .vgraph-reference { fill: var(--accent); font-size: var(--font-caption); font-weight: var(--weight-bold); }
@@ -556,13 +560,16 @@ select { appearance:none; padding-right:var(--space-8); background-image:url("da
 .scenario-changes { font-size:var(--font-caption); padding-left:var(--space-4); overflow-wrap:anywhere; }
 .analysis-recommendation .badge { margin-left:var(--space-2); white-space:normal; }
 .gemini-messages .analysis-recommendation { margin:var(--space-3) 0; }
+  .analysis-capex[data-tier="ZERO"] { color: var(--capex-zero); background: var(--capex-zero-bg); }
+  .analysis-capex[data-tier="MEDIUM"] { color: var(--capex-medium); background: var(--capex-medium-bg); }
+  .analysis-capex[data-tier="HIGH"] { color: var(--capex-high); background: var(--capex-high-bg); }
 </style>
     <style>
 .app-shell { width: 100%; min-height: 100vh; padding: 0; }
 .app-shell.case-open { padding-left: var(--sidebar-width); }
 .sidebar { position: fixed; inset: 0 auto 0 0; width: var(--sidebar-width); z-index: var(--z-sidebar); background: var(--surface-soft); border-right: var(--border-width) solid var(--line); display: flex; flex-direction: column; padding: var(--space-3); gap: var(--space-5); transition: width var(--duration-normal) var(--ease); }
 .brand { display: flex; align-items: center; gap: var(--space-2); white-space: nowrap; min-height: var(--control-height); color: var(--ink); font-weight: var(--weight-semibold); }
-.brand-mark { background: var(--ink); color: var(--page); display: grid; place-items: center; width: var(--size-28); height: var(--size-28); border-radius: var(--radius-sm); font-size: var(--font-secondary); flex-shrink: 0; }
+.brand-mark { background: var(--accent); color: var(--on-accent); display: grid; place-items: center; width: var(--size-28); height: var(--size-28); border-radius: var(--radius-sm); font-size: var(--font-secondary); flex-shrink: 0; }
 .sidebar nav { display: grid; gap: var(--space-1); }
 .nav-caption { padding: 0 var(--space-2); font-size: var(--font-caption); color: var(--muted); }
 .nav-item { position: relative; justify-content: flex-start; width: 100%; background: transparent; color: var(--muted); border-radius: var(--radius-sm); white-space: nowrap; }
@@ -745,6 +752,14 @@ dialog::backdrop { background: var(--overlay); } dialog[open] { display:flex; fl
 #gemini-resize { position:absolute; top:0; bottom:0; left:calc(-1 * var(--space-1)); width:var(--space-2); cursor:col-resize; touch-action:none; }
 #gemini-resize:hover,#gemini-resize:focus-visible { background:var(--accent-soft); outline:var(--border-width) solid var(--accent); }
 .gemini-heading { flex-shrink:0; }
+ .gemini-progress { list-style: none; margin: 0; padding: var(--space-2) var(--space-4); font-size: var(--font-secondary); color: var(--muted); }
+ .gemini-progress li { padding: var(--space-1) 0; }
+ .gemini-progress li::before { content: '○'; margin-right: var(--space-2); }
+ .gemini-progress [data-state="active"] { color: var(--accent); font-weight: var(--weight-medium); }
+ .gemini-progress [data-state="active"]::before { content: '◉'; }
+ .gemini-progress [data-state="done"]::before { content: '✓'; color: var(--success); }
+ .gemini-progress [data-state="error"] { color: var(--danger); }
+ .gemini-progress [data-state="error"]::before { content: '!'; }
 </style>
     <style>
 #sheet-import-dialog { --dialog-width:var(--size-980); }
@@ -1033,6 +1048,7 @@ window.STPreferences = (function() {
       <aside id="gemini-panel" class="gemini-panel hidden" aria-labelledby="gemini-title">
         <div id="gemini-resize" role="separator" aria-orientation="vertical" aria-label="Resize Gemini panel" tabindex="0" title="Drag to resize; use Left and Right arrows"></div><header class="gemini-heading"><div><h2 id="gemini-title">Gemini</h2><span id="gemini-context" class="chart-note"></span></div><button id="close-gemini" class="ghost icon-button" data-icon="chevron" aria-label="Collapse Gemini panel" title="Collapse Gemini panel"></button></header>
         <p id="gemini-notice" class="gemini-notice">Ask about the saved case, equipment and simulation results.</p>
+        <ol id="gemini-progress" class="gemini-progress hidden" role="status" aria-live="polite"></ol>
         <div id="gemini-messages" class="gemini-messages" role="log" aria-label="Case conversation" aria-live="polite"></div>
         <form id="gemini-form" class="gemini-composer"><label class="sr-only" for="gemini-question">Question for Gemini</label><textarea id="gemini-question" rows="3" maxlength="6000" placeholder="Ask about this case…" required></textarea><div class="gemini-actions"><button id="clear-gemini" type="button" class="ghost icon-button" data-icon="trash" aria-label="Clear case conversation" title="Clear case conversation"></button><button id="send-gemini" type="submit" data-icon="send">Send</button></div><p id="gemini-error" class="chart-note" role="alert"></p><p class="chart-note">Sending shares a compact analysis with Google Gemini. Conversations reset when changing simulation or case.</p></form>
       </aside>
@@ -1041,9 +1057,8 @@ window.STPreferences = (function() {
       <header class="dialog-heading"><h2 id="settings-title">Settings</h2><button id="settings-close" class="ghost icon-button" data-icon="x" aria-label="Close settings" title="Close settings (Esc)"></button></header>
       <div class="dialog-body">
         <section class="settings-section"><h3>Appearance</h3><p>Applied immediately on this browser.</p><div class="settings-row"><label for="settings-theme">Theme</label><select id="settings-theme" data-theme-picker aria-label="Appearance"><option value="light">Light</option><option value="dark">Dark</option><option value="auto">System / Automatic</option></select></div><div class="settings-row"><span>Accent color</span><div id="accent-palette" class="accent-palette" role="group" aria-label="Accent color"></div></div></section>
-        <section id="workspace-panel" class="settings-section"><h3>Storage &amp; simulation defaults</h3><p>Choose a Drive folder you can access. Cases and results are saved in this workspace.</p>
+        <section id="workspace-panel" class="settings-section"><h3>Storage</h3><p>Choose a Drive folder you can access. Cases and results are saved in this workspace.</p>
         <form id="workspace-form"><label for="workspace-folder-id">Drive folder ID</label><input id="workspace-folder-id" autocomplete="off" required><p id="workspace-folder-note" class="chart-note hidden">Close the current case before changing its storage folder.</p>
-        <label for="playback-rate">Default playback speed</label><select id="playback-rate"><option value="0.5">0.5×</option><option value="1">1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option><option value="20">20×</option><option value="50">50×</option></select>
         <fieldset class="gemini-settings"><legend>Gemini</legend><p class="chart-note">Your API key is stored in your Apps Script user properties and used only by the server.</p><label for="gemini-model">Model ID</label><input id="gemini-model" value="gemini-2.5-flash" maxlength="100" pattern="gemini-[a-zA-Z0-9.\-]+" required><label for="gemini-api-key">API key</label><input id="gemini-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep your saved key"><span id="gemini-key-status" class="chart-note" role="status"></span><button id="gemini-delete-key" type="button" class="danger" data-icon="trash" disabled>Remove API key</button></fieldset>
         <p id="settings-error" role="alert"></p></form></section>
         <section id="case-danger-zone" class="settings-section hidden"><h3>Delete case</h3><p>Move the open case and all its simulations to the Drive trash.</p><button id="delete-case" type="button" class="danger" data-icon="trash">Delete case</button></section>
@@ -3334,7 +3349,7 @@ window.STIcons = (function() {
     search:'M16 10a6 6 0 1 1-12 0 6 6 0 0 1 12 0m-2 5 7 7', filter:'M4 6h16M7 12h10m-7 6h4',
     pause:'M8 4v16M16 4v16', stop:'M5 5h14v14H5Z', refresh:'M20 8a8 8 0 1 0 0 8m0-13v5h-5',
     info:'M12 11v6m0-10v1M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0', warning:'m12 3 10 18H2ZM12 9v5m0 3v1',
-    check:'m5 12 4 4L19 6', x:'m6 6 12 12M6 18 18 6', collapse:'M3 4h18v16H3Zm5 0v16m8-12-4 4 4 4',
+    check:'m5 12 4 4L19 6', x:'m6 6 12 12M6 18 18 6', collapse:'M3 4h18v16H3Zm5 0v16m8-12-4 4 4 4', expand:'M3 4h18v16H3Zm5 0v16m4-12 4 4-4 4',
     lock:'M6 10h12v11H6Zm3 0V6a3 3 0 0 1 6 0v4', command:'M9 7v10a3 3 0 1 1-3-3h12a3 3 0 1 1-3 3V7a3 3 0 1 1 3 3H6a3 3 0 1 1 3-3',
     list:'M8 6h13M8 12h13M8 18h13M3 6h1m-1 6h1m-1 6h1', grid:'M3 3h7v7H3Zm11 0h7v7h-7ZM3 14h7v7H3Zm11 0h7v7h-7Z',
     save:'M4 3h13l4 4v14H3V3Zm3 0v6h9V3M7 21v-8h10v8', chevron:'m9 5 7 7-7 7', sun:'M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1'
@@ -3451,6 +3466,7 @@ window.STWhatIf = (function() {
   function card(project,create){
     var item=node('article','','analysis-recommendation');
     item.append(node('span',label(project.tier),'analysis-capex'),node('span',label(project.basis),'badge'),node('h4',project.title||label(project.titleKey)));
+    item.querySelector('.analysis-capex').dataset.tier=project.tier;
     if(project.equipmentName)item.appendChild(node('p',project.equipmentName));
     if(project.description)item.appendChild(node('p',project.description));
     var changes=node('ul','','scenario-changes');
@@ -3488,7 +3504,7 @@ window.STScenarioText = {
 window.STSettings = (function() {
   var save, removeKey, timer, version=0, savedVersion=0, sending=false, removing=false, hasKey=false, lastFocus, failure=null, waiters=[];
   function el(id){return document.getElementById(id);}
-  function request(){return {workspaceRootFolderId:el('workspace-folder-id').value,preferredPlaybackRate:Number(el('playback-rate').value),gemini:{model:el('gemini-model').value,apiKey:el('gemini-api-key').value}};}
+  function request(){return {workspaceRootFolderId:el('workspace-folder-id').value,gemini:{model:el('gemini-model').value,apiKey:el('gemini-api-key').value}};}
   function refresh(){el('settings-unsaved').textContent=failure?"Not saved":sending?"Saving…":version>savedVersion?"Changes pending":"Saved";el('settings-retry').classList.toggle('hidden',!failure);}
   function open(){var dialog=el('settings-dialog');if(dialog.open)return;lastFocus=document.activeElement;refresh();dialog.showModal();}
   function settle(ok){waiters.splice(0).forEach(function(done){done(ok);});}
@@ -3622,8 +3638,10 @@ window.STLinePerformance = (function() {
     var minimum = Math.max(0, Math.floor((Math.min.apply(null, all) - 10) / 10) * 10);
     var maximum = Math.ceil((Math.max.apply(null, all) + 10) / 10) * 10;
     if (minimum === maximum) maximum += 10;
-    var chart = svg('svg', {viewBox:'0 0 740 220', role:'img', 'aria-label':"Machine normal and maximum speeds as percentages of the pacemaker normal speed", preserveAspectRatio:'xMidYMid meet'});
-    var left = 65, right = 690, bottom = 166, top = 24;
+    var style=getComputedStyle(document.documentElement),height=parseFloat(style.getPropertyValue('--vgraph-height'))||260;
+    var width=Math.max(parseFloat(style.getPropertyValue('--vgraph-min-width'))||580,target.clientWidth||740);
+    var chart = svg('svg', {viewBox:'0 0 '+width+' '+height, role:'img', 'aria-label':"Machine normal and maximum speeds as percentages of the pacemaker normal speed", preserveAspectRatio:'xMidYMid meet'});
+    var left = 65, right = width-80, bottom = height-64, top = 24;
     var x = function(i) { return left + (valid.length === 1 ? (right - left) / 2 : i * (right - left) / (valid.length - 1)); };
     var y = function(pct) { return bottom - (pct - minimum) / (maximum - minimum) * (bottom - top); };
     [minimum, (minimum + maximum) / 2, maximum].forEach(function(pct) {
@@ -3638,10 +3656,12 @@ window.STLinePerformance = (function() {
     valid.forEach(function(p, i) {
       chart.appendChild(svg('circle', {cx:x(i), cy:y(p.normalPercent), r:4, class:'vgraph-normal-dot'}));
       if (Number.isFinite(p.maximumPercent)) chart.appendChild(svg('circle', {cx:x(i), cy:y(p.maximumPercent), r:4, class:'vgraph-maximum-dot'}));
-      chart.appendChild(svg('text', {x:x(i), y:190, class:'vgraph-label', 'text-anchor':'middle'}, p.name.length > 13 ? p.name.slice(0, 12) + '…' : p.name));
-      if (p.isPacemaker) chart.appendChild(svg('text', {x:x(i), y:206, class:'vgraph-reference', 'text-anchor':'middle'}, "Pacemaker"));
+      chart.appendChild(svg('text', {x:x(i), y:height-40, class:'vgraph-label', 'text-anchor':'middle'}, p.name.length > 13 ? p.name.slice(0, 12) + '…' : p.name));
+      if (p.isPacemaker) chart.appendChild(svg('text', {x:x(i), y:height-22, class:'vgraph-reference', 'text-anchor':'middle'}, "Pacemaker"));
     });
     target.appendChild(chart);
+    target._vgraphPoints=points;
+    if(window.ResizeObserver&&!target._vgraphObserver){target._vgraphWidth=target.clientWidth;target._vgraphObserver=new ResizeObserver(function(){if(target.clientWidth!==target._vgraphWidth){target._vgraphWidth=target.clientWidth;plot(target,target._vgraphPoints);}});target._vgraphObserver.observe(target);}
   }
   function render(result, equipment) {
     if (!document.getElementById('line-performance')) return;
@@ -3700,7 +3720,7 @@ window.STShell = function(state,actions) {
     STSettings.init();STIcons.decorate();
     document.getElementById('cases-settings').onclick=STSettings.open;
     document.getElementById('cases-sign-out').onclick=actions.signout;
-    function collapse(){document.getElementById('application').classList.toggle('sidebar-collapsed',collapsed);var el=document.getElementById('collapse-sidebar');el.setAttribute('aria-expanded',String(!collapsed));el.setAttribute('aria-label',collapsed?"Expand sidebar":"Collapse sidebar");el.title=el.getAttribute('aria-label');}
+    function collapse(){document.getElementById('application').classList.toggle('sidebar-collapsed',collapsed);var el=document.getElementById('collapse-sidebar');el.setAttribute('aria-expanded',String(!collapsed));el.setAttribute('aria-label',collapsed?"Expand sidebar":"Collapse sidebar");el.title=el.getAttribute('aria-label');el.dataset.icon=collapsed?'expand':'collapse';el.innerHTML=STIcons.svg(el.dataset.icon);}
     collapse();document.getElementById('collapse-sidebar').onclick=function(){collapsed=!collapsed;STPreferences.write('sidebar',collapsed?'collapsed':'expanded');collapse();setTimeout(actions.redraw,180);};
     document.querySelectorAll('[data-view]').forEach(function(button){button.addEventListener('click',function(){actions.navigate(button.dataset.view);});});
     document.getElementById('cancel-new-case').onclick=function(){document.getElementById('new-case-form').classList.add('hidden');document.getElementById('show-new-case').focus();};
@@ -4043,17 +4063,31 @@ return {render:renderCaseComparison};
 </script>
     <script>
 window.STAssistant = function(state,actions) {
-  var opened=false,caseId=null,simulationId=null,messages=[],pending=false,sequence=0;
+  var opened=false,caseId=null,simulationId=null,messages=[],pending=false,sequence=0,phase='idle',progressTimer=null,startedAt=0;
   function el(id){return document.getElementById(id);}
+  function progress(next){
+    phase=next;clearInterval(progressTimer);progressTimer=null;
+    var target=el('gemini-progress');target.textContent='';target.classList.toggle('hidden',next==='idle');
+    if(next==='idle')return;
+    var labels=["Check the saved case","Wait for Gemini and validate proposed changes","Response ready to review"];
+    var active={preparing:0,waiting:1,done:3,error:1}[next];
+    labels.forEach(function(label,index){var row=document.createElement('li');row.dataset.state=next==='error'&&index===1?'error':index<active?'done':index===active?'active':'pending';row.textContent=next==='error'&&index===1?"Request could not be completed":label;target.appendChild(row);});
+    target.setAttribute('aria-busy',String(next==='preparing'||next==='waiting'));
+    if(next==='waiting'){
+      startedAt=Date.now();var elapsed=document.createElement('span');elapsed.className='chart-note';elapsed.setAttribute('aria-live','off');target.children[1].appendChild(elapsed);
+      function tick(){elapsed.textContent=' · '+Math.floor((Date.now()-startedAt)/1000)+' '+"s elapsed";}
+      tick();progressTimer=setInterval(tick,1000);
+    }
+  }
   function render(){
     el('gemini-messages').textContent='';
     messages.forEach(function(m){var p=document.createElement('p');p.className='gemini-message';p.dataset.role=m.role;var label=document.createElement('strong');label.textContent=m.role==='user'?'You':"Gemini";p.appendChild(label);p.appendChild(document.createTextNode(m.text));el('gemini-messages').appendChild(p);(m.proposals||[]).forEach(function(proposal){el('gemini-messages').appendChild(STWhatIf.card(proposal,actions.applyScenario));});if(m.context){var note=document.createElement('p');note.className='chart-note';note.textContent="Compact context:"+' '+m.context.includedEquipment+'/'+m.context.totalEquipment+" equipment included. Replay samples, event logs and raw Sheet rows excluded."+(m.historyOmitted?" Older messages omitted: "+m.historyOmitted:'');el('gemini-messages').appendChild(note);}});
     el('gemini-messages').scrollTop=el('gemini-messages').scrollHeight;
   }
-  function reset(){sequence++;messages=[];pending=false;caseId=null;opened=false;render();el('gemini-question').value='';el('gemini-error').textContent='';sync();}
+  function reset(){progress('idle');sequence++;messages=[];pending=false;caseId=null;opened=false;render();el('gemini-question').value='';el('gemini-error').textContent='';sync();}
   function sync(){
     var active=state.activeCase;
-    if(caseId!==(active?.id||null)||simulationId!==state.activeSimulationId){sequence++;caseId=active?.id||null;simulationId=state.activeSimulationId;messages=[];pending=false;render();el('gemini-question').value='';el('gemini-error').textContent='';}
+    if(caseId!==(active?.id||null)||simulationId!==state.activeSimulationId){progress('idle');sequence++;caseId=active?.id||null;simulationId=state.activeSimulationId;messages=[];pending=false;render();el('gemini-question').value='';el('gemini-error').textContent='';}
     var visible=Boolean(active&&opened);
     el('application').classList.toggle('assistant-open',visible);el('gemini-panel').classList.toggle('hidden',!visible);el('toggle-gemini').setAttribute('aria-expanded',String(visible));
     el('gemini-context').textContent=active?active.name+' · '+((active.simulations||[]).find(function(s){return s.id===simulationId;})?.name||''):'';
@@ -4073,17 +4107,18 @@ window.STAssistant = function(state,actions) {
     el('toggle-gemini').onclick=function(){opened=!opened;sync();if(opened)el('gemini-question').focus();window.dispatchEvent(new Event('resize'));};
     el('close-gemini').onclick=function(){opened=false;sync();el('toggle-gemini').focus();window.dispatchEvent(new Event('resize'));};
     el('gemini-panel').addEventListener('keydown',function(e){if(e.key==='Escape'){e.stopPropagation();el('close-gemini').click();}});
-    el('clear-gemini').onclick=function(){messages=[];render();el('gemini-error').textContent='';};
+    el('clear-gemini').onclick=function(){progress('idle');messages=[];render();el('gemini-error').textContent='';};
     el('gemini-form').onsubmit=async function(e){
       e.preventDefault();sync();if(el('send-gemini').disabled)return;
       var question=el('gemini-question').value.trim();if(!question)return;
       var originalCase=caseId,originalSimulation=simulationId;
-      pending=true;sync();
-      try{await actions.flush();}catch(error){pending=false;sync();el('gemini-error').textContent=error.message;return;}
+      pending=true;progress('preparing');sync();
+      try{await actions.flush();}catch(error){pending=false;progress('error');sync();el('gemini-error').textContent=error.message;return;}
       if(originalCase!==caseId||originalSimulation!==simulationId)return;
       var request={caseId:caseId,simulationId:simulationId,question:question,history:messages.slice(-24).map(function(m){return {role:m.role,text:m.text};})},ticket=++sequence;
       pending=true;el('gemini-error').textContent='';messages.push({role:'user',text:question});el('gemini-question').value='';render();sync();
-      function finish(response){if(ticket!==sequence)return;pending=false;if(response.ok)messages.push({role:'model',text:response.data.text,proposals:response.data.proposals||[],context:response.data.context,historyOmitted:response.data.historyOmitted});else {messages.pop();el('gemini-question').value=question;el('gemini-error').textContent=response.error.message;}render();sync();}
+      progress('waiting');
+      function finish(response){if(ticket!==sequence)return;pending=false;progress(response.ok?'done':'error');if(response.ok)messages.push({role:'model',text:response.data.text,proposals:response.data.proposals||[],context:response.data.context,historyOmitted:response.data.historyOmitted});else {messages.pop();el('gemini-question').value=question;el('gemini-error').textContent=response.error.message;}render();sync();}
       google.script.run.withFailureHandler(function(){finish({ok:false,error:{message:"Gemini could not be reached. Try again."}});}).withSuccessHandler(finish).askGemini(request);
     };
   }
@@ -4281,7 +4316,6 @@ window.STSheetImport=function(state,actions){
         sampleIndex: 0,
         timer: null,
         playing: false,
-        playbackConfigured: false,
         durationMode: 'FIXED',
         configuration: null
       }
@@ -4347,6 +4381,7 @@ window.STSheetImport=function(state,actions){
       document.getElementById('play-simulation').addEventListener('click', startPlayback);
       document.getElementById('pause-simulation').addEventListener('click', pausePlayback);
       document.getElementById('reset-playback').addEventListener('click', resetPlayback);
+      document.getElementById('run-playback-rate').addEventListener('change',function(){var simulation=activePersistentSimulation();if(simulation){simulation.playbackRate=Number(this.value);autosave.change();}});
       ['run-duration','run-sample-interval','run-seed'].forEach(function(id){document.getElementById(id).addEventListener('input',markCaseDirty);});
       document.getElementById('duration-mode').addEventListener('change', function(event) {
         state.run.durationMode = event.target.value;
@@ -4434,11 +4469,7 @@ window.STSheetImport=function(state,actions){
       STSettings.configureGemini(response.data.gemini || {});
       document.getElementById('user-email').textContent = response.data.user.email;
       document.getElementById('workspace-folder-id').value = response.data.settings.workspaceRootFolderId || '';
-      document.getElementById('playback-rate').value = String(response.data.settings.preferredPlaybackRate || 1);
-      if (!state.run.playbackConfigured) {
-        document.getElementById('run-playback-rate').value = String(response.data.settings.preferredPlaybackRate || 1);
-        state.run.playbackConfigured = true;
-      }
+
 
       var hasWorkspace = Boolean(response.data.settings.workspaceRootFolderId);
       document.getElementById('workspace-panel').classList.remove('hidden');
@@ -4538,7 +4569,6 @@ async function openCase(caseId) {
         state.run.result = null;
         state.run.configuration = null;
         initializePersistentSimulations();
-        renderEditor();
         setStatus("Case loaded.");
       });
     }
@@ -5104,6 +5134,8 @@ function renderRawJson() {
     }
 
     function syncPersistentSimulation() {
+      // Rendering and navigation are read-only until an explicit edit is queued.
+      if (!autosave.pending()) return true;
       var simulation = activePersistentSimulation();
       if (!simulation || !state.activeCase) return false;
       var before=JSON.stringify([simulation.equipment,simulation.dynamicConfig]);
@@ -5134,6 +5166,7 @@ function renderRawJson() {
       state.activeCase.equipment = cloneJson(simulation.equipment || []);
       state.run.commands = cloneJson(simulation.dynamicConfig?.commands || []);
       applyScenarioRunInputs(simulation.dynamicConfig);
+      document.getElementById('run-playback-rate').value=String(simulation.playbackRate||1);
       state.run.result = simulation.results?.replay ? cloneJson(simulation.results.replay) : null;
       state.isDirty = autosave.pending() || hadUnsavedChanges;
       renderEditor();

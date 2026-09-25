@@ -14,6 +14,7 @@ async function setup({remember=false,fail=false,many=false,invalidSheet=false,em
  Object.assign(initial,{id:'demo',revision:1,updatedAt:'2026-09-15T10:00:00Z'});
  const sourceEquipment=JSON.parse(JSON.stringify(initial.equipment));
  if(empty)initial.equipment=[];
+ initial.simulations=[{id:'simulation-a',name:'Simulation A',equipment:JSON.parse(JSON.stringify(initial.equipment)),dynamicConfig:{},results:null,playbackRate:1}];
  let cases=[initial], stored={workspaceRootFolderId:'preview',preferredPlaybackRate:10}, calls=[], geminiConfigured=true;
  if(many) cases=Array.from({length:60},(_,i)=>({...initial,id:'case-'+i,name:'Line '+String(i).padStart(2,'0')}));
  const copy=x=>JSON.parse(JSON.stringify(x));
@@ -263,5 +264,31 @@ test('UI: invalid source fields are unavailable and cancel leaves equipment inta
  const h=await setup({invalidSheet:true});try{
  await h.click('#sign-in-button');await h.click('.open-case');await h.click('.sidebar [data-view="editor"]');await h.click('#open-sheet-import');h.d.getElementById('sheet-import-url').value='synthetic-sheet-id';await h.click('#sheet-import-read');
  assert.match(h.d.getElementById('sheet-import-preview').textContent,/D10:E10/);assert(h.d.querySelector('[data-source-index="0"] [data-field="mtbf"]').disabled);await h.click('#sheet-import-cancel');assert.equal(h.d.querySelectorAll('.equipment-card').length,13);assert.equal(h.d.getElementById('sheet-import-preview').textContent,'');assert.deepEqual(h.errors,[]);
+ }finally{h.dom.window.close();}
+});
+
+test('UI: opening and navigating a saved case performs no write; playback speed belongs to its simulation',async()=>{
+ const h=await setup({realScenarioServer:true});try{
+  await h.click('#sign-in-button');await h.click('.open-case');
+  await h.click('.sidebar [data-view="editor"]');await h.click('.sidebar [data-view="results"]');await h.click('.sidebar [data-view="whatif"]');
+  await new Promise(resolve=>setTimeout(resolve,600));assert.equal(h.calls.filter(name=>name==='saveCase').length,0);
+  assert(!h.d.getElementById('playback-rate'));
+  const collapse=h.d.getElementById('collapse-sidebar'),path=collapse.querySelector('path').getAttribute('d');
+  await h.click('#collapse-sidebar');assert.notEqual(collapse.querySelector('path').getAttribute('d'),path);
+  await h.click('#collapse-sidebar');assert.equal(collapse.querySelector('path').getAttribute('d'),path);
+  await h.click('.sidebar [data-view="simulation"]');const speed=h.d.getElementById('run-playback-rate');speed.value='20';speed.dispatchEvent(new h.w.Event('change',{bubbles:true}));
+  await waitFor(()=>h.storedCases()[0].simulations[0].playbackRate===20);
+  await h.click('#home-cases');await h.click('.open-case');assert.equal(h.d.getElementById('run-playback-rate').value,'20');
+  assert.deepEqual(h.errors,[]);
+ }finally{h.dom.window.close();}
+});
+test('UI: Gemini shows real request stages and clears progress on changing case',async()=>{
+ const h=await setup();try{
+  await h.click('#sign-in-button');await h.click('.open-case');await h.click('#toggle-gemini');
+  h.d.getElementById('gemini-question').value='Review this line';await h.click('#send-gemini');
+  await waitFor(()=>h.d.querySelectorAll('#gemini-progress [data-state="done"]').length===3);
+  assert.equal(h.d.getElementById('gemini-progress').getAttribute('aria-busy'),'false');
+  await h.click('#home-cases');assert(h.d.getElementById('gemini-progress').classList.contains('hidden'));
+  assert.deepEqual(h.errors,[]);
  }finally{h.dom.window.close();}
 });

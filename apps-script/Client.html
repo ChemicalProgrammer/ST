@@ -21,7 +21,6 @@
         sampleIndex: 0,
         timer: null,
         playing: false,
-        playbackConfigured: false,
         durationMode: 'FIXED',
         configuration: null
       }
@@ -87,6 +86,7 @@
       document.getElementById('play-simulation').addEventListener('click', startPlayback);
       document.getElementById('pause-simulation').addEventListener('click', pausePlayback);
       document.getElementById('reset-playback').addEventListener('click', resetPlayback);
+      document.getElementById('run-playback-rate').addEventListener('change',function(){var simulation=activePersistentSimulation();if(simulation){simulation.playbackRate=Number(this.value);autosave.change();}});
       ['run-duration','run-sample-interval','run-seed'].forEach(function(id){document.getElementById(id).addEventListener('input',markCaseDirty);});
       document.getElementById('duration-mode').addEventListener('change', function(event) {
         state.run.durationMode = event.target.value;
@@ -174,11 +174,7 @@
       STSettings.configureGemini(response.data.gemini || {});
       document.getElementById('user-email').textContent = response.data.user.email;
       document.getElementById('workspace-folder-id').value = response.data.settings.workspaceRootFolderId || '';
-      document.getElementById('playback-rate').value = String(response.data.settings.preferredPlaybackRate || 1);
-      if (!state.run.playbackConfigured) {
-        document.getElementById('run-playback-rate').value = String(response.data.settings.preferredPlaybackRate || 1);
-        state.run.playbackConfigured = true;
-      }
+
 
       var hasWorkspace = Boolean(response.data.settings.workspaceRootFolderId);
       document.getElementById('workspace-panel').classList.remove('hidden');
@@ -278,7 +274,6 @@ async function openCase(caseId) {
         state.run.result = null;
         state.run.configuration = null;
         initializePersistentSimulations();
-        renderEditor();
         setStatus(__ST_TEXT__('client.case_loaded'));
       });
     }
@@ -844,6 +839,8 @@ function renderRawJson() {
     }
 
     function syncPersistentSimulation() {
+      // Rendering and navigation are read-only until an explicit edit is queued.
+      if (!autosave.pending()) return true;
       var simulation = activePersistentSimulation();
       if (!simulation || !state.activeCase) return false;
       var before=JSON.stringify([simulation.equipment,simulation.dynamicConfig]);
@@ -874,6 +871,7 @@ function renderRawJson() {
       state.activeCase.equipment = cloneJson(simulation.equipment || []);
       state.run.commands = cloneJson(simulation.dynamicConfig?.commands || []);
       applyScenarioRunInputs(simulation.dynamicConfig);
+      document.getElementById('run-playback-rate').value=String(simulation.playbackRate||1);
       state.run.result = simulation.results?.replay ? cloneJson(simulation.results.replay) : null;
       state.isDirty = autosave.pending() || hadUnsavedChanges;
       renderEditor();

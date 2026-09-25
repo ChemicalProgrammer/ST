@@ -16,4 +16,12 @@
 #gemini-resize { position:absolute; top:0; bottom:0; left:calc(-1 * var(--space-1)); width:var(--space-2); cursor:col-resize; touch-action:none; }
 #gemini-resize:hover,#gemini-resize:focus-visible { background:var(--accent-soft); outline:var(--border-width) solid var(--accent); }
 .gemini-heading { flex-shrink:0; }
+ .gemini-progress { list-style: none; margin: 0; padding: var(--space-2) var(--space-4); font-size: var(--font-secondary); color: var(--muted); }
+ .gemini-progress li { padding: var(--space-1) 0; }
+ .gemini-progress li::before { content: '○'; margin-right: var(--space-2); }
+ .gemini-progress [data-state="active"] { color: var(--accent); font-weight: var(--weight-medium); }
+ .gemini-progress [data-state="active"]::before { content: '◉'; }
+ .gemini-progress [data-state="done"]::before { content: '✓'; color: var(--success); }
+ .gemini-progress [data-state="error"] { color: var(--danger); }
+ .gemini-progress [data-state="error"]::before { content: '!'; }
 </style>

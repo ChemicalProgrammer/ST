@@ -111,3 +111,23 @@ Scenario RPC failures include a version marker and error code, for example
 `[whatif-20260925-3 / SCENARIO_REVIEW_REQUIRED]`, to identify the responding code
 without exposing case inputs or credentials. The `/s/` portion of an Apps Script
 URL alone does not identify whether the URL ends in `/dev` or `/exec`.
+
+## Workspace presentation and Gemini feedback
+
+Opening a saved case and navigating its views are read-only. Only explicit edits
+queue autosave. Playback speed is stored as `simulation.playbackRate`; it is no
+longer a Settings control and does not alter simulation mathematics.
+
+Change the brand initials in `TextResources.gs` at `brand.initials`. The brand
+background uses the selected accent. CAPEX badges use theme-aware semantic tokens
+`--capex-zero`, `--capex-medium` and `--capex-high` (and matching background tokens).
+The V-Graph uses its actual container width and a token-controlled height, keeping
+labels at the configured font size on wide screens.
+
+Gemini feedback lists saved-case preparation, waiting for the response and server
+validation, and completion. The elapsed counter measures request time; these are
+application lifecycle states, not model reasoning or estimated internal progress.
+The parser accepts a response envelope, a standalone scenario object or an array
+of scenarios; all proposals still undergo server validation before getting a
+Create scenario button. Malformed/truncated scenario JSON produces a readable
+error instead of raw JSON. An unsupported proposal does not get an action button.

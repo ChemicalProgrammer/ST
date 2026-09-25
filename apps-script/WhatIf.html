@@ -5,6 +5,7 @@ window.STWhatIf = (function() {
   function card(project,create){
     var item=node('article','','analysis-recommendation');
     item.append(node('span',label(project.tier),'analysis-capex'),node('span',label(project.basis),'badge'),node('h4',project.title||label(project.titleKey)));
+    item.querySelector('.analysis-capex').dataset.tier=project.tier;
     if(project.equipmentName)item.appendChild(node('p',project.equipmentName));
     if(project.description)item.appendChild(node('p',project.description));
     var changes=node('ul','','scenario-changes');
