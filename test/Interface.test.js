@@ -8,7 +8,7 @@ import selectorParser from 'postcss-selector-parser';
 const read = file => fs.readFileSync(new URL('../apps-script/'+file,import.meta.url),'utf8');
 const settle = () => new Promise(resolve=>setTimeout(resolve,35));
 async function waitFor(predicate){for(let i=0;i<80;i++){if(predicate())return;await settle();}assert(predicate(),'Asynchronous UI did not settle');}
-async function setup({remember=false,fail=false,many=false,invalidSheet=false,empty=false}={}) {
+async function setup({remember=false,fail=false,many=false,invalidSheet=false,empty=false,realScenarioServer=false,fingerprintMismatch=false}={}) {
  const context={}; vm.createContext(context);vm.runInContext(read('PublicDemoCaseFactory.gs'),context);
  const initial=JSON.parse(JSON.stringify(context.createPublicDemoCaseRequest_()));
  Object.assign(initial,{id:'demo',revision:1,updatedAt:'2026-09-15T10:00:00Z'});
@@ -30,6 +30,19 @@ async function setup({remember=false,fail=false,many=false,invalidSheet=false,em
   deleteCase:id=>{cases=cases.filter(c=>c.id!==id);return {id};},
   createCase:c=>{c={...c,id:'new',equipment:[],revision:1,updatedAt:new Date().toISOString()};cases.push(c);return c;}
  };
+ if(realScenarioServer){
+  // Execute the real RPC, persistence normalization, planner and clone service.
+  // Only Google storage, identity and the transport are replaced by fixtures.
+  for(const file of ['ApiResponse.gs','CaseService.gs','ScenarioEngine.gs','ScenarioService.gs','Main.gs'])vm.runInContext(read(file),context);
+  context.requireCurrentUser_=()=>({email:'preview@example.test'});
+  context.Utilities={getUuid:()=> 'scenario-uuid'};
+  context.LockService={getUserLock:()=>({tryLock:()=>true,releaseLock:()=>{}})};
+  context.getOwnedCaseFile_=(id,user)=>{assert.equal(user.email,'preview@example.test');const record=cases.find(c=>c.id===id);assert(record);return {caseData:copy(record),file:{setContent:value=>{cases=cases.map(c=>c.id===id?JSON.parse(value):c);}}};};
+  for(const name of ['getCase','saveCase','getScenarioSourceSignature','createScenario'])api[name]=(...args)=>{
+   args=copy(args);if(name==='createScenario'&&fingerprintMismatch)args[0].sourceSignature='different-client-fingerprint';
+   const response=context[name](...args);if(!response.ok)throw Error(response.error.code+': '+response.error.message);return copy(response.data);
+  };
+ }
  const errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e.message));
  let media;
  const dom=new JSDOM(read('Index.html'),{url:'https://st.test/',runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){
@@ -143,15 +156,30 @@ test('UI: local and Gemini chat buttons clone only validated changes into persis
   assert.equal(h.storedCases()[0].simulations[2].name,'Chat proposal');assert.deepEqual(h.errors,[]);
  }finally{h.dom.window.close();}
 });
-test('UI: What-If creation uses the fingerprint of the persisted server record',async()=>{
+test('UI: Gemini proposal creation uses the fingerprint of the persisted server record',async()=>{
  const h=await setup();try{
   let expectedSignature;
   h.api.getScenarioSourceSignature=request=>{const record=h.storedCases()[0];assert.equal(request.expectedRevision,record.revision);expectedSignature='server-fingerprint-'+record.revision;return {revision:record.revision,simulationId:request.simulationId,signature:expectedSignature};};
   h.api.createScenario=request=>{assert.equal(request.sourceSignature,expectedSignature);const record=h.storedCases()[0],source=record.simulations.find(s=>s.id===request.simulationId);const clone=h.w.STScenarios.apply(source,request.proposal.changes);clone.id='verified-scenario';clone.name=request.proposal.title;record.simulations.push(clone);return {case:h.api.saveCase({...record,expectedRevision:record.revision}),simulationId:clone.id};};
+  h.api.askGemini=request=>{const source=h.storedCases()[0].simulations.find(s=>s.id===request.simulationId),proposal=h.w.STScenarios.plan(source).projects.find(p=>p.canApply);return {text:'Review this proposal.',proposals:[{...proposal,title:'Chat proposal'}]};};
+  await h.click('#sign-in-button');await h.click('.open-case');await h.click('#toggle-gemini');
+  h.d.getElementById('gemini-question').value='Suggest an improvement';await h.click('#send-gemini');
+  await waitFor(()=>!!h.d.querySelector('#gemini-messages .analysis-recommendation button'));
+  await h.click('#gemini-messages .analysis-recommendation button');await h.click('.message-dialog button:last-child');
+  await waitFor(()=>h.storedCases()[0].simulations.length===2);
+  assert(h.calls.includes('getScenarioSourceSignature'));assert.deepEqual(h.errors,[]);
+ }finally{h.dom.window.close();}
+});
+test('UI + Apps Script: a local proposal with a different fingerprint is regenerated from saved inputs',async()=>{
+ const h=await setup({realScenarioServer:true,fingerprintMismatch:true});try{
   await h.click('#sign-in-button');await h.click('.open-case');await h.click('.sidebar [data-view="whatif"]');
   await h.click('.scenario-grid button');await h.click('.message-dialog button:last-child');
   await waitFor(()=>h.storedCases()[0].simulations.length===2);
-  assert(h.calls.includes('getScenarioSourceSignature'));assert.deepEqual(h.errors,[]);
+  const simulations=h.storedCases()[0].simulations;
+  assert.equal(simulations[1].clonedFromSimulationId,simulations[0].id);
+  assert.equal(simulations[1].dynamicConfig.seed,simulations[0].dynamicConfig.seed);
+  assert.equal(simulations[1].scenario.origin,'LOCAL');assert.equal(simulations[1].results,null);
+  assert.deepEqual(h.errors,[]);
  }finally{h.dom.window.close();}
 });
 test('UI: invalid JSON remains visible and blocks closing until corrected; failed remembered entry returns to login',async()=>{

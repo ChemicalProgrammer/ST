@@ -108,9 +108,16 @@ function previewSheetImport(request) {
 }
 
 function createScenario(request) {
-  return executeServerAction_(function(user) { return createScenario_(request,user); });
+  return scenarioResponse_(function(user) { return createScenario_(request,user); });
 }
 
 function getScenarioSourceSignature(request) {
-  return executeServerAction_(function(user) { return getScenarioSourceSignature_(request,user); });
+  return scenarioResponse_(function(user) { return getScenarioSourceSignature_(request,user); });
+}
+
+function scenarioResponse_(action) {
+  var response=executeServerAction_(action);
+  response.scenarioVersion='whatif-20260925-3';
+  if(!response.ok)response.error.message='['+response.scenarioVersion+' / '+response.error.code+'] '+response.error.message;
+  return response;
 }

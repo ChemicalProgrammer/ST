@@ -12,16 +12,39 @@ function createScenario_(request,user) {
     if(Number(request.expectedRevision)!==Number(record.revision))throw createSimulatorError_('CASE_CONFLICT','The case changed. Review the latest version before creating a scenario.');
     var source=record.simulations.find(function(s){return s.id===request.simulationId;});
     if(!source)throw createSimulatorError_('SIMULATION_NOT_FOUND','The source simulation no longer exists.');
-    if(request.sourceSignature!==STScenarioEngine_.signature(source))throw createSimulatorError_('SCENARIO_STALE','The simulation inputs changed. Request a new proposal.');
-    var proposal=normalizeScenarioProposal_(request.proposal,source),copy;
+    var sourceSignature=STScenarioEngine_.signature(source),submitted=request.proposal;
+    if(request.origin==='LOCAL'){
+      // Recompute the recommendation from this locked, persisted source. A local
+      // proposal is valid only if its exact edits still match a current candidate.
+      // Browser fingerprints are not needed to establish that equivalence.
+      submitted=resolveLocalScenarioProposal_(submitted,source);
+    }else if(request.origin==='GEMINI'){
+      if(request.sourceSignature!==sourceSignature)throw createSimulatorError_('SCENARIO_STALE','The simulation inputs changed. Request a new proposal.');
+    }else throw createSimulatorError_('INVALID_SCENARIO','The scenario origin is invalid.');
+    var proposal=normalizeScenarioProposal_(submitted,source),copy;
     try{copy=STScenarioEngine_.apply(source,proposal.changes);}catch(error){throw createSimulatorError_('INVALID_SCENARIO','The proposed inputs did not pass the physical model checks.',[String(error.message)]);}
     copy.id=generateSimulationId_(record.simulations.length)+'-'+Utilities.getUuid().slice(0,8);
     copy.name=proposal.title.slice(0,120);copy.clonedFromSimulationId=source.id;copy.results=null;
     copy.createdAt=new Date().toISOString();copy.updatedAt=copy.createdAt;
-    copy.scenario={kind:proposal.kind,title:proposal.title,capex:proposal.tier,evidenceBasis:proposal.basis,sourceSimulationId:source.id,sourceSimulationName:source.name,sourceSignature:request.sourceSignature,changes:proposal.changes,evidence:proposal.evidence,origin:request.origin==='GEMINI'?'GEMINI':'LOCAL',validation:'INPUTS_VALIDATED_NOT_SIMULATED',createdAt:copy.createdAt};
+    copy.scenario={kind:proposal.kind,title:proposal.title,capex:proposal.tier,evidenceBasis:proposal.basis,sourceSimulationId:source.id,sourceSimulationName:source.name,sourceSignature:sourceSignature,changes:proposal.changes,evidence:proposal.evidence,origin:request.origin,validation:'INPUTS_VALIDATED_NOT_SIMULATED',createdAt:copy.createdAt};
     record.simulations.push(copy);record.revision++;record.updatedAt=copy.createdAt;
     owned.file.setContent(JSON.stringify(record,null,2));return {case:record,simulationId:copy.id};
   });
+}
+function resolveLocalScenarioProposal_(proposal,source) {
+  if(!proposal||proposal.sourceSimulationId!==source.id||!Array.isArray(proposal.changes)||!proposal.changes.length)throw createSimulatorError_('INVALID_SCENARIO','The local scenario source or changes are invalid.');
+  var current=STScenarioEngine_.plan(source).candidates.find(function(candidate){
+    return candidate.canApply&&candidate.kind===proposal.kind&&candidate.tier===proposal.tier&&candidate.basis===proposal.basis&&
+      candidate.equipmentId===proposal.equipmentId&&candidate.changes.length===proposal.changes.length&&
+      candidate.changes.every(function(change,index){
+        var submitted=proposal.changes[index];
+        return submitted&&change.equipmentId===submitted.equipmentId&&change.path===submitted.path&&change.before===submitted.before&&change.after===submitted.after;
+      });
+  });
+  if(!current)throw createSimulatorError_('SCENARIO_REVIEW_REQUIRED','The saved inputs now produce a different recommendation. Reopen What-If to review the updated proposal.');
+  // Evidence is always recomputed by the server; only the display title comes
+  // from the client, and its type and length are validated by the shared service.
+  return Object.assign({},current,{title:proposal.title});
 }
 function normalizeScenarioProposal_(proposal,source) {
   if(!proposal||!['ZERO','MEDIUM','HIGH'].includes(proposal.tier)||!['STATIC','DYNAMIC','HYBRID'].includes(proposal.basis)||!Array.isArray(proposal.changes))throw createSimulatorError_('INVALID_SCENARIO','The scenario format is invalid.');

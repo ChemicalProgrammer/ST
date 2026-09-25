@@ -43,3 +43,32 @@ test('server returns its own signature for the owned saved simulation and checks
  assert.throws(()=>h.ctx.getScenarioSourceSignature_({...request,expectedRevision:0},{email:'owner@test'}),error=>error.code==='CASE_CONFLICT');
  assert.throws(()=>h.ctx.getScenarioSourceSignature_({...request,simulationId:'missing'},{email:'owner@test'}),error=>error.code==='SIMULATION_NOT_FOUND');
 });
+
+test('local scenarios are replanned on the locked saved baseline when the client signature differs',()=>{
+ const h=setup(),source=h.record().simulations[0],baseline=JSON.stringify(source);
+ const request={...h.request,origin:'LOCAL',sourceSignature:'different-client-fingerprint',proposal:{...h.request.proposal,evidence:{invented:'discard this'}}};
+ const response=h.ctx.createScenario_(request,{email:'owner@test'}),created=response.case.simulations[1];
+ assert.equal(JSON.stringify(response.case.simulations[0]),baseline);
+ assert.equal(created.scenario.sourceSignature,h.ctx.STScenarioEngine_.signature(source));
+ assert.equal(created.scenario.evidence.invented,undefined);
+ assert.equal(created.scenario.origin,'LOCAL');assert.equal(h.writes(),1);
+});
+
+test('local replanning rejects modified edits, changed revisions and an unrelated source',()=>{
+ const h=setup(),request={...h.request,origin:'LOCAL',sourceSignature:'different-client-fingerprint'};
+ const altered=JSON.parse(JSON.stringify(request.proposal));altered.changes[0].after+=1;
+ assert.throws(()=>h.ctx.createScenario_({...request,proposal:altered},{email:'owner@test'}),e=>e.code==='SCENARIO_REVIEW_REQUIRED');
+ assert.throws(()=>h.ctx.createScenario_({...request,expectedRevision:0},{email:'owner@test'}),e=>e.code==='CASE_CONFLICT');
+ assert.throws(()=>h.ctx.createScenario_({...request,proposal:{...request.proposal,sourceSimulationId:'another-source'}},{email:'owner@test'}),e=>e.code==='INVALID_SCENARIO');
+ assert.equal(h.writes(),0);assert.equal(h.record().simulations.length,1);assert.equal(h.releases(),3);
+});
+
+test('scenario RPC errors identify the responding version without exposing inputs',()=>{
+ const h=setup();vm.runInContext(fs.readFileSync('apps-script/ApiResponse.gs','utf8'),h.ctx);
+ vm.runInContext(fs.readFileSync('apps-script/Main.gs','utf8'),h.ctx);
+ h.ctx.requireCurrentUser_=()=>({email:'owner@test'});
+ const response=h.ctx.createScenario({...h.request,expectedRevision:0});
+ assert.equal(response.ok,false);assert.equal(response.scenarioVersion,'whatif-20260925-3');
+ assert.match(response.error.message,/\[whatif-20260925-3 \/ CASE_CONFLICT\]/);
+ assert.doesNotMatch(JSON.stringify(response),/equipment|noiseProfile/);
+});

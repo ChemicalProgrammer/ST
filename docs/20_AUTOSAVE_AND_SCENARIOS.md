@@ -86,9 +86,14 @@ write. The source seed and baseline results are preserved; the new result is emp
 No model output is evaluated as code, and no proposal applies automatically.
 
 Conversation context is bound to the selected simulation and clears on changing
-simulation/case or signing out. Creating a scenario requires a matching input
-signature and current case revision. A rerun and Compare are required to quantify
-its effect. The API key remains server-side in UserProperties.
+simulation/case or signing out. Every creation requires the current case revision.
+For local What-If actions, the server recalculates candidates from the saved source
+inside the same write lock used to clone it. The selected kind, tier, equipment,
+evidence basis and exact before/after edits must match a currently valid candidate.
+Evidence is taken from that recalculation. Local actions do not depend on a
+browser/server fingerprint comparison. Gemini proposals retain the additional
+source fingerprint check. A rerun and Compare are required to quantify the effect.
+The API key remains server-side in UserProperties.
 
 ## Verification and deployment
 
@@ -102,3 +107,7 @@ Regenerate using `npm run build:apps-script`. For the existing manual deployment
 replace `apps-script/Code.gs` and `apps-script/Index.html` together and update the
 Apps Script deployment. Keep the manifest. Do not combine the generated server
 bundle with modular `.gs` files. Publishing GitHub changes does not deploy Apps Script.
+Scenario RPC failures include a version marker and error code, for example
+`[whatif-20260925-3 / SCENARIO_REVIEW_REQUIRED]`, to identify the responding code
+without exposing case inputs or credentials. The `/s/` portion of an Apps Script
+URL alone does not identify whether the URL ends in `/dev` or `/exec`.
