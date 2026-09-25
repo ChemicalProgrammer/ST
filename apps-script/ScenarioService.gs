@@ -1,3 +1,11 @@
+function getScenarioSourceSignature_(request,user) {
+  var record=getCase_(request.caseId,user);
+  if(Number(request.expectedRevision)!==Number(record.revision))throw createSimulatorError_('CASE_CONFLICT','The case changed. Review the latest version before creating a scenario.');
+  var source=record.simulations.find(function(s){return s.id===request.simulationId;});
+  if(!source)throw createSimulatorError_('SIMULATION_NOT_FOUND','The source simulation no longer exists.');
+  return {revision:record.revision,simulationId:source.id,signature:STScenarioEngine_.signature(source)};
+}
+
 function createScenario_(request,user) {
   return withCaseWriteLock_(function() {
     var owned=getOwnedCaseFile_(request.caseId,user),record=ensureCaseSimulations_(owned.caseData);

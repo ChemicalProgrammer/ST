@@ -110,3 +110,7 @@ function previewSheetImport(request) {
 function createScenario(request) {
   return executeServerAction_(function(user) { return createScenario_(request,user); });
 }
+
+function getScenarioSourceSignature(request) {
+  return executeServerAction_(function(user) { return getScenarioSourceSignature_(request,user); });
+}

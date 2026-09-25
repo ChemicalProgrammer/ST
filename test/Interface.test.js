@@ -23,6 +23,7 @@ async function setup({remember=false,fail=false,many=false,invalidSheet=false,em
   previewSheetImport:()=>({canImport:!invalidSheet,source:{schemaVersion:'plant-sheet-v1',sheetName:'Synthetic sheet',readAt:'2026-09-16',spreadsheetId:'synthetic-id'},metadata:{site:'Synthetic site',formatName:'Imported format'},equipment:copy(sourceEquipment.slice(0,3)).map((e,i)=>({...e,noiseProfile:{...e.noiseProfile,reliability:{...e.noiseProfile.reliability,mtbfMinutes:e.noiseProfile.reliability.mtbfMinutes+60}},processData:{...e.processData,equipment:{...e.processData.equipment,mtbfMinutes:e.processData.equipment.mtbfMinutes+60}},characteristics:{...e.characteristics,sourceSheetRow:i+10}})),sourceRows:[],errors:invalidSheet?[{cell:'D10:E10',message:'Supply both MTBF and MTTR.'}]:[],warnings:[],notes:['Review model assumptions.']}),
   getCase:id=>copy(cases.find(c=>c.id===id)),
   saveCase:c=>{c=copy(c);c.revision=c.expectedRevision+1;cases=cases.map(x=>x.id===c.id?c:x);return c;},
+  getScenarioSourceSignature:request=>{const record=cases.find(c=>c.id===request.caseId),simulation=record?.simulations.find(s=>s.id===request.simulationId);if(!simulation||record.revision!==request.expectedRevision)throw Error('Stale scenario source');return {revision:record.revision,simulationId:simulation.id,signature:dom.window.STScenarios.signature(simulation)};},
   saveUserSettings:s=>{if(s.gemini?.apiKey)geminiConfigured=true;return stored=s;},
   deleteGeminiApiKey:()=>{geminiConfigured=false;return {configured:false,model:'gemini-2.5-flash'};},
   cloneSimulation:(id,sid)=>{const c=cases.find(c=>c.id===id),source=c.simulations.find(s=>s.id===sid),next=copy(source);next.id='simulation-b';next.name='Simulation B';next.results=null;c.simulations.push(next);return copy(c);},
@@ -140,6 +141,17 @@ test('UI: local and Gemini chat buttons clone only validated changes into persis
   await h.click('#toggle-gemini');h.d.getElementById('gemini-question').value='Suggest an improvement';await h.click('#send-gemini');await waitFor(()=>!!h.d.querySelector('#gemini-messages .analysis-recommendation button'));
   await h.click('#gemini-messages .analysis-recommendation button');await h.click('.message-dialog button:last-child');await waitFor(()=>h.storedCases()[0].simulations.length===3);
   assert.equal(h.storedCases()[0].simulations[2].name,'Chat proposal');assert.deepEqual(h.errors,[]);
+ }finally{h.dom.window.close();}
+});
+test('UI: What-If creation uses the fingerprint of the persisted server record',async()=>{
+ const h=await setup();try{
+  let expectedSignature;
+  h.api.getScenarioSourceSignature=request=>{const record=h.storedCases()[0];assert.equal(request.expectedRevision,record.revision);expectedSignature='server-fingerprint-'+record.revision;return {revision:record.revision,simulationId:request.simulationId,signature:expectedSignature};};
+  h.api.createScenario=request=>{assert.equal(request.sourceSignature,expectedSignature);const record=h.storedCases()[0],source=record.simulations.find(s=>s.id===request.simulationId);const clone=h.w.STScenarios.apply(source,request.proposal.changes);clone.id='verified-scenario';clone.name=request.proposal.title;record.simulations.push(clone);return {case:h.api.saveCase({...record,expectedRevision:record.revision}),simulationId:clone.id};};
+  await h.click('#sign-in-button');await h.click('.open-case');await h.click('.sidebar [data-view="whatif"]');
+  await h.click('.scenario-grid button');await h.click('.message-dialog button:last-child');
+  await waitFor(()=>h.storedCases()[0].simulations.length===2);
+  assert(h.calls.includes('getScenarioSourceSignature'));assert.deepEqual(h.errors,[]);
  }finally{h.dom.window.close();}
 });
 test('UI: invalid JSON remains visible and blocks closing until corrected; failed remembered entry returns to login',async()=>{

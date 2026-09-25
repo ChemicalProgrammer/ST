@@ -33,3 +33,13 @@ test('server accepts an equivalent browser fingerprint after storage normalizati
  assert.equal(request.sourceSignature,h.ctx.STScenarioEngine_.signature(saved));
  assert.equal(h.ctx.createScenario_(request,{email:'owner@test'}).case.simulations.length,2);
 });
+
+test('server returns its own signature for the owned saved simulation and checks revision',()=>{
+ const h=setup();h.ctx.getCase_=(id,user)=>{assert.equal(id,'case-a');assert.equal(user.email,'owner@test');return h.record();};
+ const request={caseId:'case-a',simulationId:'a',expectedRevision:1};
+ const verified=h.ctx.getScenarioSourceSignature_(request,{email:'owner@test'});
+ assert.equal(verified.signature,h.ctx.STScenarioEngine_.signature(h.record().simulations[0]));
+ assert.equal(verified.revision,1);
+ assert.throws(()=>h.ctx.getScenarioSourceSignature_({...request,expectedRevision:0},{email:'owner@test'}),error=>error.code==='CASE_CONFLICT');
+ assert.throws(()=>h.ctx.getScenarioSourceSignature_({...request,simulationId:'missing'},{email:'owner@test'}),error=>error.code==='SIMULATION_NOT_FOUND');
+});
