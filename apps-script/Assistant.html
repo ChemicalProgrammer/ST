@@ -8,7 +8,7 @@ window.STAssistant = function(state,actions) {
     if(next==='idle')return;
     var labels=[__ST_TEXT__('assistant.progress_saved'),__ST_TEXT__('assistant.progress_waiting'),__ST_TEXT__('assistant.progress_ready')];
     var active={preparing:0,waiting:1,done:3,error:1}[next];
-    labels.forEach(function(label,index){var row=document.createElement('li');row.dataset.state=next==='error'&&index===1?'error':index<active?'done':index===active?'active':'pending';row.textContent=next==='error'&&index===1?__ST_TEXT__('assistant.progress_failed'):label;target.appendChild(row);});
+    labels.forEach(function(label,index){if(next==='error'&&index>active)return;var row=document.createElement('li');row.dataset.state=next==='error'&&index===1?'error':index<active?'done':index===active?'active':'pending';row.textContent=next==='error'&&index===1?__ST_TEXT__('assistant.progress_failed'):label;target.appendChild(row);});
     target.setAttribute('aria-busy',String(next==='preparing'||next==='waiting'));
     if(next==='waiting'){
       startedAt=Date.now();var elapsed=document.createElement('span');elapsed.className='chart-note';elapsed.setAttribute('aria-live','off');target.children[1].appendChild(elapsed);

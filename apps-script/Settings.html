@@ -20,7 +20,7 @@ window.STSettings = (function() {
   }
   function flush(){return new Promise(function(resolve){waiters.push(resolve);write();});}
   async function close(){if(removing||!await flush())return;el('settings-dialog').close();if(lastFocus?.isConnected)lastFocus.focus();}
-  function keyStatus(){el('gemini-key-status').textContent=removing?__ST_TEXT__('settings.removing_api_key'):hasKey?__ST_TEXT__('settings.api_key_saved_for_your_google_account'):__ST_TEXT__('settings.no_api_key_configured');el('gemini-delete-key').disabled=removing||!hasKey;}
+  function keyStatus(){el('gemini-api-key').placeholder=hasKey?__ST_TEXT__('settings.api_key_mask'):__ST_TEXT__('settings.enter_api_key');el('gemini-key-status').textContent=removing?__ST_TEXT__('settings.removing_api_key'):hasKey?__ST_TEXT__('settings.api_key_saved_for_your_google_account'):__ST_TEXT__('settings.no_api_key_configured');el('gemini-delete-key').disabled=removing||!hasKey;}
   async function deleteKey(){
     if(removing||!hasKey||!removeKey)return;
     if(!await STDialog.confirm(__ST_TEXT__('settings.delete_api_key_title'),__ST_TEXT__('settings.delete_api_key_message'),true))return;

@@ -305,6 +305,9 @@ var ST_TEXT_RESOURCES = {
   "settings.discard_unsaved_settings": "Discard unsaved settings?",
   "settings.api_key_saved_for_your_google_account": "API key saved for your Google account.",
   "settings.no_api_key_configured": "No API key configured.",
+  "settings.api_key_mask": "************",
+  "settings.enter_api_key": "Enter your API key",
+  "assistant.service_unavailable": "Gemini is temporarily unavailable (HTTP {status}). Please try again shortly.",
   "settings.delete_api_key": "Remove API key",
   "settings.delete_api_key_title": "Remove Gemini API key?",
   "settings.delete_api_key_message": "Gemini chat will stop working until you add a new API key. Your cases and simulation results will remain available.",
@@ -2625,7 +2628,7 @@ function askGemini_(request, user) {
     });
   } catch (_) { throw createSimulatorError_('GEMINI_UNAVAILABLE', 'Gemini could not be reached. Try again.'); }
   var status = response.getResponseCode();
-  if (status !== 200) throw createSimulatorError_('GEMINI_REQUEST_FAILED', status === 429 ? 'Gemini quota exceeded. Try again later or check your API billing.' : 'Gemini rejected the request (HTTP '+status+'). Check the API key and model in Settings.');
+  if (status !== 200) throw createSimulatorError_('GEMINI_REQUEST_FAILED', status >= 500 ? "Gemini is temporarily unavailable (HTTP {status}). Please try again shortly.".replace('{status}', String(status)) : status === 429 ? 'Gemini quota exceeded. Try again later or check your API billing.' : 'Gemini rejected the request (HTTP '+status+'). Check the API key and model in Settings.');
   var data;
   try { data = JSON.parse(response.getContentText()); } catch (_) { throw createSimulatorError_('GEMINI_RESPONSE_ERROR', 'Gemini returned an unreadable response.'); }
   var parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts || [];

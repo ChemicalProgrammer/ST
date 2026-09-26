@@ -82,11 +82,15 @@ test('UI: remove Gemini key requires confirmation and immediately updates its sa
  const h=await setup();try{
   await h.click('#sign-in-button');await h.click('#cases-settings');
   const button=h.d.getElementById('gemini-delete-key');assert(!button.disabled);
+  const key=h.d.getElementById('gemini-api-key');
+  assert.equal(key.value,'');assert.match(key.placeholder,/^\*+$/);
+  assert.equal(button.parentElement,key.parentElement);assert.equal(button.getAttribute('aria-label'),'Remove API key');
   await h.click('#gemini-delete-key');assert(h.d.querySelector('.message-dialog[open]'));
   await h.click('.message-dialog .ghost');assert(!button.disabled);assert(!h.calls.includes('deleteGeminiApiKey'));
   await h.click('#gemini-delete-key');await h.click('.message-dialog .danger');
   await waitFor(()=>button.disabled && /No API key configured/.test(h.d.getElementById('gemini-key-status').textContent));
   assert.equal(h.calls.filter(name=>name==='deleteGeminiApiKey').length,1);
+  assert.equal(key.value,'');assert.equal(key.placeholder,'Enter your API key');
   assert.equal(h.d.querySelectorAll('.case-row').length,1);
   assert.deepEqual(h.errors,[]);
  }finally{h.dom.window.close();}
@@ -290,5 +294,36 @@ test('UI: Gemini shows real request stages and clears progress on changing case'
   assert.equal(h.d.getElementById('gemini-progress').getAttribute('aria-busy'),'false');
   await h.click('#home-cases');assert(h.d.getElementById('gemini-progress').classList.contains('hidden'));
   assert.deepEqual(h.errors,[]);
+ }finally{h.dom.window.close();}
+});
+
+test('UI: saved key mask is never submitted and replacement restores the mask',async()=>{
+ const h=await setup();try{
+  await h.click('#sign-in-button');await h.click('#cases-settings');
+  const submitted=[];h.api.saveUserSettings=value=>{submitted.push(value);return value;};
+  const model=h.d.getElementById('gemini-model'),key=h.d.getElementById('gemini-api-key');
+  model.value='gemini-test';model.dispatchEvent(new h.w.Event('input',{bubbles:true}));
+  await h.click('#settings-cancel');
+  assert.equal(submitted[0].gemini.apiKey,'');assert.match(key.placeholder,/^\*+$/);
+  await h.click('#cases-settings');
+  key.value='replacement-test-key';key.dispatchEvent(new h.w.Event('input',{bubbles:true}));
+  await h.click('#settings-cancel');
+  assert.equal(submitted[1].gemini.apiKey,'replacement-test-key');
+  assert.equal(key.value,'');assert.match(key.placeholder,/^\*+$/);
+  assert.deepEqual(h.errors,[]);
+ }finally{h.dom.window.close();}
+});
+
+test('UI: failed Gemini requests stop progress without a pending response',async()=>{
+ const h=await setup();try{
+  h.api.askGemini=()=>{throw Error('Gemini is temporarily unavailable (HTTP 503).');};
+  await h.click('#sign-in-button');await h.click('.open-case');await h.click('#toggle-gemini');
+  h.d.getElementById('gemini-question').value='Review this line';await h.click('#send-gemini');
+  await waitFor(()=>h.d.querySelector('#gemini-progress [data-state="error"]'));
+  const progress=h.d.getElementById('gemini-progress');
+  assert.equal(progress.getAttribute('aria-busy'),'false');
+  assert.equal(progress.querySelectorAll('[data-state="pending"]').length,0);
+  assert(!progress.textContent.includes('Response ready'));
+  assert.match(h.d.getElementById('gemini-error').textContent,/could not be reached/);
  }finally{h.dom.window.close();}
 });

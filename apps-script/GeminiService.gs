@@ -40,7 +40,7 @@ function askGemini_(request, user) {
     });
   } catch (_) { throw createSimulatorError_('GEMINI_UNAVAILABLE', 'Gemini could not be reached. Try again.'); }
   var status = response.getResponseCode();
-  if (status !== 200) throw createSimulatorError_('GEMINI_REQUEST_FAILED', status === 429 ? 'Gemini quota exceeded. Try again later or check your API billing.' : 'Gemini rejected the request (HTTP '+status+'). Check the API key and model in Settings.');
+  if (status !== 200) throw createSimulatorError_('GEMINI_REQUEST_FAILED', status >= 500 ? __ST_TEXT__('assistant.service_unavailable').replace('{status}', String(status)) : status === 429 ? 'Gemini quota exceeded. Try again later or check your API billing.' : 'Gemini rejected the request (HTTP '+status+'). Check the API key and model in Settings.');
   var data;
   try { data = JSON.parse(response.getContentText()); } catch (_) { throw createSimulatorError_('GEMINI_RESPONSE_ERROR', 'Gemini returned an unreadable response.'); }
   var parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts || [];

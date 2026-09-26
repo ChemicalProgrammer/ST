@@ -57,3 +57,14 @@ test('Gemini incomplete scenario JSON reports a readable error and creates no pr
  const h=setup({answer:'{"title":"unfinished","changes":['});
  assert.throws(()=>h.ctx.askGemini_(request,user),error=>error.code==='GEMINI_RESPONSE_ERROR');
 });
+
+test('Gemini server errors recommend retrying without blaming the saved key',()=>{
+ for(const status of [500,502,503,504]){
+  const {ctx}=setup({status});
+  assert.throws(()=>ctx.askGemini_(request,user),error=>
+   error.code==='GEMINI_REQUEST_FAILED' &&
+   error.message.includes('HTTP '+status) &&
+   error.message.includes('temporarily unavailable') &&
+   !error.message.includes('API key'));
+ }
+});

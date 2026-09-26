@@ -679,6 +679,10 @@ dialog::backdrop { background: var(--overlay); } dialog[open] { display:flex; fl
 #toast { position: fixed; bottom: var(--space-5); right: var(--space-5); z-index: var(--z-toast); background: var(--surface); border: var(--border-width) solid var(--line-strong); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); box-shadow: var(--shadow-dialog); max-width: calc(100vw - var(--space-8)); }
 @keyframes dialog-enter { from { opacity: 0; transform: translateY(var(--size-4)); } to { opacity: 1; transform: translateY(0); } }
 @media(max-width:480px) { .settings-row { grid-template-columns: 1fr; } }
+ .api-key-control { display:grid; grid-template-columns:minmax(0,1fr) var(--control-height); gap:var(--space-2); align-items:center; }
+.api-key-control input { min-width:0; margin:0; }
+.api-key-control button { width:var(--control-height); height:var(--control-height); margin:0; padding:0; }
+#gemini-key-status { margin:var(--space-2) 0 0; }
 </style>
     <style>
 .result-kpis { display: grid; grid-template-columns: repeat(auto-fit,minmax(var(--size-150),1fr)); gap: var(--space-3); margin: var(--space-4) 0; }
@@ -1059,7 +1063,11 @@ window.STPreferences = (function() {
         <section class="settings-section"><h3>Appearance</h3><p>Applied immediately on this browser.</p><div class="settings-row"><label for="settings-theme">Theme</label><select id="settings-theme" data-theme-picker aria-label="Appearance"><option value="light">Light</option><option value="dark">Dark</option><option value="auto">System / Automatic</option></select></div><div class="settings-row"><span>Accent color</span><div id="accent-palette" class="accent-palette" role="group" aria-label="Accent color"></div></div></section>
         <section id="workspace-panel" class="settings-section"><h3>Storage</h3><p>Choose a Drive folder you can access. Cases and results are saved in this workspace.</p>
         <form id="workspace-form"><label for="workspace-folder-id">Drive folder ID</label><input id="workspace-folder-id" autocomplete="off" required><p id="workspace-folder-note" class="chart-note hidden">Close the current case before changing its storage folder.</p>
-        <fieldset class="gemini-settings"><legend>Gemini</legend><p class="chart-note">Your API key is stored in your Apps Script user properties and used only by the server.</p><label for="gemini-model">Model ID</label><input id="gemini-model" value="gemini-2.5-flash" maxlength="100" pattern="gemini-[a-zA-Z0-9.\-]+" required><label for="gemini-api-key">API key</label><input id="gemini-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep your saved key"><span id="gemini-key-status" class="chart-note" role="status"></span><button id="gemini-delete-key" type="button" class="danger" data-icon="trash" disabled>Remove API key</button></fieldset>
+        <fieldset class="gemini-settings"><legend>Gemini</legend><p class="chart-note">Your API key is stored in your Apps Script user properties and used only by the server.</p><label for="gemini-model">Model ID</label><input id="gemini-model" value="gemini-2.5-flash" maxlength="100" pattern="gemini-[a-zA-Z0-9.\-]+" required><label for="gemini-api-key">API key</label><div class="api-key-control">
+          <input id="gemini-api-key" type="password" autocomplete="new-password" aria-describedby="gemini-key-status" placeholder="Enter your API key">
+          <button id="gemini-delete-key" type="button" class="danger icon-button" data-icon="trash" title="Remove API key" aria-label="Remove API key" disabled></button>
+        </div>
+        <p id="gemini-key-status" class="chart-note" role="status"></p></fieldset>
         <p id="settings-error" role="alert"></p></form></section>
         <section id="case-danger-zone" class="settings-section hidden"><h3>Delete case</h3><p>Move the open case and all its simulations to the Drive trash.</p><button id="delete-case" type="button" class="danger" data-icon="trash">Delete case</button></section>
       </div>
@@ -3522,7 +3530,7 @@ window.STSettings = (function() {
   }
   function flush(){return new Promise(function(resolve){waiters.push(resolve);write();});}
   async function close(){if(removing||!await flush())return;el('settings-dialog').close();if(lastFocus?.isConnected)lastFocus.focus();}
-  function keyStatus(){el('gemini-key-status').textContent=removing?"Removing API key…":hasKey?"API key saved for your Google account.":"No API key configured.";el('gemini-delete-key').disabled=removing||!hasKey;}
+  function keyStatus(){el('gemini-api-key').placeholder=hasKey?"************":"Enter your API key";el('gemini-key-status').textContent=removing?"Removing API key…":hasKey?"API key saved for your Google account.":"No API key configured.";el('gemini-delete-key').disabled=removing||!hasKey;}
   async function deleteKey(){
     if(removing||!hasKey||!removeKey)return;
     if(!await STDialog.confirm("Remove Gemini API key?","Gemini chat will stop working until you add a new API key. Your cases and simulation results will remain available.",true))return;
@@ -4071,7 +4079,7 @@ window.STAssistant = function(state,actions) {
     if(next==='idle')return;
     var labels=["Check the saved case","Wait for Gemini and validate proposed changes","Response ready to review"];
     var active={preparing:0,waiting:1,done:3,error:1}[next];
-    labels.forEach(function(label,index){var row=document.createElement('li');row.dataset.state=next==='error'&&index===1?'error':index<active?'done':index===active?'active':'pending';row.textContent=next==='error'&&index===1?"Request could not be completed":label;target.appendChild(row);});
+    labels.forEach(function(label,index){if(next==='error'&&index>active)return;var row=document.createElement('li');row.dataset.state=next==='error'&&index===1?'error':index<active?'done':index===active?'active':'pending';row.textContent=next==='error'&&index===1?"Request could not be completed":label;target.appendChild(row);});
     target.setAttribute('aria-busy',String(next==='preparing'||next==='waiting'));
     if(next==='waiting'){
       startedAt=Date.now();var elapsed=document.createElement('span');elapsed.className='chart-note';elapsed.setAttribute('aria-live','off');target.children[1].appendChild(elapsed);
